@@ -6,7 +6,7 @@
 
 import { http, webSocket, type WebSocketTransport, type WebSocketTransportConfig } from "viem";
 
-import { parseQuantity, retryAfterMs, type EndpointCall } from "@smart-rpc/core";
+import { abortError, isIdempotentMethod, parseQuantity, retryAfterMs, type EndpointCall } from "@smart-rpc/core";
 
 type SocketValue = NonNullable<ReturnType<WebSocketTransport>["value"]>;
 export type EthereumSubscriptionOptions = Parameters<SocketValue["subscribe"]>[0];
@@ -58,6 +58,7 @@ export function connectViem(url: string, options: ViemConnectionOptions): ViemCo
       });
   const instance = transport({ retryCount: 0, timeout: options.timeout });
   const request = instance.request.bind(instance);
+  const batches = new BatchCancellation();
   const subscriptions = new Set<EthereumSubscription>();
   let closed = false;
   return {
@@ -67,6 +68,7 @@ export function connectViem(url: string, options: ViemConnectionOptions): ViemCo
     close(): void {
       if (closed) return;
       closed = true;
+      batches.close();
       for (const subscription of subscriptions) void subscription.unsubscribe().catch(() => undefined);
       subscriptions.clear();
     },
@@ -98,9 +100,17 @@ export function connectViem(url: string, options: ViemConnectionOptions): ViemCo
     call: async (args, callOptions) => {
       if (closed) throw new Error("Connection is closed.");
       try {
+        const body = { method: args.method, params: args.params ?? [] } as Parameters<typeof request>[0];
+        if (!websocket && options.batch && isIdempotentMethod(args.method)) {
+          // viem groups by URL and signal. A connection-local shared signal permits a
+          // real wire batch without one cancelled caller aborting its live neighbors.
+          return await batches.run(callOptions?.signal, (signal) => request(body, { signal }));
+        }
         return await request(
-          { method: args.method, params: args.params ?? [] } as Parameters<typeof request>[0],
-          callOptions?.signal ? { signal: callOptions.signal } : undefined,
+          body,
+          // Stateful calls and writes never join another caller's cancellation group.
+          // A unique signal also prevents viem mixing credentials across connections.
+          { signal: callOptions?.signal ?? new AbortController().signal },
         );
       } catch (error) {
         const waited = hint.take();
@@ -109,6 +119,52 @@ export function connectViem(url: string, options: ViemConnectionOptions): ViemCo
       }
     },
   };
+}
+
+interface BatchGroup {
+  controller: AbortController;
+  members: number;
+}
+
+/** Cancellation ownership around viem's scheduler, without implementing another batcher. */
+class BatchCancellation {
+  #current: BatchGroup | undefined;
+
+  close(): void {
+    this.#current?.controller.abort(new Error("Connection is closed."));
+    this.#current = undefined;
+  }
+
+  run<T>(signal: AbortSignal | undefined, send: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    if (signal?.aborted) return Promise.reject(abortError(signal));
+    const group = this.#current ?? { controller: new AbortController(), members: 0 };
+    this.#current = group;
+    group.members += 1;
+    return new Promise<T>((resolve, reject) => {
+      let released = false;
+      const release = (): void => {
+        if (released) return;
+        released = true;
+        signal?.removeEventListener("abort", onAbort);
+        group.members -= 1;
+        if (group.members === 0) {
+          if (this.#current === group) this.#current = undefined;
+          // Completed participants no longer need the request either. Only the last
+          // participant can abort the wire request shared by this group's batches.
+          group.controller.abort();
+        }
+      };
+      const onAbort = (): void => {
+        reject(signal ? abortError(signal) : new Error("This operation was aborted"));
+        release();
+      };
+      signal?.addEventListener("abort", onAbort, { once: true });
+      Promise.resolve().then(() => send(group.controller.signal)).then(
+        (value) => { resolve(value); release(); },
+        (error: unknown) => { reject(error); release(); },
+      );
+    });
+  }
 }
 
 function retryHint(): { record: (response: Response) => void; take: () => number } {

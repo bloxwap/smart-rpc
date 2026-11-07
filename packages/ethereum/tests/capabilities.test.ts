@@ -19,6 +19,17 @@ function fixture(resolve: (request: Wire, url: string) => unknown = () => "0x2a"
 }
 
 describe("endpoint capability routing", () => {
+  test("requires identity support by default and respects an explicit verification opt-out", async () => {
+    const endpoints = [{ url: "https://unverified.example", supportedMethods: ["eth_blockNumber"] }];
+    expect(() => ethereum({ endpoints })).toThrow("eth_chainId verification");
+    const { calls, fetchFn } = fixture();
+    const pool = ethereum({ endpoints, verifyIdentity: false, headLag: false, fetchFn });
+    try {
+      await expect(pool.request({ method: "eth_blockNumber" })).resolves.toBe("0x2a");
+      expect(calls.map((call) => call.request.method)).toEqual(["eth_blockNumber"]);
+    } finally { pool.close(); }
+  });
+
   test("denies only known unsupported selectors, not unrelated transaction fields or historical metadata", () => {
     const caps = { archive: false, blockTags: ["latest", "pending"] as const, debug: false, trace: false, maxLogBlockRange: 50, maxLogTopics: 4 };
     expect(supportsEvmRequest(caps, { method: "eth_call", params: [{ value: "0x123" }, "latest"] })).toBe(true);

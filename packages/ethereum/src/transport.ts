@@ -126,7 +126,7 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
       });
       const unsupported = new Set(config.unsupportedMethods ?? []);
       const supported = config.supportedMethods ? new Set(config.supportedMethods) : undefined;
-      if (unsupported.has("eth_chainId") || (supported && !supported.has("eth_chainId"))) {
+      if (options.verifyIdentity !== false && (unsupported.has("eth_chainId") || (supported && !supported.has("eth_chainId")))) {
         throw new Error("ethereum() endpoints must support eth_chainId verification. Use a separate submission connection for write-only sequencers.");
       }
       return {
