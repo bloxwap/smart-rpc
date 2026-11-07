@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@smart-rpc/core": ["../core/src/index.ts"],
+      "@smart-rpc/ethereum": ["../ethereum/src/index.ts"],
+      "@smart-rpc/hyperevm": ["../hyperevm/src/index.ts"],
+      "@smart-rpc/solana": ["../solana/src/index.ts"]
+    }
+  },
+  "include": ["src", "tests"]
+}

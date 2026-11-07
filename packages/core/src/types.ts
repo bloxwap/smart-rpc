@@ -1,0 +1,180 @@
+import type { BreakerOptions } from "./breaker.js";
+import type { BudgetConfig, BudgetOptions } from "./budget.js";
+import type { CacheOptions, CachePolicy, CacheStats } from "./cache.js";
+import type { EndpointSnapshot, RpcEvent } from "./events.js";
+import type { PinLatestOptions } from "./pin.js";
+import type { RaceOptions } from "./race.js";
+import type { ScoreConfig } from "./score.js";
+
+/** A JSON-RPC call. `chainId` is a CAIP-2 id such as `eip155:1` or `solana:mainnet`. */
+export interface RpcRequest {
+  chainId?: string | undefined;
+  method: string;
+  params?: unknown;
+  signal?: AbortSignal | undefined;
+}
+
+/** One registered transport inside {@link createSmartRpc}. */
+export interface SmartRpcTransport {
+  readonly chainIds: readonly string[];
+  request(request: RpcRequest): Promise<unknown>;
+  probe?: (() => Promise<void>) | undefined;
+  close?: (() => void) | undefined;
+  snapshot?: ((method?: string) => readonly EndpointSnapshot[]) | undefined;
+  onEvent?: ((listener: (event: RpcEvent) => void) => () => void) | undefined;
+}
+
+/** Calls one endpoint. Transports build this around viem or `fetch`. */
+export interface EndpointCall {
+  (request: { method: string; params?: unknown }, options?: { signal?: AbortSignal }): Promise<unknown>;
+}
+
+/** One endpoint the pool can route to. */
+export interface PoolEndpointConfig {
+  /** Public label. Default: `url`. */
+  id?: string | undefined;
+  url: string;
+  /** Routing weight above 0. Default: 1. */
+  weight?: number | undefined;
+  /** Sustained requests per second. Overrides the pool `budget` for this endpoint. */
+  rps?: number | undefined;
+  /** Bucket size for `rps`. Default: `max(1, ceil(rps * 2))`. */
+  burst?: number | undefined;
+  call: EndpointCall;
+  /** False when the endpoint cannot serve `method`. Default: every method. */
+  supports?: ((method: string) => boolean) | undefined;
+  /**
+   * Milliseconds a recent rate-limited response asked for in `Retry-After`.
+   * Reading it clears it. viem drops headers on some JSON-RPC errors, so HTTP transports keep a copy here.
+   */
+  retryAfter?: (() => number) | undefined;
+  /** Set when this endpoint has a known provider budget the pool should enforce. */
+  budget?: BudgetConfig | undefined;
+}
+
+/**
+ * Chain-specific hooks. Scoring, failover, and the breaker stay in the pool.
+ * Each transport supplies how to probe, how to recognize the chain, and which methods are safe.
+ */
+export interface ChainPolicy {
+  /** CAIP-2 chain ids this pool serves. */
+  chainIds: readonly string[];
+  /** Health probe method. EVM: `eth_blockNumber`. Solana: `getSlot`. */
+  probeMethod: string;
+  probeParams?: unknown;
+  /** Parse a probe result into a freshness unit (block or slot). Null when it is not a head. */
+  parseHead: (result: unknown) => number | null;
+  /** Pull a head out of some other call results. Default: probe method only. */
+  headFromResult?: ((method: string, result: unknown, params: unknown) => number | null) | undefined;
+  /** Chain-identity method. EVM: `eth_chainId`. Solana: `getGenesisHash`. */
+  identityMethod: string;
+  identityParams?: unknown;
+  expectedIdentity: unknown;
+  /** Null when the result is not an identity. */
+  parseIdentity: (result: unknown) => unknown;
+  identityEquals?: ((reported: unknown, expected: unknown) => boolean) | undefined;
+  isSafeMethod: (method: string) => boolean;
+  isRebroadcastMethod?: ((method: string) => boolean) | undefined;
+  shouldFailover?: ((error: Error) => boolean) | undefined;
+  /** A miss that should fail over without counting as a sick endpoint. EVM: block not held yet. */
+  isBenignMiss?: ((error: Error) => boolean) | undefined;
+  isAlreadyKnown?: ((error: Error) => boolean) | undefined;
+  /** Hash to return when a rebroadcast is answered "already known". */
+  rebroadcastResult?: ((method: string, params: unknown) => unknown) | undefined;
+  uncoalescedMethods?: ReadonlySet<string> | undefined;
+  cachePolicy?: CachePolicy | undefined;
+  /**
+   * Block-tag pinning. Default: off. EVM transports turn it on.
+   * Needs head tracking.
+   */
+  pin?: boolean | PinLatestOptions | undefined;
+  /** Freshness units per second for outlier comparison. Default: 2. */
+  maxUnitsPerSecond?: number | undefined;
+}
+
+export interface HeadLagOptions {
+  /** Freshness units of lag that do not change the score. Default: 2. */
+  maxLag?: number | undefined;
+  /** Milliseconds between health probes. `false` disables the timer. Default: 4000. */
+  probeInterval?: number | false | undefined;
+  /** Stop the probe timer after this many milliseconds without a request. `false` never stops it. Default: 60000. */
+  probeIdleTimeout?: number | false | undefined;
+  /** Heads older than this stop affecting the score. Default: 30000. */
+  staleMs?: number | undefined;
+  /**
+   * Units a head may lead the median of the other endpoints' fresh heads.
+   * A head further ahead is ignored. Default: 1000.
+   */
+  maxAhead?: number | undefined;
+}
+
+export interface HedgeOptions {
+  /** Minimum wait before a second endpoint is tried. Default: 250. */
+  minDelay?: number | undefined;
+  /** After three samples, hedge once the call exceeds this multiple of the tail. Default: 2. */
+  multiplier?: number | undefined;
+}
+
+/** Options for {@link createPool}. Defaults match the HyperEVM transport at 092b8f9. */
+export interface PoolOptions {
+  endpoints: readonly PoolEndpointConfig[];
+  policy: ChainPolicy;
+  /** Extra attempts after the first, for safe methods and rebroadcasts. Default: 2. */
+  retryCount?: number | undefined;
+  /**
+   * Wait between failovers, in milliseconds. Default: 0, so another endpoint is tried at once.
+   * Re-trying an endpoint that already failed this call waits a jittered exponential backoff from
+   * this base (100 when 0), capped at 2000.
+   */
+  retryDelay?: number | undefined;
+  /** Per-attempt deadline in milliseconds. Default: 10000. */
+  timeout?: number | undefined;
+  /** Score some methods separately. Default: true. */
+  perMethod?: boolean | undefined;
+  /** Deprioritize endpoints behind the best known head. Default: enabled, probing every 4s. */
+  headLag?: boolean | HeadLagOptions | undefined;
+  /** Send a second safe read when the first is slower than usual. Default: off. */
+  hedge?: boolean | HedgeOptions | undefined;
+  /**
+   * Send each safe read to the best verified endpoints at once. `true` races 2.
+   * Only the first attempt races. Default: on, width 2.
+   */
+  race?: boolean | RaceOptions | undefined;
+  /** `"best"` always uses the lowest score. `"p2c"` draws two and keeps the better one. Default: `"p2c"`. */
+  routing?: "best" | "p2c" | undefined;
+  /** Eject an endpoint after consecutive failures, or for a `Retry-After`. Default: enabled. */
+  breaker?: boolean | BreakerOptions | undefined;
+  /**
+   * Request budget for every endpoint without its own `rps`. `false` turns every budget off.
+   * Default: none, unless an endpoint sets `budget` or `rps`.
+   */
+  budget?: BudgetOptions | false | undefined;
+  /** Share identical in-flight safe reads. Default: true. */
+  coalesce?: boolean | undefined;
+  /** Answer safe reads from memory while they are fresh. Default: on when `policy.cachePolicy` is set, else off. */
+  cache?: boolean | CacheOptions | undefined;
+  /** Check chain identity once per endpoint before its first call. Default: true. */
+  verifyIdentity?: boolean | undefined;
+  /** Return true to stop failover. Terminal errors already stop it. */
+  shouldThrow?: ((error: Error) => boolean) | undefined;
+  onEvent?: ((event: RpcEvent) => void) | undefined;
+  /** Head probes send nothing while this returns false. Default: hidden browser tabs are inactive. */
+  isActive?: (() => boolean) | undefined;
+  score?: Partial<ScoreConfig> | undefined;
+  /** Clock used for latency, budgets, and the probe idle timeout. Tests inject this. Default: `Date.now`. */
+  now?: (() => number) | undefined;
+  /** Source of randomness for power-of-two-choices and backoff jitter. Default: `Math.random`. */
+  random?: (() => number) | undefined;
+}
+
+/** A routed pool. Register it with {@link createSmartRpc} or call `request` directly. */
+export interface RpcPool extends SmartRpcTransport {
+  readonly chainIds: readonly string[];
+  request(request: RpcRequest): Promise<unknown>;
+  probe(): Promise<void>;
+  close(): void;
+  snapshot(method?: string): readonly EndpointSnapshot[];
+  onEvent(listener: (event: RpcEvent) => void): () => void;
+  readonly endpoints: readonly { id: string; url: string; weight: number }[];
+  cacheStats(): CacheStats;
+}

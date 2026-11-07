@@ -1,0 +1,58 @@
+{
+  "name": "@bloxwap/smart-rpc",
+  "version": "0.1.0",
+  "description": "Unified smart RPC. One package: core at the root, chain transports on subpaths.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bloxwap/smart-rpc.git",
+    "directory": "packages/smart-rpc"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./solana": {
+      "types": "./dist/solana.d.ts",
+      "import": "./dist/solana.js"
+    },
+    "./ethereum": {
+      "types": "./dist/ethereum.d.ts",
+      "import": "./dist/ethereum.js"
+    },
+    "./hyperevm": {
+      "types": "./dist/hyperevm.d.ts",
+      "import": "./dist/hyperevm.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "viem": "^2.38.0"
+  },
+  "devDependencies": {
+    "@smart-rpc/core": "workspace:*",
+    "@smart-rpc/ethereum": "workspace:*",
+    "@smart-rpc/hyperevm": "workspace:*",
+    "@smart-rpc/solana": "workspace:*",
+    "tsup": "^8.5.0",
+    "typescript": "5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

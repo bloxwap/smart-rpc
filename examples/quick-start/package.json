@@ -1,0 +1,12 @@
+{
+  "name": "quick-start",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node src/main.ts"
+  },
+  "dependencies": {
+    "@bloxwap/smart-rpc": "workspace:*"
+  }
+}
