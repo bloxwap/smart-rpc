@@ -183,6 +183,8 @@ interface Stored {
   result: unknown;
   at: number;
   block: number | undefined;
+  /** True only when a pin or the result itself proves `block` is the execution height. */
+  exact?: boolean | undefined;
   bytes: number;
 }
 
@@ -369,7 +371,7 @@ export class ReadCache {
       const key = coalesceKey(method, params);
       return key === undefined
         ? undefined
-        : { kind: kind === "immutable" ? "immutable" : "latest", method, key, params };
+        : { kind: kind === "immutable" ? "immutable" : "latest", method, key, params: copy(params) };
     };
     if (!this.#config.immutableParams || !Array.isArray(params)) return compute();
     let methods = this.#plans.get(params);
@@ -464,7 +466,7 @@ export class ReadCache {
     if (plan.kind === "number") {
       if (plan.block === undefined || plan.exact === undefined) return undefined;
       const latest = this.#value(plan.key, "latest");
-      if (latest?.block === plan.block) {
+      if (latest?.block === plan.block && latest.exact === true) {
         return plan.immutable
           ? { result: latest.result, stale: 0 }
           : this.#fresh(latest, now, this.#head(plan.method, context));
@@ -546,12 +548,14 @@ export class ReadCache {
       kind: "latest",
       result: stored.result,
       block: stamped,
+      exact: ownBlock !== null || block !== undefined,
       at: now,
       bytes: stored.bytes,
     });
   }
 
   #watch(plan: CachePlan, now: number): HotKey | undefined {
+    if (this.#config.maxEntries === 0 || this.#config.maxBytes === 0) return undefined;
     const existing = this.#hot.get(plan.key);
     if (existing) {
       this.#hot.delete(plan.key);
