@@ -81,6 +81,12 @@ export type RpcEvent =
       endpoint: string;
     }
   | {
+      /** `persist.load` or `persist.save` failed, or loaded a snapshot that is not valid. Calls are unaffected. */
+      type: "persist";
+      operation: "load" | "save";
+      error: Error;
+    }
+  | {
       type: "cache";
       method: string;
       outcome: "hit" | "miss";

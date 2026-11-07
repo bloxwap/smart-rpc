@@ -5,6 +5,7 @@ import type { EndpointSnapshot, RpcEvent } from "./events.js";
 import type { PinLatestOptions } from "./pin.js";
 import type { RaceOptions } from "./race.js";
 import type { ScoreConfig } from "./score.js";
+import type { ScorePersistence, ScoreSnapshot } from "./warmstart.js";
 
 /** A JSON-RPC call. `chainId` is a CAIP-2 id such as `eip155:1` or `solana:mainnet`. */
 export interface RpcRequest {
@@ -187,7 +188,13 @@ export interface PoolOptions {
   /** Head probes send nothing while this returns false. Default: hidden browser tabs are inactive. */
   isActive?: (() => boolean) | undefined;
   score?: Partial<ScoreConfig> | undefined;
-  /** Clock used for latency, budgets, and the probe idle timeout. Tests inject this. Default: `Date.now`. */
+  /**
+   * Warm-start scores from storage. `load` runs once, on the instance's first request, and `save` runs at most every
+   * `saveInterval` and on `close()`. A load still pending at the first pick lands later, so it never delays or fails
+   * a call. Load and save errors fire a `persist` event. Use {@link localStoragePersistence} in a browser. Default: off.
+   */
+  persist?: ScorePersistence | undefined;
+  /** Clock used for latency, budgets, persistence freshness, and the probe idle timeout. Default: `Date.now`. */
   now?: (() => number) | undefined;
   /** Source of randomness for power-of-two-choices and backoff jitter. Default: `Math.random`. */
   random?: (() => number) | undefined;
@@ -202,6 +209,15 @@ export interface RpcPool extends SmartRpcTransport {
   probe(): Promise<void>;
   close(): void;
   snapshot(method?: string): readonly EndpointSnapshot[];
+  /** Learned latency, tail, and error books by endpoint label. Transient routing state is never included. */
+  scores(): ScoreSnapshot;
+  /**
+   * Seed books that have no samples yet from a {@link ScoreSnapshot} or its JSON, which may come from untrusted storage.
+   * Unknown endpoints, invalid books, and books older than `persist.maxAge` are ignored, and values are clamped.
+   * A seeded book counts as at most two samples, and the endpoint's first live sample replaces it.
+   * True when a book was seeded.
+   */
+  restoreScores(snapshot: unknown): boolean;
   onEvent(listener: (event: RpcEvent) => void): () => void;
   readonly endpoints: readonly { id: string; url: string; weight: number }[];
   cacheStats(): CacheStats;

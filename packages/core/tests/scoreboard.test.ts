@@ -49,6 +49,27 @@ describe("power of two choices", () => {
     expect(after?.methods["*"]?.ewma).toBe(before?.methods["*"]?.ewma);
     expect(after?.methods["*"]?.n).toBe(before?.methods["*"]?.n);
   });
+
+  test("a seeded prior cannot set a hedge delay and the first live sample replaces it", () => {
+    const board = new Scoreboard(endpoints, {
+      perMethod: true,
+      headLag: false,
+      maxLag: 2,
+      staleMs: 30_000,
+      now: () => 0,
+    });
+    const prior = { ewma: 20, tail: 20, error: 0, n: 2 };
+    expect(board.seed("fast", "*", prior, 123)).toBe(true);
+    expect(board.seed("fast", "eth_call", prior, 123)).toBe(true);
+    expect(board.hedgeDelay("fast", "eth_call", 250, 2)).toBe(250);
+    expect(board.books().filter((entry) => entry.id === "fast").every((entry) => entry.at === 123)).toBe(true);
+    board.success("fast", "eth_call", 300, true);
+    expect(board.snapshot("eth_call").find((row) => row.id === "fast")?.methods).toEqual({
+      "*": { ewma: 300, tail: 300, error: 0, n: 1 },
+      eth_call: { ewma: 300, tail: 300, error: 0, n: 1 },
+    });
+    expect(board.books().filter((entry) => entry.id === "fast").every((entry) => entry.at === undefined)).toBe(true);
+  });
 });
 
 describe("heads", () => {

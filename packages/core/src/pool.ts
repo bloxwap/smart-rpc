@@ -56,6 +56,7 @@ import type {
   RpcPool,
   RpcRequest,
 } from "./types.js";
+import { type ScoreSnapshot, WarmStart } from "./warmstart.js";
 
 interface BuiltEndpoint {
   id: string;
@@ -186,6 +187,14 @@ export function createPool(options: PoolOptions): RpcPool {
       spent: (id: string): boolean => !budgets.has(id),
     },
   );
+  const warm = new WarmStart(board, {
+    persistence: options.persist,
+    ids: built.map((endpoint) => endpoint.id),
+    latencyCapMs: timeout,
+    loadTimeoutMs: timeout,
+    now,
+    emit,
+  });
   const servable = (id: string, method: string): boolean =>
     gates.get(id)?.verified === true && !quarantined(id) && !breaker.isOpen(id) && byId.get(id)?.supports(method) === true && !learnedUnsupported.get(id)?.has(method);
   const pinConfig = resolvePin(policy.pin ?? false, false);
@@ -751,6 +760,8 @@ export function createPool(options: PoolOptions): RpcPool {
       throw new UnknownChainError(request.chainId);
     }
     touch();
+    const warming = warm.touch();
+    if (warming) await warming;
     const method = request.method;
     const idempotent = !isStateful(method) && policy.isSafeMethod(method);
     const rebroadcast = policy.isRebroadcastMethod?.(method) ?? false;
@@ -807,12 +818,15 @@ export function createPool(options: PoolOptions): RpcPool {
         ejected: breaker.isOpen(entry.id),
         tokens: budgets.remaining(entry.id),
       })),
+    scores: (): ScoreSnapshot => warm.scores(),
+    restoreScores: (snapshot: unknown): boolean => warm.restore(snapshot),
     probe,
     cacheStats: (): CacheStats => cache?.stats() ?? { hits: 0, misses: 0, refreshes: 0, entries: 0, bytes: 0, hotKeys: 0 },
     close(): void {
       if (closed) return;
       closed = true;
       stopProbes();
+      warm.close();
       handles.clear();
       for (const endpoint of built) endpoint.close?.();
     },

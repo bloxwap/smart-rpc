@@ -120,6 +120,15 @@ export {
   type ScoreboardEndpoint,
   type ScoreboardOptions,
 } from "./scoreboard.js";
+export {
+  DEFAULT_SCORE_MAX_AGE_MS,
+  DEFAULT_SCORE_SAVE_INTERVAL_MS,
+  localStoragePersistence,
+  WarmStart,
+  type ScoreBook,
+  type ScorePersistence,
+  type ScoreSnapshot,
+} from "./warmstart.js";
 export type {
   ChainPolicy,
   EndpointCall,
