@@ -116,4 +116,64 @@ describe("viem wire batching with separate caller cancellation", () => {
       expect(sizes).toEqual([2, 1]);
     } finally { connection.close(); }
   });
+
+  test.each(["window", "size"] as const)("does not couple cancellation across a batch %s boundary", async (boundary) => {
+    let sentA!: () => void;
+    const startedA = new Promise<void>((resolve) => { sentA = resolve; });
+    let sentB!: () => void;
+    const startedB = new Promise<void>((resolve) => { sentB = resolve; });
+    const dispatched = new Map<string, { signal: AbortSignal; body: Wire[]; finish: () => void }>();
+    const connection = connectViem(`https://boundary-${boundary}.example`, {
+      timeout: 1_000, batch: { batchSize: boundary === "size" ? 2 : 10, wait: 1 },
+      fetchFn: async (_input, init) => new Promise<Response>((resolve, reject) => {
+        const body = JSON.parse(String(init?.body)) as Wire[];
+        const key = body.some((item) => item.method === "eth_chainId") ? "B" : "A";
+        const signal = init!.signal!;
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        dispatched.set(key, { signal, body, finish: () => resolve(responseFor(body)) });
+        if (key === "A") sentA(); else sentB();
+      }),
+    });
+    const first = new AbortController();
+    const second = new AbortController();
+    try {
+      const batchA = Promise.allSettled([
+        connection.call({ method: "eth_blockNumber" }, { signal: first.signal }),
+        connection.call({ method: "eth_gasPrice" }, { signal: second.signal }),
+      ]);
+      if (boundary === "window") await startedA;
+      const batchB = connection.call({ method: "eth_chainId" });
+      await Promise.all([startedA, startedB]);
+      expect(dispatched.get("A")?.body).toHaveLength(2);
+      expect(dispatched.get("B")?.body).toHaveLength(1);
+      first.abort();
+      expect(dispatched.get("A")?.signal.aborted).toBe(false);
+      second.abort();
+      expect(dispatched.get("A")?.signal.aborted).toBe(true);
+      expect(dispatched.get("B")?.signal.aborted).toBe(false);
+      expect((await batchA).every((result) => result.status === "rejected")).toBe(true);
+      dispatched.get("B")!.finish();
+      await expect(batchB).resolves.toBe("0x10");
+    } finally { connection.close(); }
+  });
+
+  test("closing a connection aborts every outstanding batch window", async () => {
+    const signals: AbortSignal[] = [];
+    const starts: (() => void)[] = [];
+    const ready = [0, 1].map(() => new Promise<void>((resolve) => starts.push(resolve)));
+    const connection = connectViem("https://close-batches.example", {
+      timeout: 1_000, batch: { batchSize: 1, wait: 1 },
+      fetchFn: async (_input, init) => new Promise<Response>((_resolve, reject) => {
+        const signal = init!.signal!;
+        signals.push(signal);
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        starts[signals.length - 1]!();
+      }),
+    });
+    const results = Promise.allSettled([connection.call({ method: "eth_blockNumber" }), connection.call({ method: "eth_gasPrice" })]);
+    await Promise.all(ready);
+    connection.close();
+    expect(signals.every((signal) => signal.aborted)).toBe(true);
+    expect((await results).every((result) => result.status === "rejected")).toBe(true);
+  });
 });

@@ -58,7 +58,7 @@ export function connectViem(url: string, options: ViemConnectionOptions): ViemCo
       });
   const instance = transport({ retryCount: 0, timeout: options.timeout });
   const request = instance.request.bind(instance);
-  const batches = new BatchCancellation();
+  const batches = new BatchCancellation(options.batch);
   const subscriptions = new Set<EthereumSubscription>();
   let closed = false;
   return {
@@ -124,22 +124,55 @@ export function connectViem(url: string, options: ViemConnectionOptions): ViemCo
 interface BatchGroup {
   controller: AbortController;
   members: number;
+  scheduled: number;
+  timer?: ReturnType<typeof setTimeout> | undefined;
 }
 
 /** Cancellation ownership around viem's scheduler, without implementing another batcher. */
 class BatchCancellation {
   #current: BatchGroup | undefined;
+  readonly #groups = new Set<BatchGroup>();
+  readonly #wait: number;
+  readonly #size: number;
+
+  constructor(options: ViemConnectionOptions["batch"]) {
+    const config = typeof options === "object" ? options : {};
+    this.#wait = config.wait ?? 0;
+    this.#size = config.batchSize ?? 1_000; // viem's default wire batch size.
+    if (!Number.isFinite(this.#wait) || this.#wait < 0) throw new Error("batch.wait must be a non-negative finite number.");
+    if (!Number.isSafeInteger(this.#size) || this.#size < 1) throw new Error("batch.batchSize must be a positive safe integer.");
+  }
+
+  #seal(group: BatchGroup): void {
+    if (this.#current === group) this.#current = undefined;
+    if (group.timer !== undefined) clearTimeout(group.timer);
+    group.timer = undefined;
+  }
+
+  #open(): BatchGroup {
+    const group: BatchGroup = { controller: new AbortController(), members: 0, scheduled: 0 };
+    this.#current = group;
+    this.#groups.add(group);
+    // This boundary is scheduled before viem's dispatch timer, so a later window
+    // can never reuse the signal belonging to an already-dispatched HTTP batch.
+    group.timer = setTimeout(() => this.#seal(group), this.#wait);
+    return group;
+  }
 
   close(): void {
-    this.#current?.controller.abort(new Error("Connection is closed."));
-    this.#current = undefined;
+    for (const group of this.#groups) {
+      this.#seal(group);
+      group.controller.abort(new Error("Connection is closed."));
+    }
+    this.#groups.clear();
   }
 
   run<T>(signal: AbortSignal | undefined, send: (signal: AbortSignal) => Promise<T>): Promise<T> {
     if (signal?.aborted) return Promise.reject(abortError(signal));
-    const group = this.#current ?? { controller: new AbortController(), members: 0 };
-    this.#current = group;
+    const group = this.#current ?? this.#open();
     group.members += 1;
+    group.scheduled += 1;
+    if (group.scheduled === this.#size) this.#seal(group);
     return new Promise<T>((resolve, reject) => {
       let released = false;
       const release = (): void => {
@@ -148,9 +181,10 @@ class BatchCancellation {
         signal?.removeEventListener("abort", onAbort);
         group.members -= 1;
         if (group.members === 0) {
-          if (this.#current === group) this.#current = undefined;
+          this.#seal(group);
+          this.#groups.delete(group);
           // Completed participants no longer need the request either. Only the last
-          // participant can abort the wire request shared by this group's batches.
+          // participant can abort the single wire batch owned by this group.
           group.controller.abort();
         }
       };
