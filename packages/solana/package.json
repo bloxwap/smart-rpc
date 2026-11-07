@@ -1,7 +1,8 @@
 {
   "name": "@smart-rpc/solana",
   "version": "0.1.0",
-  "description": "Solana JSON-RPC transport for smart-rpc. Probes with getSlot and quarantines on getGenesisHash.",
+  "private": true,
+  "description": "Private workspace package. Compiled into @bloxwap/smart-rpc/solana.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -19,9 +20,6 @@
     "dist",
     "src"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json --noEmit",

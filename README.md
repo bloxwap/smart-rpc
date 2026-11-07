@@ -4,13 +4,13 @@ One JSON-RPC client that routes by [CAIP-2](https://github.com/ChainAgnostic/CAI
 
 Shared routing lives in `@smart-rpc/core`: EWMA scoring, power-of-two-choices, a top-2 race for safe reads, a circuit breaker, retries, per-endpoint budgets, coalescing, a freshness-bounded cache, cancellation, and health probes. Chain packages are thin transports. They supply the probe, the chain-identity check, and which methods are safe to retry. Nothing in the core imports a chain.
 
-The root package `smart-rpc` re-exports the core and nothing else. Transports are subpaths, so a bundler only includes a chain you import, and constructing the client does not register a transport you did not pass.
+Install one package. The root entry re-exports the core and nothing else. Transports are subpaths of that same package, so a bundler only includes a chain you import, and importing the root does not register every transport.
 
 ```ts
-import { createSmartRpc } from "smart-rpc";
-import { ethereum } from "smart-rpc/ethereum";
-import { hyperevm } from "smart-rpc/hyperevm";
-import { solana } from "smart-rpc/solana";
+import { createSmartRpc } from "@bloxwap/smart-rpc";
+import { ethereum } from "@bloxwap/smart-rpc/ethereum";
+import { hyperevm } from "@bloxwap/smart-rpc/hyperevm";
+import { solana } from "@bloxwap/smart-rpc/solana";
 
 const rpc = createSmartRpc({
   transports: [ethereum(), hyperevm(), solana()],
@@ -25,29 +25,31 @@ const block = await rpc.request({
 
 `eip155:999` is HyperEVM. `eip155:1` is Ethereum mainnet. `solana:mainnet` is Solana. A chain id only reaches the transport that registered it.
 
-## Install the transports you use
+## Install
 
 ```sh
-pnpm add smart-rpc @smart-rpc/hyperevm
+npm install @bloxwap/smart-rpc
 ```
-
-`@smart-rpc/ethereum`, `@smart-rpc/hyperevm`, and `@smart-rpc/solana` are optional peer dependencies of `smart-rpc`. Install the ones you import. `@smart-rpc/ethereum` and `@smart-rpc/hyperevm` depend on `viem` and call `http()` / `webSocket()` for each endpoint. `@smart-rpc/solana` speaks JSON-RPC over `fetch`.
-
-You can also depend on a chain package directly and skip the umbrella:
 
 ```sh
-pnpm add @smart-rpc/solana
+pnpm add @bloxwap/smart-rpc
 ```
 
-## Packages
+```sh
+yarn add @bloxwap/smart-rpc
+```
 
-| Package | Role |
+That install is the whole library. Core, Ethereum, HyperEVM, and Solana are compiled into `@bloxwap/smart-rpc`. There is no second package to add for a chain. `viem` is a dependency of this package, used by the Ethereum and HyperEVM subpaths as `http()` / `webSocket()` child transports. Solana speaks JSON-RPC over `fetch`. A bundler that only imports `@bloxwap/smart-rpc/solana` does not include the EVM transports.
+
+## Layout
+
+| Path | Role |
 | --- | --- |
-| `@smart-rpc/core` | Scoring, routing, breaker, retries, budgets, cache, pin, probes |
-| `@smart-rpc/ethereum` | EVM JSON-RPC. Probe `eth_blockNumber`. Quarantine on `eth_chainId`. Pins `"latest"`. |
-| `@smart-rpc/hyperevm` | `ethereum()` with chain `eip155:999` / `eip155:998` and `https://rpc.hyperliquid.xyz/evm` |
-| `@smart-rpc/solana` | Probe `getSlot`. Quarantine on `getGenesisHash`. |
-| `smart-rpc` | Re-exports core at `.` and each transport at a subpath |
+| `@bloxwap/smart-rpc` | Published package. Root export is the core. |
+| `@bloxwap/smart-rpc/ethereum` | EVM JSON-RPC. Probe `eth_blockNumber`. Quarantine on `eth_chainId`. Pins `"latest"`. |
+| `@bloxwap/smart-rpc/hyperevm` | Ethereum transport with chain `eip155:999` / `eip155:998` and `https://rpc.hyperliquid.xyz/evm` |
+| `@bloxwap/smart-rpc/solana` | Probe `getSlot`. Quarantine on `getGenesisHash`. |
+| `packages/core`, `packages/ethereum`, `packages/hyperevm`, `packages/solana` | Private workspace packages. Not published. The release build compiles them into `@bloxwap/smart-rpc`. |
 | `examples/quick-start` | The snippet above |
 
 HyperEVM mainnet is chain id 999 (`eip155:999`), default URL `https://rpc.hyperliquid.xyz/evm`. Testnet is chain id 998 (`eip155:998`), default URL `https://rpc.hyperliquid-testnet.xyz/evm`. `hyperevm()` with no arguments serves both. The official mainnet URL keeps the reference budget of 1.5 requests per second, burst 3.
@@ -75,10 +77,10 @@ createSmartRpc({ transports: [hyperevm({ endpoints: ["https://rpc.hyperliquid.xy
 
 ## Add a transport
 
-Implement the chain hooks and hand the pool to `createSmartRpc`. Do not import it from `smart-rpc`'s root.
+An app can register a custom transport without a new package. `createPool` is exported from the root. Do not import a built-in chain from the root; import its subpath.
 
 ```ts
-import { createPool, createSmartRpc, type ChainPolicy } from "smart-rpc";
+import { createPool, createSmartRpc, type ChainPolicy } from "@bloxwap/smart-rpc";
 
 const policy: ChainPolicy = {
   chainIds: ["eip155:8453"],
@@ -117,7 +119,9 @@ const rpc = createSmartRpc({ transports: [base] });
 await rpc.request({ chainId: "eip155:8453", method: "eth_blockNumber", params: [] });
 ```
 
-For an EVM chain, prefer `@smart-rpc/ethereum` with `chainId` and `endpoints`. It already wires viem, pinning, and `eth_chainId`. A new package should depend on `@smart-rpc/core` (and `@smart-rpc/ethereum` when it is an EVM chain), set `"sideEffects": false`, and export a factory that returns a transport. Add a subpath under `packages/smart-rpc/src` that re-exports that factory, and add the package as an optional peer of `smart-rpc`. The root `src/index.ts` stays a re-export of `@smart-rpc/core` only.
+For an EVM chain that viem already speaks, prefer `ethereum({ chainId, endpoints })` from `@bloxwap/smart-rpc/ethereum`. It wires `http()` / `webSocket()`, pinning, and `eth_chainId`.
+
+To ship a new chain inside this repo, add a private workspace package and a subpath file under `packages/smart-rpc/src` that re-exports its factory. The release build compiles that subpath into `@bloxwap/smart-rpc`. Leave `src/index.ts` as a re-export of the core only, so the new chain is not imported by the package root.
 
 ## Develop
 

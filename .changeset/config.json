@@ -7,5 +7,12 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["quick-start", "smart-rpc-workspace"]
+  "ignore": [
+    "quick-start",
+    "smart-rpc-workspace",
+    "@smart-rpc/core",
+    "@smart-rpc/ethereum",
+    "@smart-rpc/hyperevm",
+    "@smart-rpc/solana"
+  ]
 }

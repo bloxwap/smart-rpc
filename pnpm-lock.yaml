@@ -23,16 +23,7 @@ importers:
 
   examples/quick-start:
     dependencies:
-      '@smart-rpc/ethereum':
-        specifier: workspace:*
-        version: link:../../packages/ethereum
-      '@smart-rpc/hyperevm':
-        specifier: workspace:*
-        version: link:../../packages/hyperevm
-      '@smart-rpc/solana':
-        specifier: workspace:*
-        version: link:../../packages/solana
-      smart-rpc:
+      '@bloxwap/smart-rpc':
         specifier: workspace:*
         version: link:../../packages/smart-rpc
 
@@ -88,10 +79,13 @@ importers:
 
   packages/smart-rpc:
     dependencies:
+      viem:
+        specifier: ^2.38.0
+        version: 2.57.16(typescript@5.9.3)
+    devDependencies:
       '@smart-rpc/core':
         specifier: workspace:*
         version: link:../core
-    devDependencies:
       '@smart-rpc/ethereum':
         specifier: workspace:*
         version: link:../ethereum

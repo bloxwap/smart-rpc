@@ -1,7 +1,8 @@
 {
   "name": "@smart-rpc/hyperevm",
   "version": "0.1.0",
-  "description": "HyperEVM transport. The ethereum transport with chain ids 999 and 998 and the public Hyperliquid RPC.",
+  "private": true,
+  "description": "Private workspace package. Compiled into @bloxwap/smart-rpc/hyperevm.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -19,9 +20,6 @@
     "dist",
     "src"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json --noEmit",

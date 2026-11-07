@@ -1,17 +1,31 @@
 # Folding smart-hyperevm and smart-solana into smart-rpc
 
-This is the map for moving [bloxwap/smart-hyperevm](https://github.com/bloxwap/smart-hyperevm) (`092b8f9`) and [bloxwap/smart-solana](https://github.com/bloxwap/smart-solana) (`ff5891a`) onto this repo. v1 is the shared router plus thin transports. It is not a drop-in rename of either package.
+This is the map for moving [bloxwap/smart-hyperevm](https://github.com/bloxwap/smart-hyperevm) (`092b8f9`) and [bloxwap/smart-solana](https://github.com/bloxwap/smart-solana) (`ff5891a`) onto this repo. v1 is one published package, `@bloxwap/smart-rpc`, with the shared router and thin transports compiled in. It is not a drop-in rename of either package.
+
+Callers install that package only:
+
+```sh
+npm install @bloxwap/smart-rpc
+```
+
+```ts
+import { createSmartRpc } from "@bloxwap/smart-rpc";
+import { hyperevm } from "@bloxwap/smart-rpc/hyperevm";
+import { solana } from "@bloxwap/smart-rpc/solana";
+```
+
+The workspace packages below are private. They are how the repo is organized. They are not on npm, and they are not peer dependencies. The release build of `@bloxwap/smart-rpc` compiles them into `dist/index.js` and the subpath entries.
 
 ## Where the code goes
 
-| Today | Here |
-| --- | --- |
-| `smart-hyperevm` `transport/_score.ts`, `_breaker.ts`, `_race.ts`, `_budget.ts`, `_coalesce.ts`, `_pin.ts`, `_scoreboard.ts`, the send loop in `transport/mod.ts` | `@smart-rpc/core` |
-| `transport/_methods.ts` (idempotency, reverts, block-not-held) | `@smart-rpc/core` `evm-methods.ts`, passed in by `@smart-rpc/ethereum` |
-| viem `http()` / `webSocket()` child transports, `eth_chainId`, `eth_blockNumber` | `@smart-rpc/ethereum` |
-| Chain 999 / 998, `https://rpc.hyperliquid.xyz/evm`, official 1.5 rps burst 3, HyperCore precompile pin-skip | `@smart-rpc/hyperevm`, which calls `ethereum()` |
-| `smart-solana` method safety, genesis hashes, default public endpoints, `getSlot` / `getGenesisHash` | `@smart-rpc/solana` |
-| Ranked public registry, warm-start persistence, the rolling `eth_getLogs` index | Not in v1. Leave them in smart-hyperevm until a follow-up moves the registry in as data the HyperEVM transport loads. |
+| Today | In this repo | Published as |
+| --- | --- | --- |
+| `smart-hyperevm` `transport/_score.ts`, `_breaker.ts`, `_race.ts`, `_budget.ts`, `_coalesce.ts`, `_pin.ts`, `_scoreboard.ts`, the send loop in `transport/mod.ts` | private `@smart-rpc/core` | `@bloxwap/smart-rpc` |
+| `transport/_methods.ts` (idempotency, reverts, block-not-held) | private `@smart-rpc/core` `evm-methods.ts`, passed in by the ethereum transport | `@bloxwap/smart-rpc` |
+| viem `http()` / `webSocket()` child transports, `eth_chainId`, `eth_blockNumber` | private `@smart-rpc/ethereum` | `@bloxwap/smart-rpc/ethereum` |
+| Chain 999 / 998, `https://rpc.hyperliquid.xyz/evm`, official 1.5 rps burst 3, HyperCore precompile pin-skip | private `@smart-rpc/hyperevm`, which calls `ethereum()` | `@bloxwap/smart-rpc/hyperevm` |
+| `smart-solana` method safety, genesis hashes, default public endpoints, `getSlot` / `getGenesisHash` | private `@smart-rpc/solana` | `@bloxwap/smart-rpc/solana` |
+| Ranked public registry, warm-start persistence, the rolling `eth_getLogs` index | Not in v1. Leave them in smart-hyperevm until a follow-up moves the registry in as data the HyperEVM transport loads. | — |
 
 Callers that do `createPublicClient({ transport: smartHyperevm() })` need an adapter. v1's public call is `rpc.request({ chainId, method, params })`. The ethereum transport still uses viem `http()` and `webSocket()` as the child of each endpoint. A later `asViemTransport(pool)` can wrap `createTransport` without moving policy back into the chain package.
 
@@ -46,10 +60,10 @@ Score persistence (`_warmstart.ts`, `localStoragePersistence`) is not ported. A 
 
 ## Suggested order
 
-1. Point new callers at `createSmartRpc` and the subpath for the chain they use. Keep smart-hyperevm and smart-solana published until those callers move.
-2. Add a viem `Transport` adapter in `@smart-rpc/ethereum` that delegates to the pool, so `createPublicClient` sites can switch without rewriting call sites. Map `smartHyperevm({ endpoints, onEvent })` onto `hyperevm({ endpoints, onEvent })`.
-3. Move `registry/nodes.json` into `@smart-rpc/hyperevm` and use eligible HTTP URLs as the default endpoint list, keeping the official budget.
-4. Port the log index and warm-start into core behind the existing cache and scoreboard hooks.
-5. Replace smart-solana's transport internals with `@smart-rpc/solana`. Keep its cluster endpoint list if it is ahead of the short default in this repo. Do not bring its breaker or backoff numbers back.
+1. Point new callers at `npm install @bloxwap/smart-rpc` and the subpath for the chain they use (`@bloxwap/smart-rpc/hyperevm`, `@bloxwap/smart-rpc/solana`). Keep smart-hyperevm and smart-solana published until those callers move. Do not publish the private workspace packages.
+2. Add a viem `Transport` adapter on the ethereum subpath that delegates to the pool, so `createPublicClient` sites can switch without rewriting call sites. Map `smartHyperevm({ endpoints, onEvent })` onto `hyperevm({ endpoints, onEvent })` from `@bloxwap/smart-rpc/hyperevm`.
+3. Move `registry/nodes.json` into the private HyperEVM workspace package and use eligible HTTP URLs as the default endpoint list, keeping the official budget. It still ships only through `@bloxwap/smart-rpc/hyperevm`.
+4. Port the log index and warm-start into the private core package behind the existing cache and scoreboard hooks.
+5. Replace smart-solana's transport internals with the Solana code in this repo. Keep its cluster endpoint list if it is ahead of the short default here. Do not bring its breaker or backoff numbers back.
 
 Until step 2, a process that needs both a viem client and this router should use this router for new calls and leave the old transport in place for the viem client. Do not run both against the same provider budget unless each has its own `budget`.

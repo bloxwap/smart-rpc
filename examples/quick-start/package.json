@@ -7,9 +7,6 @@
     "start": "node src/main.ts"
   },
   "dependencies": {
-    "@smart-rpc/ethereum": "workspace:*",
-    "@smart-rpc/hyperevm": "workspace:*",
-    "@smart-rpc/solana": "workspace:*",
-    "smart-rpc": "workspace:*"
+    "@bloxwap/smart-rpc": "workspace:*"
   }
 }

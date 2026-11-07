@@ -1,7 +1,8 @@
 {
   "name": "@smart-rpc/ethereum",
   "version": "0.1.0",
-  "description": "Ethereum JSON-RPC transport for smart-rpc. Child connections reuse viem http() and webSocket().",
+  "private": true,
+  "description": "Private workspace package. Compiled into @bloxwap/smart-rpc/ethereum. Child connections reuse viem http() and webSocket().",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -19,9 +20,6 @@
     "dist",
     "src"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json --noEmit",

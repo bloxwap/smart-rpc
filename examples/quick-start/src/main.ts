@@ -3,10 +3,10 @@
  *
  * Run with `pnpm --filter quick-start start` after `pnpm build`.
  */
-import { createSmartRpc } from "smart-rpc";
-import { ethereum } from "smart-rpc/ethereum";
-import { hyperevm } from "smart-rpc/hyperevm";
-import { solana } from "smart-rpc/solana";
+import { createSmartRpc } from "@bloxwap/smart-rpc";
+import { ethereum } from "@bloxwap/smart-rpc/ethereum";
+import { hyperevm } from "@bloxwap/smart-rpc/hyperevm";
+import { solana } from "@bloxwap/smart-rpc/solana";
 
 const rpc = createSmartRpc({
   transports: [ethereum(), hyperevm(), solana()],
