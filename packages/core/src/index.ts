@@ -98,6 +98,7 @@ export {
   type RacePool,
 } from "./race.js";
 export { createSmartRpc, type SmartRpc } from "./router.js";
+export type { PublicRpcEndpoint } from "./registry.js";
 export {
   defaultScoreConfig,
   emptyStat,

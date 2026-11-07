@@ -3,8 +3,10 @@ export { isSafeSolanaMethod, isSolanaRebroadcast, parseSlot, solanaCachePolicy }
 export {
   DEVNET_ENDPOINTS,
   DEVNET_GENESIS_HASH,
+  DEVNET_REGISTRY,
   MAINNET_ENDPOINTS,
   MAINNET_GENESIS_HASH,
+  MAINNET_REGISTRY,
   SOLANA_DEVNET_CAIP,
   SOLANA_DEVNET_GENESIS_CAIP,
   SOLANA_MAINNET_CAIP,
@@ -13,6 +15,7 @@ export {
   SOLANA_TESTNET_GENESIS_CAIP,
   TESTNET_ENDPOINTS,
   TESTNET_GENESIS_HASH,
+  TESTNET_REGISTRY,
   defaultChainIds,
   defaultEndpoints,
   defaultGenesisHash,

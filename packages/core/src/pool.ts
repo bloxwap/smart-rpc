@@ -212,7 +212,7 @@ export function createPool(options: PoolOptions): RpcPool {
     if (!gate || gate.verified) return Promise.resolve(undefined);
     if (gate.mismatch) return Promise.resolve(gate.mismatch);
     const pending = gate.pending ?? startCheck(endpoint, gate);
-    return withDeadline(pending, timeout).catch((error: unknown): Error => {
+    return pending.catch((error: unknown): Error => {
       if (gate.pending === pending) gate.pending = undefined;
       return toError(error);
     });
@@ -220,9 +220,14 @@ export function createPool(options: PoolOptions): RpcPool {
 
   const startCheck = (endpoint: BuiltEndpoint, gate: ChainGate): Promise<Error | undefined> => {
     const started = now();
+    // Identity checks are shared by concurrent callers. Only their own deadline,
+    // not one caller's cancellation, aborts the upstream request.
+    const controller = new AbortController();
     budgets.take(endpoint.id);
     const pending = withDeadline(
-      endpoint.call({ method: policy.identityMethod, params: policy.identityParams }),
+      Promise.resolve().then(() =>
+        endpoint.call({ method: policy.identityMethod, params: policy.identityParams }, { signal: controller.signal }),
+      ),
       timeout,
     ).then(
       (result): Error | undefined => {
@@ -245,6 +250,7 @@ export function createPool(options: PoolOptions): RpcPool {
         });
         return gate.mismatch;
       },
+    ).catch(
       (error: unknown): Error => {
         const wrapped = toError(error);
         const latencyMs = Math.max(0, now() - started);
@@ -261,7 +267,7 @@ export function createPool(options: PoolOptions): RpcPool {
         if (!terminal) openCircuit(endpoint, wrapped, false);
         return wrapped;
       },
-    );
+    ).finally(() => controller.abort());
     gate.pending = pending;
     void pending.finally(() => {
       if (gate.pending === pending) gate.pending = undefined;
@@ -336,7 +342,7 @@ export function createPool(options: PoolOptions): RpcPool {
     emit({ type: "request", endpoint: endpoint.url, method });
     const started = now();
     const requestPromise = Promise.resolve().then(() =>
-      target.call({ method, params }, parent ? { signal: parent } : undefined),
+      target.call({ method, params }, { signal: controller.signal }),
     );
     const abortPromise = new Promise<never>((_resolve, reject) => {
       const fail = (): void => reject(abortError(controller.signal));
@@ -606,13 +612,20 @@ export function createPool(options: PoolOptions): RpcPool {
 
   let closed = false;
   let probing: Promise<void> | undefined;
-  const probe = (): Promise<void> => {
+  const runProbe = (reserveToken: boolean): Promise<void> => {
     if (closed) return Promise.resolve();
+    if (probing) return probing;
+    // Background maintenance leaves one token for a foreground call. This matters
+    // for low-quota public RPCs whose refill is slower than the probe interval.
+    const funded = (id: string): boolean => {
+      const remaining = budgets.remaining(id);
+      return remaining === null || remaining >= (reserveToken ? 2 : 1);
+    };
     const pending = built.map((endpoint) =>
-      breaker.isOpen(endpoint.id) || !endpoint.supports(policy.probeMethod) || !budgets.has(endpoint.id)
+      breaker.isOpen(endpoint.id) || !endpoint.supports(policy.probeMethod) || !funded(endpoint.id)
         ? Promise.resolve()
         : checkChain(endpoint).then((reason) =>
-            reason || !budgets.has(endpoint.id)
+            reason || !funded(endpoint.id)
               ? undefined
               : start(endpoint, policy.probeMethod, policy.probeParams, undefined, false, false).promise.then(
                   () => undefined,
@@ -627,6 +640,7 @@ export function createPool(options: PoolOptions): RpcPool {
     });
     return done;
   };
+  const probe = (): Promise<void> => runProbe(false);
 
   const probeEvery =
     headLag.enabled && headLag.probeInterval !== false && headLag.probeInterval > 0 ? headLag.probeInterval : 0;
@@ -646,7 +660,7 @@ export function createPool(options: PoolOptions): RpcPool {
       return;
     }
     if (!activity.active()) return;
-    void probe();
+    void runProbe(true);
   };
   const touch = (): void => {
     lastRequestAt = now();

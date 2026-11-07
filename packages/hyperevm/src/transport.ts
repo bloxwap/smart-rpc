@@ -2,7 +2,7 @@
  * HyperEVM transport.
  *
  * A factory around {@link ethereum} with HyperEVM defaults: chain `eip155:999` and
- * `eip155:998`, `https://rpc.hyperliquid.xyz/evm`, HyperCore precompile pin-skip, and
+ * `eip155:998`, source-backed public endpoint registries, HyperCore precompile pin-skip, and
  * the official RPC's 1.5 rps / burst 3 budget from smart-hyperevm at 092b8f9.
  * @module
  */
@@ -18,6 +18,14 @@ import {
   type EthereumOptions,
 } from "@smart-rpc/ethereum";
 
+import {
+  HYPEREVM_MAINNET_REGISTRY,
+  HYPEREVM_RPC_URL,
+  HYPEREVM_TESTNET_REGISTRY,
+} from "./registry.js";
+
+export { HYPEREVM_RPC_URL, HYPEREVM_TESTNET_RPC_URL } from "./registry.js";
+
 /** HyperEVM mainnet chain id. */
 export const HYPEREVM_CHAIN_ID = 999;
 
@@ -30,21 +38,15 @@ export const HYPEREVM_MAINNET_CAIP = "eip155:999";
 /** CAIP-2 id for HyperEVM testnet. */
 export const HYPEREVM_TESTNET_CAIP = "eip155:998";
 
-/** Official HyperEVM HTTP RPC. The reference keeps this under the per-IP limit at 1.5 rps, burst 3. */
-export const HYPEREVM_RPC_URL = "https://rpc.hyperliquid.xyz/evm";
-
-/** Official HyperEVM testnet HTTP RPC. */
-export const HYPEREVM_TESTNET_RPC_URL = "https://rpc.hyperliquid-testnet.xyz/evm";
-
 export interface HyperEvmOptions
   extends Omit<EthereumOptions, "chainId" | "chainIds" | "endpoints" | "skipPrecompiles"> {
   /**
    * One HyperEVM chain. Omit to serve both `eip155:999` and `eip155:998`.
    */
   chainId?: 999 | 998 | undefined;
-  /** Endpoints for the selected chain, or for mainnet when both chains are served. */
+  /** Replace public defaults for the selected chain, or mainnet when both chains are served. */
   endpoints?: readonly EthereumEndpoint[] | undefined;
-  /** Endpoints for `eip155:998` when both chains are served. */
+  /** Replace public testnet defaults for `eip155:998` when both chains are served. */
   testnetEndpoints?: readonly EthereumEndpoint[] | undefined;
   /** Skip HyperCore read precompiles when pinning `eth_call`. Default: true. */
   skipPrecompiles?: boolean | undefined;
@@ -78,11 +80,12 @@ function shared(options: HyperEvmOptions): Omit<EthereumOptions, "chainId" | "ch
 }
 
 function endpointsFor(options: HyperEvmOptions, chainId: 999 | 998): readonly EthereumEndpoint[] {
-  if (chainId === 998 && options.chainId === undefined) {
-    return (options.testnetEndpoints ?? [HYPEREVM_TESTNET_RPC_URL]).map((endpoint) => tagOfficial(endpoint));
-  }
-  const configured = options.endpoints ?? (chainId === 999 ? [HYPEREVM_RPC_URL] : [HYPEREVM_TESTNET_RPC_URL]);
-  return configured.map((endpoint) => tagOfficial(endpoint));
+  const configured = chainId === 998 && options.chainId === undefined
+    ? options.testnetEndpoints
+    : options.endpoints;
+  if (configured !== undefined) return configured.map((endpoint) => tagOfficial(endpoint));
+  const registry = chainId === 999 ? HYPEREVM_MAINNET_REGISTRY : HYPEREVM_TESTNET_REGISTRY;
+  return registry.map(({ url, rps, burst, unsupportedMethods }) => ({ url, rps, burst, unsupportedMethods }));
 }
 
 /** The official mainnet RPC keeps the reference per-IP budget unless the caller set one. */

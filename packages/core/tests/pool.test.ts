@@ -93,8 +93,16 @@ describe("retries", () => {
   test("times out an attempt at 10s", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
+    let upstreamSignal: AbortSignal | undefined;
     const client = pool(
-      [{ id: "hang", url: "hang", call: () => new Promise(() => undefined) }],
+      [{
+        id: "hang",
+        url: "hang",
+        call: (_request, options) => {
+          upstreamSignal = options?.signal;
+          return new Promise(() => undefined);
+        },
+      }],
       { now: () => Date.now(), retryCount: 0, timeout: 10_000 },
     );
     const pending = client.request({ method: "eth_call", params: [] }).then(
@@ -102,6 +110,8 @@ describe("retries", () => {
       (error: unknown) => error,
     );
     await vi.advanceTimersByTimeAsync(9_999);
+    expect(upstreamSignal).toBeDefined();
+    expect(upstreamSignal?.aborted).toBe(false);
     let settled = false;
     void pending.then(() => {
       settled = true;
@@ -112,6 +122,7 @@ describe("retries", () => {
     const error = await pending;
     expect(error).toBeInstanceOf(TimeoutError);
     expect(error).toMatchObject({ timeoutMs: 10_000 });
+    expect(upstreamSignal?.aborted).toBe(true);
     client.close();
   });
 });
@@ -173,6 +184,70 @@ describe("Retry-After", () => {
 });
 
 describe("health probes", () => {
+  test("background probes preserve the last token on low-quota endpoints", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const seen: string[] = [];
+    const client = pool(
+      [{
+        id: "limited",
+        url: "limited",
+        rps: 0.1,
+        burst: 2,
+        call: async (request) => {
+          seen.push(request.method);
+          return request.method === "eth_chainId" ? "0x1" : "0x10";
+        },
+      }],
+      {
+        verifyIdentity: true,
+        headLag: { probeInterval: 4_000 },
+      },
+    );
+
+    await client.request({ method: "eth_getBalance", params: ["0x1", "latest"] });
+    expect(seen).toEqual(["eth_chainId", "eth_getBalance"]);
+    await vi.advanceTimersByTimeAsync(12_000);
+    expect(client.snapshot()[0]?.tokens).toBe(1);
+    expect(seen).toEqual(["eth_chainId", "eth_getBalance"]);
+    await expect(client.request({ method: "eth_getBalance", params: ["0x2", "latest"] })).resolves.toBe("0x10");
+
+    // An explicit probe remains allowed to spend the last available token.
+    await vi.advanceTimersByTimeAsync(10_000);
+    await client.probe();
+    expect(seen).toEqual(["eth_chainId", "eth_getBalance", "eth_getBalance", "eth_blockNumber"]);
+    client.close();
+  });
+
+  test("shares an in-flight probe across concurrent callers", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    let release: (value: string) => void = () => undefined;
+    const response = new Promise<string>((resolve) => {
+      release = resolve;
+    });
+    const client = pool([
+      {
+        id: "slow",
+        url: "slow",
+        call: async () => {
+          calls += 1;
+          return response;
+        },
+      },
+    ]);
+
+    const first = client.probe();
+    const second = client.probe();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(calls).toBe(1);
+    release("0x10");
+    await Promise.all([first, second]);
+    await client.probe();
+    expect(calls).toBe(2);
+    client.close();
+  });
+
   test("runs eth_blockNumber every 4s and stops 60s after the last request", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
@@ -208,6 +283,92 @@ describe("health probes", () => {
 });
 
 describe("quarantine", () => {
+  test("aborts a hanging identity check at its deadline and fails over", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    let identitySignal: AbortSignal | undefined;
+    const seen: string[] = [];
+    const client = pool(
+      [
+        {
+          id: "hang",
+          url: "hang",
+          call: (request, options) => {
+            seen.push(`hang:${request.method}`);
+            identitySignal = options?.signal;
+            return new Promise(() => undefined);
+          },
+        },
+        {
+          id: "up",
+          url: "up",
+          call: async (request) => {
+            seen.push(`up:${request.method}`);
+            return request.method === "eth_chainId" ? "0x1" : "0x20";
+          },
+        },
+      ],
+      { verifyIdentity: true, routing: "best", timeout: 100 },
+    );
+    const pending = client.request({ method: "eth_getBalance", params: ["0x1", "latest"] });
+    await vi.advanceTimersByTimeAsync(99);
+    expect(identitySignal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(pending).resolves.toBe("0x20");
+    expect(identitySignal?.aborted).toBe(true);
+    expect(seen).toEqual(["hang:eth_chainId", "up:eth_chainId", "up:eth_getBalance"]);
+    client.close();
+  });
+
+  test("a cancelled caller leaves the shared identity check running for another caller", async () => {
+    vi.useFakeTimers();
+    let identityCalls = 0;
+    let identitySignal: AbortSignal | undefined;
+    let release: (value: string) => void = () => undefined;
+    const identity = new Promise<string>((resolve) => {
+      release = resolve;
+    });
+    const client = pool(
+      [{
+        id: "shared",
+        url: "shared",
+        call: async (request, options) => {
+          if (request.method === "eth_chainId") {
+            identityCalls += 1;
+            identitySignal = options?.signal;
+            return identity;
+          }
+          return "0x20";
+        },
+      }],
+      { verifyIdentity: true },
+    );
+    const controller = new AbortController();
+    const cancelled = client.request({ method: "eth_getBalance", params: ["0x1"], signal: controller.signal }).catch((error: unknown) => error);
+    const active = client.request({ method: "eth_getBalance", params: ["0x2"] });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(identityCalls).toBe(1);
+    controller.abort();
+    await expect(cancelled).resolves.toMatchObject({ name: "AbortError" });
+    expect(identitySignal?.aborted).toBe(false);
+    release("0x1");
+    await expect(active).resolves.toBe("0x20");
+    expect(identityCalls).toBe(1);
+    client.close();
+  });
+
+  test("a synchronous identity-check failure can fail over", async () => {
+    const client = pool(
+      [
+        { id: "throw", url: "throw", call: () => { throw new Error("connection failed"); } },
+        { id: "up", url: "up", call: async (request) => request.method === "eth_chainId" ? "0x1" : "0x20" },
+      ],
+      { verifyIdentity: true, routing: "best" },
+    );
+    await expect(client.request({ method: "eth_getBalance", params: ["0x1"] })).resolves.toBe("0x20");
+    client.close();
+  });
+
   test("drops an endpoint that reports the wrong eth_chainId", async () => {
     const seen: string[] = [];
     const client = pool(

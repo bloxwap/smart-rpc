@@ -1,7 +1,18 @@
 export {
+  DEVNET_ENDPOINTS,
+  DEVNET_GENESIS_HASH,
+  DEVNET_REGISTRY,
+  MAINNET_ENDPOINTS,
+  MAINNET_GENESIS_HASH,
+  MAINNET_REGISTRY,
   SOLANA_DEVNET_CAIP,
   SOLANA_MAINNET_CAIP,
   SOLANA_TESTNET_CAIP,
+  TESTNET_ENDPOINTS,
+  TESTNET_GENESIS_HASH,
+  TESTNET_REGISTRY,
+  type SolanaCluster,
+  type SolanaEndpointConfig,
   solana,
   type SolanaOptions,
 } from "@smart-rpc/solana";
