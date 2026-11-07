@@ -27,7 +27,7 @@ The workspace packages below are private. They are how the repo is organized. Th
 | `smart-solana` method safety, genesis hashes, default public endpoints, `getSlot` / `getGenesisHash` | private `@smart-rpc/solana` | `@bloxwap/smart-rpc/solana` |
 | Public endpoint discovery and registry data | Source-backed registries in the Ethereum, HyperEVM, and Solana packages; the shared pool ranks endpoints at runtime. | Each transport subpath |
 | HyperEVM mainnet registry rankings | Ported as HyperEVM-only rolling probe history, deterministic ranking, establishment caps, and persisted default weights. | `packages/hyperevm/registry` |
-| Warm-start persistence | Not ported. | — |
+| Warm-start persistence | private `@smart-rpc/core` `warmstart.ts`, with opaque endpoint labels and serialized saves | `@bloxwap/smart-rpc` |
 | Rolling `eth_getLogs` index | private `@smart-rpc/core` `log-index.ts`, integrated with the read cache and pool | `@bloxwap/smart-rpc` |
 
 Callers that use `createPublicClient({ transport: smartHyperevm() })` can use `asViemTransport(options)` from the ethereum subpath. It delegates to pools and keeps routing policy out of the viem adapter. Equivalent clients share one pool, while chain, timeout, and retry variants remain isolated; matching variants spend factory-scoped endpoint and provider budgets. The ethereum transport still uses viem `http()` and `webSocket()` as the child of each endpoint.
@@ -63,14 +63,14 @@ Automatic health probes preserve the last available token on budgeted endpoints 
 
 The read cache includes canonical plans, background hot-key refresh, and rolling log indexes. State reads, hashes, `eth_chainId`, and covered log ranges are cached. HyperEVM keeps confirmed numbered and by-hash results immutably; reorg-capable chains retain bounded fresh entries and invalidate log indexes on observed reorgs. Generated log reads preserve endpoint capabilities and operation budgets; unsupported latest-derived numeric reads fall back to the unchanged original query without being indexed. Filters, subscriptions, gas estimates, and nonces at `"latest"` remain uncached.
 
-Score persistence (`_warmstart.ts`, `localStoragePersistence`) is not ported. A `persist` option can sit on the pool later without a chain import.
+Score persistence is implemented in core. Every pool accepts `persist` and exposes `scores()` / `restoreScores()`. Snapshots use explicit public labels or opaque URL hashes for unlabeled endpoints, restored books are weak priors, and asynchronous saves are serialized newest-last. `localStoragePersistence` provides a safe browser adapter.
 
 ## Suggested order
 
 1. Point new callers at `npm install @bloxwap/smart-rpc` and the subpath for the chain they use (`@bloxwap/smart-rpc/hyperevm`, `@bloxwap/smart-rpc/solana`). Keep smart-hyperevm and smart-solana published until those callers move. Do not publish the private workspace packages.
 2. Use `asViemTransport(options)` from the ethereum subpath for `createPublicClient`. For HyperEVM, set `chainId: 999`, `skipPrecompiles: true`, the HyperEVM endpoints, and `HYPEREVM_SAFE_METHODS`; the adapter supplies equivalent-client sharing and budget coordination.
 3. Review and refresh the included source-backed endpoint registries with `pnpm check:rpcs` after building. Preserve provider budgets and separate chain identities; the public defaults ship through the transport subpaths.
-4. Port warm-start into the private core package behind the existing scoreboard hooks.
+4. Configure the pool's `persist` option when scores should survive restarts, or call `scores()` / `restoreScores()` directly.
 5. Replace smart-solana's transport internals with the Solana code in this repo. Reconcile new public endpoints into the source-backed cluster registries. Do not bring its breaker or backoff numbers back.
 
 A process that keeps the old `smart-hyperevm` package alongside this adapter still has two independent budget stores. Migrate equivalent clients to one adapter scope, or give the old and new transports separate allowances.

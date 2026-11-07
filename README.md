@@ -2,7 +2,7 @@
 
 One JSON-RPC client that routes by [CAIP-2](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-2.md) chain id.
 
-Shared routing lives in `@smart-rpc/core`: EWMA scoring, power-of-two-choices, a top-2 race for safe reads, a circuit breaker, retries, per-endpoint budgets, coalescing, a freshness-bounded cache, cancellation, and health probes. Chain packages are thin transports. They supply the probe, the chain-identity check, and which methods are safe to retry. Nothing in the core imports a chain.
+Shared routing lives in `@smart-rpc/core`: EWMA scoring, power-of-two-choices, a top-2 race for safe reads, a circuit breaker, retries, per-endpoint budgets, coalescing, a hot freshness-bounded cache with rolling log indexes, warm-start score persistence, cancellation, and health probes. Chain packages are thin transports. They supply the probe, the chain-identity check, and which methods are safe to retry. Nothing in the core imports a chain.
 
 Install one package. The root entry re-exports the core and nothing else. Transports are subpaths of that same package, so a bundler only includes a chain you import, and importing the root does not register every transport.
 
@@ -136,6 +136,12 @@ const equivalent = hyperevm({
 
 For viem clients, `asViemTransport(options)` from `@bloxwap/smart-rpc/ethereum` derives these keys from the client chain, timeout, and retry count. It delegates requests to the same pool implementation and exposes `close`, `snapshot`, `probe`, `cacheStats`, and events through the viem transport value. Closing one client does not close an equivalent peer.
 
+## Cache and warm start
+
+The cache canonicalizes block tags, refreshes hot reads in the background, and keeps rolling `eth_getLogs` indexes. Configure `cache` with `maxStaleBlocks`, `maxAgeMs`, `refreshInterval`, `hotKeys`, `hotIdleMs`, `maxEntries`, `maxBytes`, `logsWindow`, `copyResults`, or `immutableParams`. Generated log reads preserve endpoint capabilities and request budgets; latest-only providers retain their unchanged latest-query fallback.
+
+Every pool exposes `scores()` and `restoreScores(snapshot)`. For automatic persistence, pass `persist: { load, save }`; saves are throttled and serialized newest-last. `localStoragePersistence(key)` provides a browser adapter. Snapshots contain global and per-method score books but never heads, breakers, identity state, or raw URLs for unlabeled endpoints.
+
 ## Defaults
 
 The shared scoring, breaker and retry defaults follow `@bloxwap/smart-hyperevm` at `092b8f9`. Every chain uses them. Head freshness and endpoint capabilities can vary by chain.
@@ -151,7 +157,7 @@ The shared scoring, breaker and retry defaults follow `@bloxwap/smart-hyperevm` 
 - Heads older than 30s stop affecting the score. A head more than 1000 units ahead of the others' median is ignored. Two heads that far apart are not a reference.
 - EVM transports pin `"latest"` to a block the chosen endpoints hold, and quarantine an endpoint whose `eth_chainId` is wrong. Solana quarantines a `getGenesisHash` mismatch. HyperEVM also skips HyperCore precompile `eth_call`s (`0x…0800`–`0x…08ff`) when pinning, because those calls ignore the block.
 
-Pass `retryCount`, `timeout`, `operationBudget`, `race`, `breaker`, `budget`, `cache`, `endpoints`, `now`, and `random` on a transport to override a default. Registration stays explicit:
+Pass `retryCount`, `timeout`, `operationBudget`, `race`, `breaker`, `budget`, `cache`, `persist`, `sharing`, `endpoints`, `now`, and `random` on a transport to override a default. Registration stays explicit:
 
 ```ts
 createSmartRpc({ transports: [hyperevm({ endpoints: ["https://rpc.hyperliquid.xyz/evm"] })] });
