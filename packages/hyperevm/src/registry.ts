@@ -1,8 +1,12 @@
 import type { PublicRpcEndpoint } from "@smart-rpc/core";
 import type { EthereumEndpointConfig } from "@smart-rpc/ethereum";
 
-/** Public endpoint with the capabilities enabled by this transport. */
-export interface HyperEvmPublicEndpoint extends PublicRpcEndpoint {
+import rawMainnetRanking from "../registry/mainnet.json" with { type: "json" };
+import { assertMainnetRegistryFile } from "./registry/data.js";
+import { endpointKey, type RegistryRanking } from "./registry/policy.js";
+
+/** Public endpoint with capabilities and its latest persisted registry ranking. */
+export interface HyperEvmPublicEndpoint extends PublicRpcEndpoint, RegistryRanking {
   readonly capabilities: NonNullable<EthereumEndpointConfig["capabilities"]>;
 }
 
@@ -45,12 +49,13 @@ const drpcUnsupportedMethods: readonly string[] = [
   "eth_uninstallFilter",
 ];
 
+type MainnetEndpointSource = Omit<HyperEvmPublicEndpoint, keyof RegistryRanking>;
+
 /**
- * Keyless mainnet RPCs with chain, head, and HyperCore precompile checks.
- * Budgets are conservative client settings, not promises of provider capacity.
- * Quotas and restricted-method services are documented in docs/research/hyperevm.md.
+ * Source-backed mainnet metadata. Ranking data lives separately so scheduled
+ * probes cannot rewrite capabilities, provenance, or conservative budgets.
  */
-export const HYPEREVM_MAINNET_REGISTRY: readonly HyperEvmPublicEndpoint[] = [
+const mainnetSources: readonly MainnetEndpointSource[] = [
   {
     id: "hyperliquid-mainnet",
     url: HYPEREVM_RPC_URL,
@@ -165,11 +170,31 @@ export const HYPEREVM_MAINNET_REGISTRY: readonly HyperEvmPublicEndpoint[] = [
   },
 ];
 
-/**
- * Broad-method testnet RPCs. Other discovered public testnet services failed
- * head checks or restrict eth_call; do not route general reads to those hosts.
- */
-export const HYPEREVM_TESTNET_REGISTRY: readonly HyperEvmPublicEndpoint[] = [
+assertMainnetRegistryFile(rawMainnetRanking);
+const rankingByUrl = new Map(rawMainnetRanking.endpoints.map((row) => [endpointKey(row.url), row]));
+if (rankingByUrl.size !== mainnetSources.length) {
+  throw new Error("HyperEVM ranking data and source registry contain different endpoint counts.");
+}
+
+/** Mainnet endpoints ranked from the committed rolling probe history. */
+export const HYPEREVM_MAINNET_REGISTRY: readonly HyperEvmPublicEndpoint[] = mainnetSources.map((source) => {
+  const key = endpointKey(source.url);
+  const ranking = rankingByUrl.get(key);
+  if (!ranking) throw new Error(`HyperEVM ranking data is missing ${source.url}.`);
+  rankingByUrl.delete(key);
+  return { ...source, ...ranking };
+}).sort((a, b) => {
+  if (a.rank === null && b.rank === null) return endpointKey(a.url).localeCompare(endpointKey(b.url));
+  if (a.rank === null) return 1;
+  if (b.rank === null) return -1;
+  return a.rank - b.rank;
+});
+if (rankingByUrl.size !== 0) throw new Error("HyperEVM ranking data contains an unknown endpoint URL.");
+
+type TestnetEndpointSource = Omit<HyperEvmPublicEndpoint, keyof RegistryRanking>;
+
+/** Broad-method testnet RPCs. Historical ranking currently covers mainnet only. */
+const testnetSources: readonly TestnetEndpointSource[] = [
   {
     id: "hyperliquid-testnet",
     url: HYPEREVM_TESTNET_RPC_URL,
@@ -199,8 +224,21 @@ export const HYPEREVM_TESTNET_REGISTRY: readonly HyperEvmPublicEndpoint[] = [
   },
 ];
 
-/** Public mainnet URL list; the default transport also applies registry budgets. */
-export const HYPEREVM_MAINNET_ENDPOINTS: readonly string[] = HYPEREVM_MAINNET_REGISTRY.map(({ url }) => url);
+/** Testnet retains neutral weights until it has its own rolling probe history. */
+export const HYPEREVM_TESTNET_REGISTRY: readonly HyperEvmPublicEndpoint[] = testnetSources.map((source) => ({
+  ...source,
+  eligible: true,
+  weight: 1,
+  rank: null,
+  stats: null,
+}));
+
+function defaultUrls(registry: readonly HyperEvmPublicEndpoint[]): readonly string[] {
+  return registry.filter((endpoint) => endpoint.eligible && endpoint.weight > 0).map(({ url }) => url);
+}
+
+/** Eligible mainnet URLs; the default transport also applies weights and budgets. */
+export const HYPEREVM_MAINNET_ENDPOINTS: readonly string[] = defaultUrls(HYPEREVM_MAINNET_REGISTRY);
 
 /** Public testnet URL list; the default transport also applies registry budgets. */
-export const HYPEREVM_TESTNET_ENDPOINTS: readonly string[] = HYPEREVM_TESTNET_REGISTRY.map(({ url }) => url);
+export const HYPEREVM_TESTNET_ENDPOINTS: readonly string[] = defaultUrls(HYPEREVM_TESTNET_REGISTRY);

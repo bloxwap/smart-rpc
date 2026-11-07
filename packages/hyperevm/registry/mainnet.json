@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "chainId": 999,
+  "updatedAt": "2026-10-31T16:46:51.848Z",
+  "policy": {
+    "windowMs": 2419200000,
+    "minObservations": 3,
+    "minSpanMs": 1209600000,
+    "minUptime": 0.8,
+    "minEligibleUptime": 0.5,
+    "newNodeWeightCap": 0.15,
+    "maxNewNodeShare": 0.25
+  },
+  "endpoints": [
+    {
+      "url": "https://rpc.hypurrscan.io",
+      "eligible": true,
+      "weight": 0.15,
+      "rank": 1,
+      "stats": {
+        "observations": 2,
+        "successes": 2,
+        "uptime": 1,
+        "latencyMs": 505.4,
+        "tailMs": 586.9,
+        "medianLag": 0.5,
+        "established": false,
+        "precompileOk": true
+      }
+    },
+    {
+      "url": "https://rpc.hyperliquid.xyz/evm",
+      "eligible": true,
+      "weight": 0.15,
+      "rank": 2,
+      "stats": {
+        "observations": 2,
+        "successes": 1,
+        "uptime": 0.5,
+        "latencyMs": 181,
+        "tailMs": 238.4,
+        "medianLag": 0.5,
+        "established": false,
+        "precompileOk": true
+      }
+    },
+    {
+      "url": "https://hyperliquid.drpc.org",
+      "eligible": true,
+      "weight": 0.15,
+      "rank": 3,
+      "stats": {
+        "observations": 2,
+        "successes": 1,
+        "uptime": 0.5,
+        "latencyMs": 260.4,
+        "tailMs": 267.3,
+        "medianLag": 0.5,
+        "established": false,
+        "precompileOk": true
+      }
+    },
+    {
+      "url": "https://rpc.purroofgroup.com",
+      "eligible": true,
+      "weight": 0.15,
+      "rank": 4,
+      "stats": {
+        "observations": 2,
+        "successes": 2,
+        "uptime": 1,
+        "latencyMs": 152.8,
+        "tailMs": 192.6,
+        "medianLag": 35.5,
+        "established": false,
+        "precompileOk": true
+      }
+    },
+    {
+      "url": "https://hyperliquid-json-rpc.stakely.io",
+      "eligible": true,
+      "weight": 0.15,
+      "rank": 5,
+      "stats": {
+        "observations": 2,
+        "successes": 2,
+        "uptime": 1,
+        "latencyMs": 1156.9,
+        "tailMs": 1701.4,
+        "medianLag": 10,
+        "established": false,
+        "precompileOk": true
+      }
+    },
+    {
+      "url": "https://hyperliquid-rpc.publicnode.com",
+      "eligible": false,
+      "weight": 0,
+      "rank": null,
+      "stats": {
+        "observations": 0,
+        "successes": 0,
+        "uptime": 0,
+        "latencyMs": null,
+        "tailMs": null,
+        "medianLag": null,
+        "established": false,
+        "precompileOk": null
+      }
+    },
+    {
+      "url": "https://hyperliquid.api.onfinality.io/evm/public",
+      "eligible": false,
+      "weight": 0,
+      "rank": null,
+      "stats": {
+        "observations": 2,
+        "successes": 0,
+        "uptime": 0,
+        "latencyMs": null,
+        "tailMs": null,
+        "medianLag": null,
+        "established": false,
+        "precompileOk": null
+      }
+    },
+    {
+      "url": "https://hyperliquid.api.pocket.network",
+      "eligible": false,
+      "weight": 0,
+      "rank": null,
+      "stats": {
+        "observations": 0,
+        "successes": 0,
+        "uptime": 0,
+        "latencyMs": null,
+        "tailMs": null,
+        "medianLag": null,
+        "established": false,
+        "precompileOk": null
+      }
+    },
+    {
+      "url": "https://hyperliquid.rpc.blxrbdn.com",
+      "eligible": false,
+      "weight": 0,
+      "rank": null,
+      "stats": {
+        "observations": 2,
+        "successes": 0,
+        "uptime": 0,
+        "latencyMs": null,
+        "tailMs": null,
+        "medianLag": null,
+        "established": false,
+        "precompileOk": null
+      }
+    },
+    {
+      "url": "https://hyperliquid.web3cdn.rest",
+      "eligible": false,
+      "weight": 0,
+      "rank": null,
+      "stats": {
+        "observations": 0,
+        "successes": 0,
+        "uptime": 0,
+        "latencyMs": null,
+        "tailMs": null,
+        "medianLag": null,
+        "established": false,
+        "precompileOk": null
+      }
+    }
+  ]
+}

@@ -55,6 +55,8 @@ The old Ankr keyless URL requires credentials, and [Cloudflare deprecated its le
 
 Ten mainnet endpoints and two testnet endpoints passed chain identity, head, and a HyperCore precompile read during research. These are point-in-time capability checks. HyperEVM keeps the existing precompile pinning exception and routes through the Ethereum transport and shared pool.
 
+Mainnet also has a persisted historical ranking. `packages/hyperevm/registry/mainnet.json` contains eligibility, rank, weight, and summary statistics; `history.json` contains the rolling observations that produced them. Only eligible endpoints with positive weights enter the default pool. Source URLs, capabilities, unsupported methods, and request budgets remain in `src/registry.ts`, so a ranking refresh cannot rewrite those operator-reviewed settings. Testnet retains neutral weight 1 until it has a separate history. Explicit `endpoints` and `testnetEndpoints` continue to replace these defaults and retain caller-supplied weights.
+
 | Network | Provider source | HTTP RPC | Local rps / burst |
 | --- | --- | --- | --- |
 | Mainnet | [Hyperliquid](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm) | `https://rpc.hyperliquid.xyz/evm` | 1.5 / 3 |
@@ -142,7 +144,7 @@ The release-build check on 2026-11-06 (Pacific time; completed 2026-11-07 01:48 
 | `https://solana.api.onfinality.io/public` | HTTP 429 |
 | `https://solana-devnet.api.onfinality.io/public` | HTTP 429 |
 
-These documented public services remain eligible in the registry, with runtime identity checks, scoring, circuit breakers, and fallback determining their use. Registry membership records eligibility; it does not promise current availability. This check used an 8-second request deadline and concurrency 4, with provider pacing enabled. The checker exited 1 to preserve those six failures in its result.
+These documented public services remain listed as source-backed candidates, with runtime identity checks, scoring, circuit breakers, and fallback determining their use. HyperEVM mainnet's historical eligibility additionally determines whether a candidate enters its default pool. Registry membership does not promise current availability. This check used an 8-second request deadline and concurrency 4, with provider pacing enabled. The checker exited 1 to preserve those six failures in its result.
 
 Build first, then run the opt-in network checker from the repository root:
 
@@ -155,4 +157,8 @@ pnpm check:rpcs --help
 
 The checker sends read-only identity and head requests against the built registry. It uses bounded timeouts, paces requests across networks by provider, and emits JSON results. Exit status is 0 when all checks pass, 1 when an endpoint fails a check, and 2 for invalid arguments or a missing/invalid build. Use `--timeout 10000` or `--concurrency 2` to adjust those defaults. It does not run during unit tests or rewrite the registry. Network, DNS, authentication, rate-limit, malformed-response, and chain-identity failures should be interpreted separately; a blocked local network is not evidence that a provider is permanently unavailable.
 
-Refresh an endpoint by reviewing its operator's current documentation, checking its network identity and head, recording its source URLs and review date, and updating its budget or unsupported methods as needed. Keep keys and transaction-only services out of the default pool. Run the normal typecheck, tests, and build after changes. The pool will continue measuring live health at runtime; historical probe results are not a fixed ranking.
+Refresh an endpoint by reviewing its operator's current documentation, checking its network identity and head, recording its source URLs and review date, and updating its budget or unsupported methods as needed. Keep keys and transaction-only services out of the default pool. Run the normal typecheck, tests, and build after changes.
+
+HyperEVM mainnet rankings are refreshed separately by the weekly/manual **Rank HyperEVM registry** workflow, which opens a pull request rather than pushing to `main`. The ranker checks identity and head, adjusts lag for probe time, records ordinary call and log latency, calls the HyperCore `l1BlockNumber` precompile, and requests a 999-block log page. Requests have bounded deadlines and concurrency and are paced below each endpoint's configured sustained budget. Three successful observations spread over 14 days earn full weight; until then the endpoint cap is 0.15 and newcomers together hold at most 25% once an established endpoint exists. Missing source observations, wrong-chain-only runs, and rewrites that empty the pool are refused before writing.
+
+The committed history was bootstrapped from the reference `smart-hyperevm` registry at commit `092b8f9`, retaining only URLs in this repo's source registry; it was not produced by a new current-day run. To explicitly rerun the live maintenance probe and print its result without writing, use `pnpm rank:hyperevm --dry-run`. `pnpm rank:hyperevm --fixtures <observation.json> --dry-run` replays historical fixtures without network access. Neither command is part of normal CI. The shared pool continues measuring live health at runtime; persisted weights only set its HyperEVM starting preferences.

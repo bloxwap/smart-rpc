@@ -26,7 +26,8 @@ The workspace packages below are private. They are how the repo is organized. Th
 | Chain 999 / 998, `https://rpc.hyperliquid.xyz/evm`, official 1.5 rps burst 3, HyperCore precompile pin-skip | private `@smart-rpc/hyperevm`, which calls `ethereum()` | `@bloxwap/smart-rpc/hyperevm` |
 | `smart-solana` method safety, genesis hashes, default public endpoints, `getSlot` / `getGenesisHash` | private `@smart-rpc/solana` | `@bloxwap/smart-rpc/solana` |
 | Public endpoint discovery and registry data | Source-backed registries in the Ethereum, HyperEVM, and Solana packages; the shared pool ranks endpoints at runtime. | Each transport subpath |
-| Persisted registry rankings, warm-start persistence, the rolling `eth_getLogs` index | Not ported. The source registries carry provenance and local budgets, not historical scores. | — |
+| HyperEVM mainnet registry rankings | Ported as HyperEVM-only rolling probe history, deterministic ranking, establishment caps, and persisted default weights. | `packages/hyperevm/registry` |
+| Warm-start persistence and the rolling `eth_getLogs` index | Not ported. | — |
 
 Callers that do `createPublicClient({ transport: smartHyperevm() })` need an adapter. v1's public call is `rpc.request({ chainId, method, params })`. The ethereum transport still uses viem `http()` and `webSocket()` as the child of each endpoint. A later `asViemTransport(pool)` can wrap `createTransport` without moving policy back into the chain package.
 
@@ -53,7 +54,7 @@ The brief says to follow the HyperEVM reference when it disagrees with smart-sol
 
 `solana:mainnet`, `solana:devnet`, and `solana:testnet` are aliases. Each cluster also registers `solana:<genesis hash>`, which is the CAIP-2 chain reference from the Solana namespace. `createSmartRpc` matches the string the caller passes. It does not guess.
 
-Public endpoint registries are now included as transport data. HyperEVM mainnet and testnet each use their own list, including the official URL and documented public alternatives. Ethereum mainnet and each Solana cluster use the same approach. Registry entries carry provider/source metadata and conservative request budgets; core owns runtime scoring and fallback. The old `registry/nodes.json` historical rankings and ranker are not loaded. See [Public RPCs](docs/PUBLIC_RPCS.md) for sources, limitations, and verification commands.
+Public endpoint registries are now included as transport data. HyperEVM mainnet and testnet each use their own list, including the official URL and documented public alternatives. Ethereum mainnet and each Solana cluster use the same approach. Registry entries carry provider/source metadata and conservative request budgets; core owns runtime scoring and fallback. HyperEVM mainnet additionally loads its own `registry/mainnet.json` historical weights and `registry/history.json` observations, seeded from the reference registry rather than a new one-day probe. Other chains do not load that data. See [Public RPCs](docs/PUBLIC_RPCS.md) for sources, limitations, and verification commands.
 
 An explicit `endpoints` array still replaces the defaults. For `hyperevm()` serving both chains, `endpoints` selects mainnet endpoints and `testnetEndpoints` selects testnet endpoints. The official HyperEVM mainnet budget remains 1.5 rps, burst 3. Solana's public endpoint budgets now account for provider-specific limits instead of carrying over the old endpoint settings unchanged.
 

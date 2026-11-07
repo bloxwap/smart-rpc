@@ -12,6 +12,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "check:rpcs": "node scripts/check-rpcs.mjs",
+    "rank:hyperevm": "pnpm --filter @smart-rpc/hyperevm rank",
     "changeset": "changeset"
   },
   "devDependencies": {
