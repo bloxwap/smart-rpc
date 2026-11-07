@@ -60,6 +60,7 @@ import { type ScoreSnapshot, WarmStart } from "./warmstart.js";
 
 interface BuiltEndpoint {
   id: string;
+  snapshotLabel: string;
   url: string;
   weight: number;
   call: EndpointCall;
@@ -216,7 +217,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
   );
   const warm = new WarmStart(board, {
     persistence: options.persist,
-    ids: built.map((endpoint) => endpoint.id),
+    endpoints: built.map((endpoint) => ({ id: endpoint.id, label: endpoint.snapshotLabel })),
     latencyCapMs: timeout,
     loadTimeoutMs: timeout,
     now,
@@ -921,11 +922,13 @@ function buildEndpoints(options: PoolOptions): BuiltEndpoint[] {
   if (options.endpoints.length === 0) throw new Error("smart-rpc requires at least one endpoint.");
   const fallback = resolveDefaultBudget(options.budget);
   const ids = new Set<string>();
+  const snapshotLabels = new Set(options.endpoints.flatMap((endpoint) => endpoint.id === undefined ? [] : [endpoint.id]));
   return options.endpoints.map((endpoint, index) => {
     const id = endpoint.id ?? endpoint.url;
     if (id.trim() === "") throw new Error(`smart-rpc endpoints[${index}].id must not be empty.`);
     if (ids.has(id)) throw new Error(`smart-rpc endpoint "${id}" is used more than once.`);
     ids.add(id);
+    const snapshotLabel = endpoint.id ?? uniqueSnapshotLabel(endpoint.url, snapshotLabels);
     const weight = endpoint.weight ?? 1;
     if (!(Number.isFinite(weight) && weight > 0)) {
       throw new Error(`smart-rpc endpoints[${index}].weight must be a finite number above 0.`);
@@ -936,6 +939,7 @@ function buildEndpoints(options: PoolOptions): BuiltEndpoint[] {
         : (endpoint.budget ?? resolveEndpointBudget(endpoint, fallback, `smart-rpc endpoints[${index}]`));
     return {
       id,
+      snapshotLabel,
       url: endpoint.url,
       weight,
       call: endpoint.call,
@@ -949,6 +953,24 @@ function buildEndpoints(options: PoolOptions): BuiltEndpoint[] {
       budget,
     };
   });
+}
+
+function uniqueSnapshotLabel(url: string, used: Set<string>): string {
+  const base = `endpoint:${urlHash(url)}`;
+  let label = base;
+  for (let suffix = 2; used.has(label); suffix += 1) label = `${base}:${suffix}`;
+  used.add(label);
+  return label;
+}
+
+/** Stable across sessions without exposing userinfo, query parameters, paths, or hostnames from credentialed URLs. */
+function urlHash(url: string): string {
+  let hash = 0xcbf29ce484222325n;
+  for (let index = 0; index < url.length; index += 1) {
+    hash ^= BigInt(url.charCodeAt(index));
+    hash = BigInt.asUintN(64, hash * 0x100000001b3n);
+  }
+  return hash.toString(16).padStart(16, "0");
 }
 
 function raceHedge(
