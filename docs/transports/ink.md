@@ -12,7 +12,7 @@ await rpc.request({ chainId: "eip155:57073", method: "eth_blockNumber" });
 
 Defaults use `https://rpc-gel.inkonchain.com` and `https://rpc-qnd.inkonchain.com`, from the [Ink network information](https://docs.inkonchain.com/general/network-information). `INK_MAINNET_REGISTRY` records provider sources and documented WebSocket alternatives. The [RPC guide](https://docs.inkonchain.com/tools/rpc) gives Gelato's WS URL as `wss://ws-gel.inkonchain.com`, while the network table gives `wss://rpc-gel.inkonchain.com`; both are recorded, and neither is silently substituted for HTTP.
 
-No universal rate or batch limit is asserted. Public defaults disable unverified archive, debug, trace, wire batching, subscriptions, numeric pinning, and safe/finalized tag capabilities. An unsupported request fails instead of changing its state tag. Configure a tested provider explicitly to enable those features and provide its limits:
+No universal rate or batch limit is asserted. Public defaults conservatively disable archive, debug, trace, wire batching, subscriptions, numeric pinning, and safe/finalized tag capabilities. An unsupported request fails instead of changing its state tag. Configure a tested provider explicitly to enable those features and provide its limits:
 
 ```ts
 const transport = ink({
@@ -32,6 +32,10 @@ const transport = ink({
 
 `wss://subblocks.inkonchain.com/ws` is a separate stream and is rejected as an RPC pool endpoint. Subblocks use payload/index/diff messages and provide sequencer preconfirmations; their zero state roots and hashes are not authoritative blocks. Stateful WebSocket subscriptions require a tested endpoint and a persistent connection with explicit reconnect/resubscribe handling, separate from stateless retry routing.
 
+For a dedicated subscription, `connectViem` from `@bloxwap/smart-rpc/ethereum` accepts the documented WS URL, `expectedChainId: 57073`, and `reconnect: true`. Its callback-based `subscribe({ params: ["newHeads"], onData })` verifies that connection's identity and keeps reconnect/resubscribe on the same provider. Call the returned subscription's `unsubscribe()` when finished. Generic pooled `request({ method: "eth_subscribe" })` is intentionally unsupported.
+
 Receipt fields pass through unchanged, including L1 data/blob fee quantities and L2 execution gas quantities. The adapter performs no conversion or summation of those components; [Ink fee documentation](https://docs.inkonchain.com/build/transaction-fees) explains their separate roles.
 
 Run deterministic fixtures with `pnpm --filter @smart-rpc/ink test`. To opt into public identity/head checks, run `SMART_RPC_LIVE=1 pnpm --filter @smart-rpc/ink test`. Set `SMART_RPC_INK_CAPABILITIES=1` separately to test safe/finalized tags, a small JSON batch, and subscriptions on the documented WS URLs. Set both `SMART_RPC_INK_ARCHIVE_URL` and `SMART_RPC_INK_ARCHIVE_BLOCK` to check historical state against a chosen archive provider. These optional checks have no SLA assumption, do not measure rate limits, and do not automatically enable capabilities in the default registry.
+
+On 2026-11-06, both default providers passed identity/head, safe/finalized-tag, small-batch, and WS subscription smoke checks. Gelato's tested WS URL was `wss://ws-gel.inkonchain.com`; QuickNode's was `wss://rpc-qnd.inkonchain.com`. Archive access and provider capacity were not tested. This is a point-in-time observation, not a service guarantee or a numeric batch ceiling.
