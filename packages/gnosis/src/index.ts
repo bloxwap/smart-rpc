@@ -1,0 +1,2 @@
+export { gnosis, GNOSIS_CHAIN_ID, GNOSIS_MAINNET_CAIP, GNOSIS_NATIVE_CURRENCY, GNOSIS_CONSENSUS, type GnosisOptions } from "./transport.js";
+export { GNOSIS_RPC_URL, GNOSIS_GATEWAY_RPC_URL, GNOSIS_WEBSOCKET_URL, GNOSIS_MAINNET_REGISTRY, GNOSIS_MAINNET_ENDPOINTS, type GnosisPublicRpcEndpoint } from "./registry.js";
