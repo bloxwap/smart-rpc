@@ -58,6 +58,31 @@ Solana registers `solana:mainnet` and the genesis-hash CAIP-2 id `solana:5eykt4U
 
 ## Public RPC defaults
 
+The package also includes these EVM transports. Each factory uses the shared Ethereum adapter and core routing policies, verifies its own chain identity, and accepts dedicated endpoints and HTTP headers. Import the factory from its subpath, for example `import { base } from "@bloxwap/smart-rpc/base"`.
+
+| Transport and provider notes | Subpath / factory | CAIP-2 id |
+| --- | --- | --- |
+| [BNB Smart Chain](docs/transports/bsc.md) | `bsc` | `eip155:56` |
+| [Polygon PoS](docs/transports/polygon.md) | `polygon` | `eip155:137` |
+| [Base](docs/transports/base.md) | `base` | `eip155:8453` |
+| [Arbitrum One](docs/transports/arbitrum.md) | `arbitrum` | `eip155:42161` |
+| [Monad](docs/transports/monad.md) | `monad` | `eip155:143` |
+| [X Layer](docs/transports/xlayer.md) | `xlayer` | `eip155:196` |
+| [Robinhood Chain](docs/transports/robinhood.md) | `robinhood` | `eip155:4663` |
+| [Plasma](docs/transports/plasma.md) | `plasma` | `eip155:9745` |
+| [Ink](docs/transports/ink.md) | `ink` | `eip155:57073` |
+| [OP Mainnet](docs/transports/optimism.md) | `optimism` | `eip155:10` |
+| [opBNB](docs/transports/opbnb.md) | `opbnb` | `eip155:204` |
+| [Arc](docs/transports/arc.md) | `arc` | `eip155:5042` |
+| [Etherlink](docs/transports/etherlink.md) | `etherlink` | `eip155:42793` |
+| [Avalanche C-Chain](docs/transports/avalanche.md) | `avalanche` | `eip155:43114` |
+| [Celo](docs/transports/celo.md) | `celo` | `eip155:42220` |
+| [Gnosis](docs/transports/gnosis.md) | `gnosis` | `eip155:100` |
+| [Mantle](docs/transports/mantle.md) | `mantle` | `eip155:5000` |
+| [Flare](docs/transports/flare.md) | `flare` | `eip155:14` |
+
+The existing `ethereum`, `hyperevm`, and `solana` subpaths remain available. Public endpoint records expose verified restrictions; undocumented numeric quotas and optional capabilities are not assumed. See each transport's notes before enabling archive, debug/trace, finality tags, HTTP batches, or subscriptions.
+
 Ethereum mainnet, HyperEVM mainnet/testnet, and Solana mainnet/devnet/testnet have source-backed registries of free HTTP endpoints that do not require an API key. The transports pass those endpoints into the shared pool, so defaults use the same scoring, identity checks, failover, racing, circuit breakers, caching, and request budgets as custom endpoints. Endpoint discovery does not run in the client.
 
 Each registry entry records its provider, source URLs, review date, and local request budget. These budgets are conservative client settings, not purchased capacity or provider guarantees. They cover calls, retries, identity checks, and probes in that pool; other clients and processes sharing your IP can also consume the provider's quota. Services that require a free account or API key are documented separately and can be configured explicitly.

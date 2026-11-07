@@ -1,0 +1,43 @@
+name: Public RPC smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      protocol:
+        description: Transport subpath to check, or all
+        default: all
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Verify identity and head
+        env:
+          RPC_PROTOCOL: ${{ inputs.protocol }}
+        run: |
+          if [ "$RPC_PROTOCOL" = all ]; then
+            node scripts/check-rpcs.mjs > rpc-smoke.json
+          else
+            node scripts/check-rpcs.mjs --protocol "$RPC_PROTOCOL" > rpc-smoke.json
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rpc-smoke
+          path: rpc-smoke.json

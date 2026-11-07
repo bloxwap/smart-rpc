@@ -4,13 +4,21 @@
  * Run `pnpm build` first. This script is intentionally outside the test suite.
  */
 
+const EVM_CHAINS = {
+  bsc: 56, polygon: 137, base: 8453, arbitrum: 42161, monad: 143,
+  xlayer: 196, robinhood: 4663, plasma: 9745, ink: 57073, optimism: 10,
+  opbnb: 204, arc: 5042, etherlink: 42793, avalanche: 43114, celo: 42220,
+  gnosis: 100, mantle: 5000, flare: 14,
+};
+const PROTOCOLS = ["ethereum", "hyperevm", "solana", ...Object.keys(EVM_CHAINS)];
+
 const HELP = `Usage: node scripts/check-rpcs.mjs [options]
 
 Check each public RPC's chain identity, then its current block or slot.
 No transactions are submitted. Build the workspace with pnpm build first.
 
 Options:
-  --protocol <name>   ethereum, hyperevm, or solana (default: all)
+  --protocol <name>   A transport subpath (default: all)
   --timeout <ms>      Deadline per HTTP request, 100–60000 (default: 10000)
   --concurrency <n>   Concurrent endpoint checks, 1–4 (default: 2)
   --help             Show this help without importing packages or making requests
@@ -19,6 +27,8 @@ JSON is written to stdout. Exit status: 0 = all checks passed, 1 = an endpoint
 failed a check, 2 = invalid arguments or a missing/invalid build. A connection
 failure can reflect the local network; it does not establish a provider outage.
 Checks are paced per provider using the most conservative configured budget.
+Where no budget is documented, this checker uses one request/second.
+Supported transports: ${PROTOCOLS.join(", ")}.
 `;
 
 class CheckFailure extends Error {
@@ -40,8 +50,8 @@ function parseOptions(args) {
     const value = args[++index];
     if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value.`);
     if (flag === "--protocol") {
-      if (!["ethereum", "hyperevm", "solana"].includes(value)) {
-        throw new Error("--protocol must be ethereum, hyperevm, or solana.");
+      if (!PROTOCOLS.includes(value)) {
+        throw new Error(`--protocol must be one of: ${PROTOCOLS.join(", ")}.`);
       }
       options.protocol = value;
     } else {
@@ -87,6 +97,14 @@ async function loadRegistries(protocol) {
       entries: solana[`${network.toUpperCase()}_REGISTRY`],
     })));
   }
+  for (const [name, identity] of Object.entries(EVM_CHAINS)) {
+    if (protocol && protocol !== name) continue;
+    const transport = await import(`../packages/smart-rpc/dist/${name}.js`);
+    groups.push({
+      protocol: name, network: "mainnet", chainId: `eip155:${identity}`, identity,
+      entries: transport[`${name.toUpperCase()}_MAINNET_REGISTRY`],
+    });
+  }
   for (const group of groups) {
     if (!Array.isArray(group.entries) || group.entries.length === 0 || group.identity === undefined) {
       throw new Error(`Missing ${group.protocol} ${group.network} registry or identity export. Run pnpm build.`);
@@ -94,7 +112,7 @@ async function loadRegistries(protocol) {
     for (const entry of group.entries) {
       if (!entry || typeof entry.url !== "string" || new URL(entry.url).protocol !== "https:" ||
           typeof entry.provider !== "string" || entry.provider.length === 0 ||
-          !Number.isFinite(entry.rps) || entry.rps <= 0) {
+          (entry.rps !== undefined && (!Number.isFinite(entry.rps) || entry.rps <= 0))) {
         throw new Error(`Invalid registry entry in ${group.protocol} ${group.network}.`);
       }
     }
@@ -109,15 +127,16 @@ function providerPacer(groups) {
   const providers = new Map();
   for (const group of groups) {
     for (const entry of group.entries) {
-      const current = providers.get(entry.provider);
-      providers.set(entry.provider, {
-        interval: Math.max(current?.interval ?? 0, Math.ceil(1000 / entry.rps)),
+      const key = entry.providerGroup ?? entry.provider;
+      const current = providers.get(key);
+      providers.set(key, {
+        interval: Math.max(current?.interval ?? 0, Math.ceil(1000 / Math.min(entry.rps ?? 1, entry.providerBudget?.rps ?? Infinity))),
         next: 0,
       });
     }
   }
   return async (entry) => {
-    const provider = providers.get(entry.provider);
+    const provider = providers.get(entry.providerGroup ?? entry.provider);
     const now = performance.now();
     const reserved = Math.max(now, provider.next);
     provider.next = reserved + provider.interval;

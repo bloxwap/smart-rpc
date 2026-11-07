@@ -13,6 +13,24 @@
     "@smart-rpc/core",
     "@smart-rpc/ethereum",
     "@smart-rpc/hyperevm",
-    "@smart-rpc/solana"
+    "@smart-rpc/solana",
+    "@smart-rpc/bsc",
+    "@smart-rpc/polygon",
+    "@smart-rpc/base",
+    "@smart-rpc/arbitrum",
+    "@smart-rpc/monad",
+    "@smart-rpc/xlayer",
+    "@smart-rpc/robinhood",
+    "@smart-rpc/plasma",
+    "@smart-rpc/ink",
+    "@smart-rpc/optimism",
+    "@smart-rpc/opbnb",
+    "@smart-rpc/arc",
+    "@smart-rpc/etherlink",
+    "@smart-rpc/avalanche",
+    "@smart-rpc/celo",
+    "@smart-rpc/gnosis",
+    "@smart-rpc/mantle",
+    "@smart-rpc/flare"
   ]
 }
