@@ -73,6 +73,8 @@ export interface EthereumOptions
   pinLatest?: boolean | PinLatestOptions | undefined;
   /** Skip `eth_call` to HyperCore precompiles `0x…0800`–`0x…08ff`. Default: false. HyperEVM sets true. */
   skipPrecompiles?: boolean | undefined;
+  /** Chain-specific cache planning. Default: reorg-safe EVM plans. */
+  cachePolicy?: ReturnType<typeof evmCachePolicy> | undefined;
   /** Extra methods that must not be retried or raced. */
   nonIdempotentMethods?: readonly string[] | undefined;
   /** Explicit chain-specific read extensions safe to retry/race. Writes must never be included. */
@@ -102,6 +104,7 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
     endpoints: _endpoints,
     pinLatest,
     skipPrecompiles: _skip,
+    cachePolicy,
     nonIdempotentMethods,
     safeMethods,
     maxUnitsPerSecond,
@@ -174,7 +177,7 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
       isBenignMiss: isBlockNotHeldError,
       isAlreadyKnown: isAlreadyKnownError,
       rebroadcastResult,
-      cachePolicy: evmCachePolicy(),
+      cachePolicy: cachePolicy ?? evmCachePolicy(),
       pin: resolveEvmPin(pinLatest, skipPrecompiles),
     },
   });

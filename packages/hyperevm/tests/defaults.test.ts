@@ -292,6 +292,49 @@ describe("hyperevm configuration", () => {
       client.close?.();
     }
   });
+
+  test("uses timed precompile entries and immutable confirmed results through chain policy", async () => {
+    let now = 0;
+    let head = 100;
+    const hash = `0x${"ab".repeat(32)}`;
+    const precompile = { to: "0x0000000000000000000000000000000000000809", data: "0x" };
+    const mock = mockRpc(({ method }) => {
+      if (method === "eth_chainId") return "0x3e7";
+      if (method === "eth_blockNumber") return `0x${head.toString(16)}`;
+      if (method === "eth_getTransactionByHash") return { hash, blockNumber: null };
+      return "0x1";
+    });
+    const client = hyperevm({
+      chainId: 999,
+      endpoints: ["https://custom.example/rpc"],
+      fetchFn: mock.fetchFn,
+      verifyIdentity: false,
+      race: false,
+      cache: { refreshInterval: false },
+      headLag: { probeInterval: false },
+      now: () => now,
+    });
+    try {
+      await client.probe();
+      await client.request({ method: "eth_call", params: [precompile, "latest"] });
+      await client.request({ method: "eth_call", params: [precompile, "0x1"] });
+      expect(mock.calls.filter((call) => call.method === "eth_call")).toHaveLength(1);
+
+      await client.request({ method: "eth_getBalance", params: [hash, "0x10"] });
+      await client.request({ method: "eth_getBalance", params: [hash, "0x10"] });
+      now = 100_000;
+      head = 200;
+      await client.probe();
+      await client.request({ method: "eth_getBalance", params: [hash, "0x10"] });
+      expect(mock.calls.filter((call) => call.method === "eth_getBalance")).toHaveLength(1);
+
+      await client.request({ method: "eth_getTransactionByHash", params: [hash] });
+      await client.request({ method: "eth_getTransactionByHash", params: [hash] });
+      expect(mock.calls.filter((call) => call.method === "eth_getTransactionByHash")).toHaveLength(2);
+    } finally {
+      client.close();
+    }
+  });
 });
 
 

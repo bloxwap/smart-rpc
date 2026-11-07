@@ -60,7 +60,7 @@ An explicit `endpoints` array still replaces the defaults. For `hyperevm()` serv
 
 Automatic health probes preserve the last available token on budgeted endpoints so slow-refill public services can still serve requests. Explicit `probe()` calls may spend it. Concurrent probes share one pending sweep, and timed-out attempts cancel their underlying request.
 
-The v1 read cache does not include the reference log index or background hot-key refresh. State reads, hashes, and `eth_chainId` are cached. `eth_getLogs`, filters, subscriptions, gas estimates, and nonces at `"latest"` are not. Port `_cache.ts` into core behind the same `CachePolicy` hook when log queries need the index.
+The read cache includes canonical plans and background hot-key refresh but deliberately excludes the reference log index. State reads, hashes, and `eth_chainId` are cached. HyperEVM keeps confirmed numbered and by-hash results immutably; reorg-capable chains retain bounded fresh entries. `eth_getLogs`, filters, subscriptions, gas estimates, and nonces at `"latest"` are not cached. A standalone log index can integrate through the cache lookup/fill boundary without owning background routing.
 
 Score persistence (`_warmstart.ts`, `localStoragePersistence`) is not ported. A `persist` option can sit on the pool later without a chain import.
 

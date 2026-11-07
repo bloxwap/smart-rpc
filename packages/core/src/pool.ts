@@ -225,22 +225,44 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
   const servable = (id: string, method: string): boolean =>
     gates.get(id)?.verified === true && !quarantined(id) && !breaker.isOpen(id) && byId.get(id)?.supports(method) === true && !learnedUnsupported.get(id)?.has(method);
   const pinConfig = resolvePin(policy.pin ?? false, false);
-  const pin =
-    pinConfig.enabled && headLag.enabled
-      ? new LatestPin(
-          pinConfig,
-          {
-            heads: (maxAgeMs: number) => board.heads(maxAgeMs),
-            maxLag: headLag.maxLag,
-            servable: (id: string, method: string): boolean => servable(id, method) && byId.get(id)?.pinning === true,
-          },
-          policy.probeMethod,
-        )
-      : undefined;
+  const pin = headLag.enabled
+    ? new LatestPin(
+        pinConfig,
+        {
+          heads: (maxAgeMs: number) => board.heads(maxAgeMs),
+          maxLag: headLag.maxLag,
+          servable: (id: string, method: string): boolean => servable(id, method) && byId.get(id)?.pinning === true,
+        },
+        policy.probeMethod,
+      )
+    : undefined;
   const coalescer = new Coalescer(timeout + Math.min(timeout, INFLIGHT_GRACE_MS));
   const cacheConfig = resolveCache(options.cache ?? (policy.cachePolicy ? true : false));
-  const cache =
-    cacheConfig.enabled && policy.cachePolicy ? new ReadCache(cacheConfig, policy.cachePolicy) : undefined;
+  const cache = cacheConfig.enabled && policy.cachePolicy
+    ? new ReadCache(cacheConfig, policy.cachePolicy, {
+        now,
+        head: (method: string) => newestHead(method),
+        held: (method: string) => heldHead(method),
+        active: () => activity.active(),
+        probe: () => probeBest(),
+        probeMethod: policy.probeMethod,
+        read: (method: string, params: unknown) => {
+          const pinned = pin?.pinTop(method, params) ?? { params, holders: undefined, block: undefined };
+          const barred = new Set(barredFrom(pinned.holders));
+          for (const endpoint of built) {
+            if (!endpoint.supportsRequest({ method, params: pinned.params })) barred.add(endpoint.id);
+          }
+          return sendShared(method, pinned.params, undefined, true, false, barred, undefined, true).then(
+            (result) => ({ result, block: pinned.block }),
+          );
+        },
+        ready: (method: string): boolean => {
+          const picked = board.pick(method, NO_BAR, "best", random);
+          return picked !== undefined && !breaker.isOpen(picked.id) && budgets.has(picked.id);
+        },
+        emit,
+      })
+    : undefined;
 
   const closeCircuit = (endpoint: RankedEndpoint, call: boolean): void => {
     if (!call && breaker.isOpen(endpoint.id)) return;
@@ -389,6 +411,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       lag: recorded.lag,
       trusted: recorded.trusted,
     });
+    cache?.headChanged();
   };
 
   const start = (
@@ -577,6 +600,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     rebroadcast: boolean,
     barred: ReadonlySet<string>,
     progress: (waitMs?: number) => void = noProgress,
+    background = false,
   ): Promise<unknown> => {
     const pause = (ms: number): Promise<void> => {
       progress(ms);
@@ -585,7 +609,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     const exclude = new Set<string>(barred);
     const errors: Error[] = [];
     const retries = idempotent || rebroadcast;
-    const racing = idempotent && raceRivals > 0;
+    const racing = idempotent && raceRivals > 0 && !background;
     const attempts = retries ? retryCount + 1 : 1;
     let previous: RankedEndpoint | undefined;
     let round = 0;
@@ -669,7 +693,16 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       }
       progress();
       try {
-        const result = await dispatch(endpoint, method, params, parent, idempotent, exclude, errors, attempt === 0 && racing);
+        const result = await dispatch(
+          endpoint,
+          method,
+          params,
+          parent,
+          idempotent && !background,
+          exclude,
+          errors,
+          attempt === 0 && racing,
+        );
         if (stateful?.create.includes(method) && typeof result === "string") {
           const handle = `0x${(++handleSequence).toString(16)}`;
           handles.set(handle, { endpoint: endpoint.id, upstream: result });
@@ -704,12 +737,13 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     rebroadcast: boolean,
     barred: ReadonlySet<string>,
     batchOperation?: Operation,
+    background = false,
   ): Promise<unknown> => {
     const run = async (caller: AbortSignal | undefined, progress = noProgress): Promise<unknown> => {
       const operation = batchOperation ?? new Operation(options.operationBudget, timeout, caller);
       const signal = batchOperation && caller ? AbortSignal.any([operation.signal, caller]) : operation.signal;
       operations.set(signal, operation);
-      try { return await send(method, params, signal, idempotent, rebroadcast, barred, progress); }
+      try { return await send(method, params, signal, idempotent, rebroadcast, barred, progress, background); }
       finally { if (!batchOperation) operation.close(); }
     };
     const share = batchOperation === undefined &&
@@ -758,6 +792,21 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
   };
   const probe = (): Promise<void> => runProbe(false);
 
+  /** One head sample from the best verified, closed, funded endpoint for cache ticks. */
+  const probeBest = async (): Promise<void> => {
+    if (closed) return;
+    const picked = board.pick(policy.probeMethod, NO_BAR, "best", random);
+    if (!picked || breaker.isOpen(picked.id) || !budgets.has(picked.id)) return;
+    const target = byId.get(picked.id);
+    if (target?.supports(policy.probeMethod) !== true) return;
+    const reason = await checkChain(target);
+    if (reason || closed || breaker.isOpen(picked.id) || !budgets.has(picked.id)) return;
+    await start(picked, policy.probeMethod, policy.probeParams, undefined, false, false).promise.then(
+      () => undefined,
+      () => undefined,
+    );
+  };
+
   const probeEvery =
     headLag.enabled && headLag.probeInterval !== false && headLag.probeInterval > 0 ? headLag.probeInterval : 0;
   let probeTimer: ReturnType<typeof setInterval> | undefined;
@@ -799,12 +848,25 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     return best;
   };
 
+  const heldHead = (method: string): number | undefined => {
+    const readings = new Map(board.heads(Number.POSITIVE_INFINITY).map((reading) => [reading.id, reading]));
+    let held: number | undefined;
+    for (const endpoint of built) {
+      if (!servable(endpoint.id, method)) continue;
+      const reading = readings.get(endpoint.id);
+      if (reading?.trusted !== true) return undefined;
+      if (held === undefined || reading.head < held) held = reading.head;
+    }
+    return held;
+  };
+
   const execute = async (request: RpcRequest, batchOperation?: Operation): Promise<unknown> => {
     if (closed) throw new TransportClosedError();
     if (request.chainId !== undefined && !policy.chainIds.includes(request.chainId)) {
       throw new UnknownChainError(request.chainId);
     }
     touch();
+    cache?.touch();
     const warming = warm.touch();
     if (warming) await warming;
     const method = request.method;
@@ -821,10 +883,13 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     }
     const signal = request.signal;
     if (signal?.aborted) throw abortError(signal);
-    if (method === policy.probeMethod && idempotent && pin?.answersBlockNumber) {
-      if (signal?.aborted) throw abortError(signal);
-      const local = pin.blockNumber();
-      if (local !== undefined) return local;
+    if (method === "eth_blockNumber" && method === policy.probeMethod && idempotent && (pin?.answersBlockNumber || cache)) {
+      const pinned = pin?.blockNumber();
+      if (pinned !== undefined) return pinned;
+      const local = cache?.blockNumber();
+      if (local !== undefined) return pin?.answersBlockNumber ? pin.observe(local) : local;
+      const upstream = await sendShared(method, params, signal, idempotent, rebroadcast, NO_BAR, batchOperation);
+      return pin?.answersBlockNumber ? pin.observe(upstream) : upstream;
     }
     const cached = cache?.lookup(method, params, idempotent, { now: now(), head: newestHead(method) });
     if (cached?.hit) {
@@ -871,6 +936,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       if (closed) return;
       closed = true;
       stopProbes();
+      cache?.close();
       warm.close();
       handles.clear();
       for (const endpoint of built) endpoint.close?.();

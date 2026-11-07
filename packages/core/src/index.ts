@@ -20,10 +20,14 @@ export {
   type BudgetOptions,
 } from "./budget.js";
 export {
+  DEFAULT_CACHE_HOT_IDLE_MS,
+  DEFAULT_CACHE_HOT_KEYS,
   DEFAULT_CACHE_MAX_AGE_MS,
   DEFAULT_CACHE_MAX_BYTES,
   DEFAULT_CACHE_MAX_ENTRIES,
   DEFAULT_CACHE_MAX_STALE_BLOCKS,
+  DEFAULT_CACHE_REFRESH_INTERVAL_MS,
+  evmCachePlan,
   evmCachePolicy,
   ReadCache,
   resolveCache,
@@ -32,8 +36,13 @@ export {
   type CacheKind,
   type CacheMiss,
   type CacheOptions,
+  type CachePlan,
+  type CachePlanKind,
   type CachePolicy,
+  type CacheRead,
+  type CacheSource,
   type CacheStats,
+  type EvmCachePolicyOptions,
 } from "./cache.js";
 export {
   coalesceKey,
