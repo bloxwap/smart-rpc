@@ -112,6 +112,30 @@ const transport = ethereum({
 
 `ETHEREUM_MAINNET_ENDPOINTS` and the HyperEVM endpoint lists expose URLs for compatibility; their registry counterparts also carry budgets. Solana's `MAINNET_ENDPOINTS`, `DEVNET_ENDPOINTS`, and `TESTNET_ENDPOINTS` expose endpoint configurations with budgets. For a dual-network `hyperevm()` transport, `endpoints` replaces mainnet and `testnetEndpoints` replaces testnet. With `chainId: 998`, use `endpoints` for testnet.
 
+## Scoped sharing and viem
+
+Every built-in factory accepts `sharing`. Create one scope per fixed endpoint/credential configuration, then key each consumer variant by its chain, timeout, and retry policy. Equivalent acquisitions share scores, cache, coalescing, identity checks, and probe timers. A lease closes only itself; the last lease closes the underlying pool, and a later acquisition builds a fresh one. `scope.close()` closes the whole factory scope.
+
+```ts
+import { createPoolScope } from "@bloxwap/smart-rpc";
+import { hyperevm } from "@bloxwap/smart-rpc/hyperevm";
+
+const scope = createPoolScope();
+const config = { chainId: 999 as const, endpoints: ["https://rpc.hyperliquid.xyz/evm"] };
+const first = hyperevm({
+  ...config,
+  sharing: { scope, key: "999:10000:2", budgetKey: "999" },
+});
+const equivalent = hyperevm({
+  ...config,
+  sharing: { scope, key: "999:10000:2", budgetKey: "999" },
+});
+```
+
+`budgetKey` defaults to `key`. Keep it unchanged across timeout/retry variants only when they use the same endpoints, credentials, chain, and budget configuration; those variants then share endpoint and provider-group token buckets while keeping separate pools. Different keys or scopes never share learned state. No global pool registry is used.
+
+For viem clients, `asViemTransport(options)` from `@bloxwap/smart-rpc/ethereum` derives these keys from the client chain, timeout, and retry count. It delegates requests to the same pool implementation and exposes `close`, `snapshot`, `probe`, `cacheStats`, and events through the viem transport value. Closing one client does not close an equivalent peer.
+
 ## Defaults
 
 The shared scoring, breaker and retry defaults follow `@bloxwap/smart-hyperevm` at `092b8f9`. Every chain uses them. Head freshness and endpoint capabilities can vary by chain.

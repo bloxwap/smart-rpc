@@ -12,6 +12,7 @@ export {
   type LogRangeOptions,
   type ViemConnection,
   type ViemConnectionOptions,
+  asViemTransport,
   connectViem,
   ethereum,
   requestLogs,

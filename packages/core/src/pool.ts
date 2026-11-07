@@ -104,6 +104,24 @@ const noProgress = (): void => undefined;
 
 /** Build a pool. Registration with {@link createSmartRpc} is separate and explicit. */
 export function createPool(options: PoolOptions): RpcPool {
+  const now = options.now ?? ((): number => Date.now());
+  const sharing = options.sharing;
+  if (sharing) {
+    const chainKey = JSON.stringify(options.policy.chainIds);
+    const key = JSON.stringify([sharing.key, chainKey]);
+    const budgetKey = JSON.stringify([sharing.budgetKey ?? sharing.key, chainKey]);
+    let built = false;
+    const lease = sharing.scope.acquire(key, budgetKey, now, (budgets) => {
+      built = true;
+      return buildPool(options, budgets, budgetKey);
+    });
+    if (!built) for (const endpoint of options.endpoints) endpoint.close?.();
+    return lease;
+  }
+  return buildPool(options, new Budgets(now), "");
+}
+
+function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: string): RpcPool {
   const policy = options.policy;
   const now = options.now ?? ((): number => Date.now());
   const random = options.random ?? Math.random;
@@ -122,7 +140,16 @@ export function createPool(options: PoolOptions): RpcPool {
   const verifyIdentity = options.verifyIdentity ?? true;
   const breaker = new Breaker(resolveBreaker(options.breaker), now);
   const built = buildEndpoints(options);
-  const budgets = new Budgets(now);
+  const budgetId = (id: string): string => budgetNamespace === "" ? id : JSON.stringify([budgetNamespace, id]);
+  const budgets = {
+    configure(id: string, config: BudgetConfig | undefined, group?: string, provider?: BudgetConfig): void {
+      budgetStore.configure(budgetId(id), config, group === undefined ? undefined : budgetId(group), provider);
+    },
+    has: (id: string): boolean => budgetStore.has(budgetId(id)),
+    take: (id: string): boolean => budgetStore.take(budgetId(id)),
+    remaining: (id: string): number | null => budgetStore.remaining(budgetId(id)),
+    refillMs: (ids: Iterable<string>): number => budgetStore.refillMs([...ids].map(budgetId)),
+  };
   for (const endpoint of built) budgets.configure(endpoint.id, endpoint.budget, endpoint.providerGroup, endpoint.providerBudget);
   const operations = new WeakMap<AbortSignal, Operation>();
   const stateful = policy.statefulMethods;

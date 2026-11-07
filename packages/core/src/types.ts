@@ -1,5 +1,5 @@
 import type { BreakerOptions } from "./breaker.js";
-import type { BudgetConfig, BudgetOptions } from "./budget.js";
+import type { BudgetConfig, BudgetOptions, Budgets } from "./budget.js";
 import type { CacheOptions, CachePolicy, CacheStats } from "./cache.js";
 import type { EndpointSnapshot, RpcEvent } from "./events.js";
 import type { PinLatestOptions } from "./pin.js";
@@ -51,7 +51,7 @@ export interface PoolEndpointConfig {
   /** URLs sharing a provider quota use the same group inside this pool. */
   providerGroup?: string | undefined;
   providerBudget?: BudgetOptions | undefined;
-  /** Release transport resources when the pool closes. */
+  /** Release owned resources on pool close, or immediately when a shared acquisition discards this duplicate. */
   close?: (() => void) | undefined;
   /**
    * Milliseconds a recent rate-limited response asked for in `Retry-After`.
@@ -139,6 +139,34 @@ export interface OperationBudgetOptions {
   timeout?: number | undefined;
 }
 
+/** A factory-local owner for shared pools and budgets. Create one with `createPoolScope()`. */
+export interface PoolShareScope {
+  /** @internal Called by `createPool` when `sharing` is set. */
+  acquire(
+    key: string,
+    budgetKey: string,
+    now: () => number,
+    build: (budgets: Budgets) => RpcPool,
+  ): RpcPool;
+  /** Close every pool in this scope. Existing and future leases cannot make requests. */
+  close(): void;
+}
+
+/** Opt in to reuse inside one explicit factory scope. No process-global registry is used. */
+export interface PoolSharingOptions {
+  scope: PoolShareScope;
+  /**
+   * Identity of every routing-relevant input. Dedicate a scope to fixed endpoints, credentials,
+   * and policy, then include per-consumer chain, timeout, and retry settings in this key.
+   */
+  key: string;
+  /**
+   * Identity of the provider allowance. Default: `key`. Use the same value across timeout/retry
+   * variants only when their endpoints, credentials, chain, and budget configuration match.
+   */
+  budgetKey?: string | undefined;
+}
+
 /** Options for {@link createPool}. Defaults match the HyperEVM transport at 092b8f9. */
 export interface PoolOptions {
   endpoints: readonly PoolEndpointConfig[];
@@ -191,6 +219,8 @@ export interface PoolOptions {
   now?: (() => number) | undefined;
   /** Source of randomness for power-of-two-choices and backoff jitter. Default: `Math.random`. */
   random?: (() => number) | undefined;
+  /** Reuse equivalent pools and coordinate budgets only inside this explicit scope. Default: off. */
+  sharing?: PoolSharingOptions | undefined;
 }
 
 /** A routed pool. Register it with {@link createSmartRpc} or call `request` directly. */

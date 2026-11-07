@@ -28,7 +28,7 @@ The workspace packages below are private. They are how the repo is organized. Th
 | Public endpoint discovery and registry data | Source-backed registries in the Ethereum, HyperEVM, and Solana packages; the shared pool ranks endpoints at runtime. | Each transport subpath |
 | Persisted registry rankings, warm-start persistence, the rolling `eth_getLogs` index | Not ported. The source registries carry provenance and local budgets, not historical scores. | — |
 
-Callers that do `createPublicClient({ transport: smartHyperevm() })` need an adapter. v1's public call is `rpc.request({ chainId, method, params })`. The ethereum transport still uses viem `http()` and `webSocket()` as the child of each endpoint. A later `asViemTransport(pool)` can wrap `createTransport` without moving policy back into the chain package.
+Callers that use `createPublicClient({ transport: smartHyperevm() })` can use `asViemTransport(options)` from the ethereum subpath. It delegates to pools and keeps routing policy out of the viem adapter. Equivalent clients share one pool, while chain, timeout, and retry variants remain isolated; matching variants spend factory-scoped endpoint and provider budgets. The ethereum transport still uses viem `http()` and `webSocket()` as the child of each endpoint.
 
 ## What stays the same
 
@@ -66,9 +66,9 @@ Score persistence (`_warmstart.ts`, `localStoragePersistence`) is not ported. A 
 ## Suggested order
 
 1. Point new callers at `npm install @bloxwap/smart-rpc` and the subpath for the chain they use (`@bloxwap/smart-rpc/hyperevm`, `@bloxwap/smart-rpc/solana`). Keep smart-hyperevm and smart-solana published until those callers move. Do not publish the private workspace packages.
-2. Add a viem `Transport` adapter on the ethereum subpath that delegates to the pool, so `createPublicClient` sites can switch without rewriting call sites. Map `smartHyperevm({ endpoints, onEvent })` onto `hyperevm({ endpoints, onEvent })` from `@bloxwap/smart-rpc/hyperevm`.
+2. Use `asViemTransport(options)` from the ethereum subpath for `createPublicClient`. For HyperEVM, set `chainId: 999`, `skipPrecompiles: true`, the HyperEVM endpoints, and `HYPEREVM_SAFE_METHODS`; the adapter supplies equivalent-client sharing and budget coordination.
 3. Review and refresh the included source-backed endpoint registries with `pnpm check:rpcs` after building. Preserve provider budgets and separate chain identities; the public defaults ship through the transport subpaths.
 4. Port the log index and warm-start into the private core package behind the existing cache and scoreboard hooks.
 5. Replace smart-solana's transport internals with the Solana code in this repo. Reconcile new public endpoints into the source-backed cluster registries. Do not bring its breaker or backoff numbers back.
 
-Until step 2, a process that needs both a viem client and this router should use this router for new calls and leave the old transport in place for the viem client. Do not run both against the same provider budget unless each has its own `budget`.
+A process that keeps the old `smart-hyperevm` package alongside this adapter still has two independent budget stores. Migrate equivalent clients to one adapter scope, or give the old and new transports separate allowances.

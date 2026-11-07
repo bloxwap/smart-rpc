@@ -90,6 +90,7 @@ export {
   type PinTarget,
 } from "./pin.js";
 export { createPool } from "./pool.js";
+export { createPoolScope } from "./share.js";
 export { blockNumberFromResult, parseQuantity, toHexQuantity } from "./quantity.js";
 export {
   DEFAULT_RACE_WIDTH,
@@ -127,6 +128,8 @@ export type {
   HedgeOptions,
   PoolEndpointConfig,
   PoolOptions,
+  PoolShareScope,
+  PoolSharingOptions,
   OperationBudgetOptions,
   RpcPool,
   RpcRequest,
