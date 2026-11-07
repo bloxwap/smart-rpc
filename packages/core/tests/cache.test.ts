@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   DEFAULT_CACHE_MAX_AGE_MS,
   DEFAULT_CACHE_MAX_STALE_BLOCKS,
+  EndpointCapabilityError,
   evmCachePlan,
   evmCachePolicy,
   isPrecompileCall,
@@ -202,6 +203,46 @@ describe("fresh and immutable entries", () => {
     })?.hit).toBe(false);
   });
 
+  test("aliases latest entries to exact blocks only with a pin or result-proven height", async () => {
+    const head = { value: 100 };
+    const a = node("a", head, (_method, params) => Array.isArray(params) && params[1] === "latest" ? "0x65" : "0x64");
+    const policy = evmPolicy(1, false);
+    policy.cachePolicy = evmCachePolicy({ immutable: true });
+    const client = opened([a.config], { isActive: () => false, now: () => 0 }, policy);
+    await client.probe();
+    await expect(client.request({ method: "eth_getBalance", params: [ADDRESS, "latest"] })).resolves.toBe("0x65");
+    await expect(client.request({ method: "eth_getBalance", params: [ADDRESS, "0x64"] })).resolves.toBe("0x64");
+    expect(a.count("eth_getBalance")).toBe(2);
+    client.close();
+
+    const latestOnly = node("latest-only", head, () => "0x65");
+    latestOnly.config.pinning = false;
+    latestOnly.config.supportsRequest = ({ method, params }) =>
+      method !== "eth_getBalance" || (Array.isArray(params) && params[1] === "latest");
+    const latestPolicy = evmPolicy(1, true);
+    latestPolicy.cachePolicy = evmCachePolicy({ immutable: true });
+    const restricted = opened([latestOnly.config], { isActive: () => false, now: () => 0 }, latestPolicy);
+    await restricted.probe();
+    await restricted.request({ method: "eth_getBalance", params: [ADDRESS, "latest"] });
+    await expect(restricted.request({ method: "eth_getBalance", params: [ADDRESS, "0x64"] })).rejects.toBeInstanceOf(
+      EndpointCapabilityError,
+    );
+    expect(latestOnly.count("eth_getBalance")).toBe(1);
+    restricted.close();
+
+    const cache = new ReadCache(resolveCache({ refreshInterval: false }), evmCachePolicy({ immutable: true }));
+    const miss = cache.lookup("eth_getBlockByNumber", ["latest", false], true, {
+      now: 0,
+      head: { block: 100, ageMs: 0 },
+    });
+    if (!miss || miss.hit) throw new Error("expected a miss");
+    miss.fill({ number: "0x64", hash: HASH }, undefined);
+    expect(cache.lookup("eth_getBlockByNumber", ["0x64", false], true, {
+      now: 100_000,
+      head: { block: 100, ageMs: 0 },
+    })).toMatchObject({ hit: true, result: { number: "0x64", hash: HASH } });
+  });
+
   test("keeps default numbered results fresh, but HyperEVM-style results immutable", () => {
     const params = [ADDRESS, "0xa"];
     const fresh = new ReadCache(resolveCache({ refreshInterval: false }), evmCachePolicy());
@@ -394,6 +435,28 @@ describe("background refresh", () => {
     expect(a.count("eth_call")).toBe(2);
     expect(client.cacheStats()).toMatchObject({ entries: 1, hotKeys: 1, refreshes: 1 });
     await expect(client.request({ method: "eth_call", params: [TX] })).resolves.toBe("0x1");
+    client.close();
+  });
+
+  test.each([{ maxEntries: 0 }, { maxBytes: 0 }])("disables hot refresh with zero storage capacity: %o", async (capacity) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const head = { value: 100 };
+    const a = node("a", head);
+    const policy = evmPolicy(1, true);
+    policy.cachePolicy = evmCachePolicy({ isTimedCall: isPrecompileCall });
+    const client = opened([a.config], {
+      cache: { ...capacity, refreshInterval: 5 },
+      now: () => Date.now(),
+    }, policy);
+    await client.probe();
+    await client.request({ method: "eth_call", params: [TX] });
+    await client.request({ method: "eth_call", params: [PRECOMPILE] });
+    expect(a.count("eth_call")).toBe(2);
+    await vi.advanceTimersByTimeAsync(50);
+    expect(a.count("eth_call")).toBe(2);
+    expect(a.count("eth_blockNumber")).toBe(1);
+    expect(client.cacheStats()).toMatchObject({ entries: 0, bytes: 0, hotKeys: 0, refreshes: 0 });
     client.close();
   });
 

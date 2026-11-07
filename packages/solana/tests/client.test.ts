@@ -3,6 +3,14 @@ import { describe, expect, test } from "vitest";
 import { retryAfterMs } from "@smart-rpc/core";
 import { jsonRpcCaller, solana } from "../src/index.js";
 
+async function until(condition: () => boolean): Promise<void> {
+  const deadline = Date.now() + 1_000;
+  while (!condition()) {
+    if (Date.now() > deadline) throw new Error("Condition not met in time.");
+    await new Promise((resolve) => setTimeout(resolve, 2));
+  }
+}
+
 describe("Solana HTTP responses", () => {
   test.each([
     "",
@@ -114,6 +122,43 @@ describe("Solana HTTP responses", () => {
       await client.request({ method: "getBalance", params: ["address"] });
       expect(balances).toBe(1);
       expect(client.cacheStats()).toMatchObject({ hits: 1, misses: 1, entries: 1 });
+    } finally {
+      client.close();
+    }
+  });
+
+  test("snapshots generic hot-plan params before caller mutation", async () => {
+    let slot = 100;
+    const balanceParams: unknown[] = [];
+    const client = solana({
+      endpoints: ["https://rpc.example"],
+      verifyIdentity: false,
+      race: false,
+      cache: { refreshInterval: false, immutableParams: false },
+      headLag: { probeInterval: false },
+      fetchFn: async (_input, init) => {
+        const body = JSON.parse(String(init?.body)) as { id: number; method: string; params?: unknown };
+        if (body.method === "getBalance") balanceParams.push(body.params);
+        const result = body.method === "getSlot" ? slot : body.method === "getBalance" ? body.params : "ok";
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result }));
+      },
+    });
+    try {
+      await client.probe();
+      const params = [{ account: "original", nested: { value: "original" } }];
+      await client.request({ method: "getBalance", params });
+      params[0]!.account = "changed";
+      params[0]!.nested.value = "changed";
+      slot = 101;
+      await client.probe();
+      await until(() => balanceParams.length === 2);
+      expect(balanceParams[1]).toEqual([{ account: "original", nested: { value: "original" } }]);
+      expect(client.cacheStats().hotKeys).toBe(1);
+      await expect(client.request({
+        method: "getBalance",
+        params: [{ account: "original", nested: { value: "original" } }],
+      })).resolves.toEqual([{ account: "original", nested: { value: "original" } }]);
+      expect(balanceParams).toHaveLength(2);
     } finally {
       client.close();
     }
