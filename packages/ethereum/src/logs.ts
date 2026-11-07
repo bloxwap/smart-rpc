@@ -50,7 +50,7 @@ export async function requestLogs(
   for (const result of results) {
     if (result.status !== "fulfilled") continue;
     if (!Array.isArray(result.value)) throw new Error("eth_getLogs returned a non-array result.");
-    logs.push(...result.value);
+    for (const log of result.value) logs.push(log);
   }
   return logs;
 }

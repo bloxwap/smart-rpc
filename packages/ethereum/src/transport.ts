@@ -33,6 +33,9 @@ export { ETHEREUM_MAINNET_ENDPOINTS } from "./registry.js";
 /** CAIP-2 id for Ethereum mainnet. */
 export const ETHEREUM_MAINNET_CAIP = "eip155:1";
 
+// Explicit read extensions cannot turn transaction submission or wallet/admin calls into reads.
+const WRITE_PREFIX = /^(?:eth_(?:send|sign|submit|new|uninstall|subscribe|unsubscribe)|personal_|wallet_|engine_|mev_|builder_|flashbots_)/;
+
 /** A URL, or a URL plus label, weight, and budget. `wss:` URLs use viem `webSocket()`. */
 export interface EthereumEndpointConfig {
   url: string;
@@ -155,6 +158,7 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
       expectedIdentity: chainId,
       parseIdentity: parseQuantity,
       isSafeMethod: (method: string): boolean =>
+        !WRITE_PREFIX.test(method) &&
         !NON_IDEMPOTENT_METHODS.includes(method) &&
         !(nonIdempotentMethods ?? []).includes(method) &&
         (isIdempotentMethod(method) || (safeMethods ?? []).includes(method)),

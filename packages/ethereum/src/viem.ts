@@ -4,7 +4,7 @@
  * @module
  */
 
-import { http, webSocket, type WebSocketTransport } from "viem";
+import { http, webSocket, type WebSocketTransport, type WebSocketTransportConfig } from "viem";
 
 import { parseQuantity, retryAfterMs, type EndpointCall } from "@smart-rpc/core";
 
@@ -19,7 +19,7 @@ export interface ViemConnectionOptions {
   headers?: Readonly<Record<string, string>> | undefined;
   /** Required for a dedicated subscription session, verified on its own connection. */
   expectedChainId?: number | undefined;
-  reconnect?: Parameters<typeof webSocket>[1] extends infer C ? C extends { reconnect?: infer R } ? R : never : never;
+  reconnect?: WebSocketTransportConfig["reconnect"] | undefined;
 }
 
 export interface ViemConnection {

@@ -79,7 +79,7 @@ describe("endpoint capability routing", () => {
 
   test("never races or coalesces relay writes even when called concurrently", async () => {
     const { calls, fetchFn } = fixture();
-    const pool = ethereum({ endpoints: ["https://relay-a.example", "https://relay-b.example"], fetchFn, headLag: false, race: true });
+    const pool = ethereum({ endpoints: ["https://relay-a.example", "https://relay-b.example"], fetchFn, headLag: false, race: true, safeMethods: ["eth_sendBundle"] });
     try {
       await Promise.all([pool.request({ method: "eth_sendBundle", params: [{ txs: ["0x01"] }] }), pool.request({ method: "eth_sendBundle", params: [{ txs: ["0x01"] }] })]);
       expect(calls.filter((entry) => entry.request.method === "eth_sendBundle")).toHaveLength(2);
@@ -110,6 +110,39 @@ describe("endpoint capability routing", () => {
       ]);
       expect(filter.toBlock).toBe("0x65");
       await expect(requestLogs(pool, filter, { maxBlockRange: 1, maxRequests: 2 })).rejects.toThrow("exceeding maxRequests");
+    } finally { pool.close(); }
+  });
+
+  test("does not return partial logs when a split rejects", async () => {
+    const { fetchFn } = fixture((request) => {
+      const filter = request.params[0] as { fromBlock: string };
+      return filter.fromBlock === "0x33" ? new Error("rejected range") : [{ blockNumber: filter.fromBlock }];
+    });
+    const pool = ethereum({ endpoints: ["https://partial.example"], fetchFn, headLag: false, race: false });
+    try {
+      await expect(requestLogs(pool, { fromBlock: "0x1", toBlock: "0x65" }, { maxBlockRange: 50 })).rejects.toThrow("no partial result");
+    } finally { pool.close(); }
+  });
+
+  test("cancels an HTTP call without recording an endpoint failure", async () => {
+    let started!: () => void;
+    const ready = new Promise<void>((resolve) => { started = resolve; });
+    let cancelled = false;
+    const pool = ethereum({ endpoints: ["https://cancel.example"], verifyIdentity: false, headLag: false,
+      fetchFn: async (_input, init) => new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => { cancelled = true; reject(init.signal?.reason); }, { once: true });
+        started();
+      }),
+    });
+    const controller = new AbortController();
+    try {
+      const request = pool.request({ method: "eth_getBalance", params: ["0x00", "latest"], signal: controller.signal });
+      const rejected = expect(request).rejects.toThrow();
+      await ready;
+      controller.abort();
+      await rejected;
+      expect(cancelled).toBe(true);
+      expect(pool.snapshot().every((entry) => !entry.ejected && !entry.quarantined && entry.inflight === 0)).toBe(true);
     } finally { pool.close(); }
   });
 });
