@@ -43,6 +43,8 @@ describe("factory-scoped pools", () => {
     await expect(second.request(request)).resolves.toBe("0x2");
     expect(calls).toBe(1);
     expect(first.cacheStats().hits).toBe(1);
+    expect(second.scores().endpoints.endpoint?.["*"]?.n).toBe(1);
+    expect(second.restoreScores(second.scores())).toBe(false);
     first.close();
     second.close();
     scope.close();

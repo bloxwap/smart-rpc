@@ -131,6 +131,48 @@ describe("score snapshots", () => {
     expect(JSON.parse(text)).toEqual(snapshot);
   });
 
+  test("unlabeled core endpoints use stable distinct opaque labels in scores and persisted JSON", async () => {
+    const time = clock();
+    const urls = [
+      "https://user:CORE_SECRET_ONE@same.example/private/PATH_ONE?api-key=QUERY_ONE",
+      "https://user:CORE_SECRET_TWO@same.example/private/PATH_TWO?api-key=QUERY_TWO",
+    ];
+    const endpoints = urls.map((url, index) => ({
+      url,
+      call: async () => {
+        time.advance(index === 0 ? 400 : 20);
+        return "0x1";
+      },
+    }));
+    const saved: ScoreSnapshot[] = [];
+    const transport = pool(endpoints, {
+      headLag: false,
+      routing: "best",
+      now: time.now,
+      persist: { load: () => undefined, save: (snapshot) => void saved.push(snapshot) },
+    });
+    await call(transport);
+    await call(transport);
+    const snapshot = transport.scores();
+    const labels = Object.keys(snapshot.endpoints);
+    expect(labels).toHaveLength(2);
+    expect(new Set(labels).size).toBe(2);
+    for (const label of labels) expect(label).toMatch(/^endpoint:[0-9a-f]{16}$/);
+    expect(transport.endpoints.map((endpoint) => endpoint.id)).toEqual(urls);
+    transport.close();
+    expect(saved).toHaveLength(1);
+    for (const text of [JSON.stringify(snapshot), JSON.stringify(saved)]) {
+      for (const secret of [...urls, "CORE_SECRET", "QUERY_", "same.example", "private", "PATH_", "api-key"]) {
+        expect(text).not.toContain(secret);
+      }
+    }
+
+    const restored = pool(endpoints, { headLag: false, now: time.now });
+    expect(restored.restoreScores(JSON.stringify(snapshot))).toBe(true);
+    expect(Object.keys(restored.scores().endpoints)).toEqual(labels);
+    expect(restored.endpoints.map((endpoint) => endpoint.id)).toEqual(urls);
+  });
+
   test("a fresh pool restored from a snapshot routes to the endpoint the last session found fastest", async () => {
     const time = clock();
     const first = [mockEndpoint("a", time, 400), mockEndpoint("b", time, 20)];
@@ -427,6 +469,95 @@ describe("persist", () => {
     expect(saves).toHaveLength(4);
   });
 
+  test("async saves do not overlap and only the newest queued snapshot follows the in-flight save", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(START);
+    const time = clock();
+    const writes: { snapshot: ScoreSnapshot; finish: () => void }[] = [];
+    const completed: number[] = [];
+    const transport = open(time, [mockEndpoint("a", time, 5)], {
+      persist: {
+        load: () => undefined,
+        save: (snapshot) => {
+          const pending = deferred<void>();
+          writes.push({
+            snapshot,
+            finish: () => {
+              completed.push(snapshot.endpoints.node0?.eth_call?.n ?? 0);
+              pending.resolve();
+            },
+          });
+          return pending.promise;
+        },
+        saveInterval: 0,
+      },
+    });
+    await call(transport);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(writes).toHaveLength(1);
+    await call(transport);
+    await vi.advanceTimersByTimeAsync(0);
+    await call(transport);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(writes).toHaveLength(1);
+
+    writes[0]!.finish();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(writes).toHaveLength(2);
+    expect(writes[1]?.snapshot.endpoints.node0?.eth_call?.n).toBe(3);
+    writes[1]!.finish();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(completed).toEqual([1, 3]);
+
+    transport.close();
+    expect(writes).toHaveLength(3);
+    writes[2]!.finish();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(completed).toEqual([1, 3, 3]);
+  });
+
+  test("close queues its newest snapshot behind an in-flight timer save without blocking", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(START);
+    const time = clock();
+    const writes: { snapshot: ScoreSnapshot; finish: () => void }[] = [];
+    const completed: number[] = [];
+    const transport = open(time, [mockEndpoint("a", time, 5)], {
+      persist: {
+        load: () => undefined,
+        save: (snapshot) => {
+          const pending = deferred<void>();
+          writes.push({
+            snapshot,
+            finish: () => {
+              completed.push(snapshot.endpoints.node0?.eth_call?.n ?? 0);
+              pending.resolve();
+            },
+          });
+          return pending.promise;
+        },
+        saveInterval: 0,
+      },
+    });
+    await call(transport);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(writes).toHaveLength(1);
+    await call(transport);
+    transport.close();
+    transport.close();
+    expect(writes).toHaveLength(1);
+
+    writes[0]!.finish();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(writes).toHaveLength(2);
+    expect(writes[1]?.snapshot.endpoints.node0?.eth_call?.n).toBe(2);
+    writes[1]!.finish();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(completed).toEqual([1, 2]);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(writes).toHaveLength(2);
+  });
+
   test("defaults to one save per 10 seconds", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(START);
@@ -543,6 +674,7 @@ describe("persist", () => {
         throw new Error("quota exceeded");
       },
       (): Promise<void> => Promise.reject(new Error("kv write failed")),
+      (): Promise<void> => Promise.reject(),
     ] satisfies ScorePersistence["save"][]) {
       const time = clock();
       const events: RpcEvent[] = [];

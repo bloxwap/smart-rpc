@@ -33,7 +33,7 @@ export interface EndpointCall {
 
 /** One endpoint the pool can route to. */
 export interface PoolEndpointConfig {
-  /** Public label. Default: `url`. */
+  /** Public runtime label. Default: `url`. Unlabeled endpoints use an opaque URL hash in score snapshots. */
   id?: string | undefined;
   url: string;
   /** Routing weight above 0. Default: 1. */

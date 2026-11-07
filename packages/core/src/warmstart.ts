@@ -63,10 +63,17 @@ export interface ScorePersistence {
   saveInterval?: number | undefined;
 }
 
+interface WarmStartEndpoint {
+  /** Runtime scoreboard ID. */
+  id: string;
+  /** Public snapshot key. Unlike an implicit runtime ID, this never contains the endpoint URL. */
+  label: string;
+}
+
 interface WarmStartOptions {
   persistence: ScorePersistence | undefined;
-  /** Endpoint labels. Books for any other id are ignored. */
-  ids: readonly string[];
+  /** Runtime IDs and their public snapshot labels. Books for any other label are ignored. */
+  endpoints: readonly WarmStartEndpoint[];
   /** Largest latency a restored book may hold: the per-attempt deadline, since no live sample can be slower. */
   latencyCapMs: number;
   /**
@@ -82,6 +89,7 @@ interface WarmStartOptions {
 export class WarmStart {
   readonly #board: Scoreboard;
   readonly #options: WarmStartOptions;
+  readonly #labels: ReadonlyMap<string, string>;
   readonly #maxAgeMs: number;
   readonly #saveIntervalMs: number;
   /** `"idle"` before the first request, `"loading"` while `load` runs, `"ready"` once it settled. */
@@ -91,11 +99,15 @@ export class WarmStart {
   #timer: ReturnType<typeof setTimeout> | undefined;
   /** When the armed timer should have fired. */
   #dueAt = 0;
+  #writing = false;
+  /** Only the newest requested save waits behind an in-flight write. */
+  #queued: ScoreSnapshot | undefined;
   #closed = false;
 
   constructor(board: Scoreboard, options: WarmStartOptions) {
     this.#board = board;
     this.#options = options;
+    this.#labels = new Map(options.endpoints.map((endpoint) => [endpoint.id, endpoint.label]));
     const persistence = options.persistence;
     this.#maxAgeMs = nonNegative(persistence?.maxAge, "maxAge", DEFAULT_SCORE_MAX_AGE_MS);
     this.#saveIntervalMs = nonNegative(persistence?.saveInterval, "saveInterval", DEFAULT_SCORE_SAVE_INTERVAL_MS);
@@ -104,15 +116,17 @@ export class WarmStart {
   scores(): ScoreSnapshot {
     const endpoints = new Map<string, [string, ScoreBook][]>();
     for (const { id, method, stat, at } of this.#board.books()) {
-      const books = endpoints.get(id) ?? [];
+      const label = this.#labels.get(id);
+      if (label === undefined) continue;
+      const books = endpoints.get(label) ?? [];
       books.push([method, at === undefined ? stat : { ...stat, at }]);
-      endpoints.set(id, books);
+      endpoints.set(label, books);
     }
     // Built from entries: a label or method named `__proto__` must stay an own property.
     return {
       version: 1,
       savedAt: this.#options.now(),
-      endpoints: Object.fromEntries([...endpoints].map(([id, books]) => [id, Object.fromEntries(books)])),
+      endpoints: Object.fromEntries([...endpoints].map(([label, books]) => [label, Object.fromEntries(books)])),
     };
   }
 
@@ -171,9 +185,9 @@ export class WarmStart {
     const now = this.#options.now();
     if (!this.#fresh(snapshot.savedAt, now)) return false;
     let seeded = false;
-    for (const id of this.#options.ids) {
+    for (const { id, label } of this.#options.endpoints) {
       // A plain read would find `Object.prototype` under `__proto__`.
-      const books: unknown = Object.getOwnPropertyDescriptor(snapshot.endpoints, id)?.value;
+      const books: unknown = Object.getOwnPropertyDescriptor(snapshot.endpoints, label)?.value;
       if (!isRecord(books)) continue;
       for (const method of Object.keys(books).slice(0, MAX_RESTORED_BOOKS)) {
         if (method !== "*" && !METHOD_NAME.test(method)) continue;
@@ -222,24 +236,47 @@ export class WarmStart {
   }
 
   #save(): void {
-    const persistence = this.#options.persistence;
     if (this.#load === "loading" && Date.now() - this.#loadStartedAt >= this.#options.loadTimeoutMs) {
       this.#load = "ready";
       this.#report("load", new Error(`The score load did not settle within ${this.#options.loadTimeoutMs}ms.`));
     }
     // Until the load settles, a save would overwrite stored books this instance has not read. The next request retries.
-    if (!persistence || this.#load !== "ready") return;
+    if (!this.#options.persistence || this.#load !== "ready") return;
     this.#lastSaveAt = Date.now();
-    try {
-      const pending = persistence.save(this.scores());
-      if (isThenable(pending)) Promise.resolve(pending).then(undefined, (error: unknown) => this.#saveFailed(error));
-    } catch (error) {
-      this.#saveFailed(error);
+    const snapshot = this.scores();
+    if (this.#writing) {
+      this.#queued = snapshot;
+      return;
     }
+    this.#write(snapshot);
   }
 
-  #saveFailed(error: unknown): void {
-    this.#report("save", toError(error));
+  #write(snapshot: ScoreSnapshot): void {
+    const persistence = this.#options.persistence;
+    if (!persistence) return;
+    this.#writing = true;
+    try {
+      const pending = persistence.save(snapshot);
+      if (isThenable(pending)) {
+        Promise.resolve(pending).then(
+          () => this.#written(),
+          (error: unknown) => this.#written({ error }),
+        );
+        return;
+      }
+    } catch (error) {
+      this.#written({ error });
+      return;
+    }
+    this.#written();
+  }
+
+  #written(failure?: { error: unknown }): void {
+    this.#writing = false;
+    if (failure) this.#report("save", toError(failure.error));
+    const queued = this.#queued;
+    this.#queued = undefined;
+    if (queued) this.#write(queued);
   }
 
   #report(operation: "load" | "save", error: Error): void {

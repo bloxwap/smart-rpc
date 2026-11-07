@@ -52,11 +52,11 @@ export function solana(options: SolanaOptions = {}): RpcPool {
   void _endpoints;
   return createPool({
     ...poolOptions,
-    endpoints: endpoints.map((input, index) => {
+    endpoints: endpoints.map((input) => {
       const config = typeof input === "string" ? { url: input } : input;
       const unsupported = new Set(config.unsupportedMethods ?? []);
       return {
-        id: config.label ?? config.url ?? `solana:${index}`,
+        id: config.label,
         url: config.url,
         weight: config.weight,
         rps: config.rps,
