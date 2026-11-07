@@ -1,0 +1,25 @@
+# Multi-chain transport contract
+
+The [transport roadmap](https://github.com/bloxwap/smart-rpc/issues/21) coordinates twenty EVM adapters. Chain packages compose the canonical Ethereum adapter and the same core pool. Provider routing, scoring, retries, breakers, quotas and cancellation must stay in the core rather than being copied into a chain package.
+
+The published package uses explicit chain subpaths. Importing the root registers no transport. A request must name a CAIP-2 chain ID; the router rejects an unregistered ID before sending traffic. The transport inventory and supported defaults are documented in the repository README and each chain package.
+
+## Shared runtime guarantees
+
+- Identity checks precede user traffic. A method-only or write-only endpoint cannot bypass identity verification simply by declaring `eth_chainId` unsupported. Wrong identities are quarantined.
+- Only explicit read methods can race, retry, coalesce or enter the read cache. Unknown methods and signing, transaction submission, filters and subscriptions are never assumed safe. An adapter may explicitly add tested read extensions. Raw signed transaction rebroadcast is a separate sequential policy.
+- Each endpoint has its own token bucket. URLs with the same `providerGroup` additionally share one `providerBudget` within a pool. Every upstream request, including identity checks and probes, charges both buckets atomically. This does not coordinate quotas across processes or independent pools.
+- `operationBudget.maxRequests` bounds total upstream calls across races, retries, hedges, identity checks and batch items. Its default is 64; `operationBudget.timeout` defaults to four per-attempt timeouts and includes queueing and backoff. Shared identity work is charged to the operation that starts it. Automatic health probes run separately under endpoint/provider quotas.
+- `requestBatch()` returns ordered `PromiseSettledResult` entries. A rejected item retains its original error without discarding successful siblings. All items within a pool share one operation budget. The router groups mixed-chain batches by transport; each transport enforces its own budget. This API does not promise wire-level JSON batching on a provider that has not declared support.
+- Endpoint `supportsRequest` checks consider method parameters before routing. Numeric pinning excludes endpoints with `pinning: false`. Requested historical, safe, finalized or pending state is never rewritten to latest. A learned method-not-found response excludes that method from the endpoint without poisoning its health.
+- Winning races abort pending losers. Intentional cancellation does not add endpoint failures or latency samples. Cancelling one coalesced caller leaves unrelated subscribers running.
+- Server-local filters receive opaque pool handles. Polling and uninstalling a filter always uses its original endpoint and upstream ID; those calls never race, coalesce or fail over. Unknown or released handles fail locally. WebSocket subscription streams require the adapter's connection lifecycle API; the ordinary request method cannot substitute for callbacks and resubscription.
+- Pending reads and missing transaction results are not cached. Transaction receipts and numbered state use bounded fresh entries instead of permanent inclusion assumptions. Observing a head regression or conflicting hashes at the same height invalidates the cache and resets monotonic pin tracking. In-flight results begun before invalidation cannot refill the old generation. Reorganizations can only be detected when a replacement head or block is observed; this is not a consensus verifier.
+
+The reference score constants, three-failure breaker, 5–60 second cooldown, two extra retries, 10 second attempt timeout, 100–2000 millisecond backoff and 4 second active probe cadence remain shared. Probe liveness does not replace user latency samples or heal outstanding user-call failures.
+
+## Validation and release
+
+`packages/core/tests/roadmap.test.ts` covers provider quotas, total operation ceilings, per-item batch errors, capability gates, filter affinity, loser cancellation, caller isolation and cache invalidation. Existing core tests cover reference scoring, breakers, timeout, retry, stale/outlier heads, pinning and health scheduling. Chain fixtures must additionally exercise each chain's identity, native-token metadata, endpoint restrictions and extension fields.
+
+Run `pnpm typecheck`, `pnpm test` and `pnpm build` before merging. Bundle tests must establish that importing one subpath excludes unrelated chains. Live public RPC probes are optional and must be bounded; endpoint availability does not establish archive, finality, debug, batching or WebSocket guarantees. Unknown capabilities remain explicit, and provider credentials do not belong in fixtures. Publishing is a separate release action through the Changesets workflow.

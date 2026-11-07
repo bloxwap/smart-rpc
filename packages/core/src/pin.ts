@@ -22,7 +22,7 @@ export interface PinLatestOptions {
   freshMs?: number | undefined;
   /**
    * Answer the probe method locally with the block a pinned `"latest"` would use, when one exists.
-   * Answers never go backwards, upstream ones included. Default: true.
+   * Answers are monotonic until an observed reorganization. Default: true.
    */
   blockNumber?: boolean | undefined;
   /**

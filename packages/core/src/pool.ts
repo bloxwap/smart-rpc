@@ -744,49 +744,49 @@ export function createPool(options: PoolOptions): RpcPool {
   };
 
   const execute = async (request: RpcRequest, batchOperation?: Operation): Promise<unknown> => {
-      if (closed) throw new TransportClosedError();
-      if (request.chainId !== undefined && !policy.chainIds.includes(request.chainId)) {
-        throw new UnknownChainError(request.chainId);
-      }
-      touch();
-      const method = request.method;
-      const idempotent = !isStateful(method) && policy.isSafeMethod(method);
-      const rebroadcast = policy.isRebroadcastMethod?.(method) ?? false;
-      let params = request.params;
-      let owner: { endpoint: string; upstream: unknown } | undefined;
-      let handle: string | undefined;
-      if (stateful && [...stateful.use, ...stateful.release].includes(method)) {
-        handle = Array.isArray(params) && typeof params[0] === "string" ? params[0] : undefined;
-        owner = handle === undefined ? undefined : handles.get(handle);
-        if (!owner || !Array.isArray(params)) throw new Error("Unknown or expired RPC stateful handle.");
-        params = [owner.upstream, ...params.slice(1)];
-      }
-      const signal = request.signal;
+    if (closed) throw new TransportClosedError();
+    if (request.chainId !== undefined && !policy.chainIds.includes(request.chainId)) {
+      throw new UnknownChainError(request.chainId);
+    }
+    touch();
+    const method = request.method;
+    const idempotent = !isStateful(method) && policy.isSafeMethod(method);
+    const rebroadcast = policy.isRebroadcastMethod?.(method) ?? false;
+    let params = request.params;
+    let owner: { endpoint: string; upstream: unknown } | undefined;
+    let handle: string | undefined;
+    if (stateful && [...stateful.use, ...stateful.release].includes(method)) {
+      handle = Array.isArray(params) && typeof params[0] === "string" ? params[0] : undefined;
+      owner = handle === undefined ? undefined : handles.get(handle);
+      if (!owner || !Array.isArray(params)) throw new Error("Unknown or expired RPC stateful handle.");
+      params = [owner.upstream, ...params.slice(1)];
+    }
+    const signal = request.signal;
+    if (signal?.aborted) throw abortError(signal);
+    if (method === policy.probeMethod && idempotent && pin?.answersBlockNumber) {
       if (signal?.aborted) throw abortError(signal);
-      if (method === policy.probeMethod && idempotent && pin?.answersBlockNumber) {
-        if (signal?.aborted) throw abortError(signal);
-        const local = pin.blockNumber();
-        if (local !== undefined) return local;
-      }
-      const cached = cache?.lookup(method, params, idempotent, { now: now(), head: newestHead(method) });
-      if (cached?.hit) {
-        emit({ type: "cache", method, outcome: "hit", stale: cached.stale });
-        return cached.result;
-      }
-      if (cached && !cached.hit) emit({ type: "cache", method, outcome: "miss", stale: null });
-      const pinned = pin?.pin(method, params, idempotent) ?? { params, holders: undefined, block: undefined };
-      const barred = new Set(barredFrom(pinned.holders));
-      for (const endpoint of built) {
-        if ((owner && owner.endpoint !== endpoint.id) || !endpoint.supportsRequest({ method, params: pinned.params })) barred.add(endpoint.id);
-      }
-      if (!built.some((endpoint) => !barred.has(endpoint.id) && supports(endpoint, method))) throw new EndpointCapabilityError(method);
-      const result = await sendShared(method, pinned.params, signal, idempotent, rebroadcast, barred, batchOperation);
-      if (handle && stateful?.release.includes(method) && result === true) handles.delete(handle);
-      if (!cached || cached.hit) {
-        return method === policy.probeMethod && pin?.answersBlockNumber ? pin.observe(result) : result;
-      }
-      cached.fill(result, pinned.block);
+      const local = pin.blockNumber();
+      if (local !== undefined) return local;
+    }
+    const cached = cache?.lookup(method, params, idempotent, { now: now(), head: newestHead(method) });
+    if (cached?.hit) {
+      emit({ type: "cache", method, outcome: "hit", stale: cached.stale });
+      return cached.result;
+    }
+    if (cached && !cached.hit) emit({ type: "cache", method, outcome: "miss", stale: null });
+    const pinned = pin?.pin(method, params, idempotent) ?? { params, holders: undefined, block: undefined };
+    const barred = new Set(barredFrom(pinned.holders));
+    for (const endpoint of built) {
+      if ((owner && owner.endpoint !== endpoint.id) || !endpoint.supportsRequest({ method, params: pinned.params })) barred.add(endpoint.id);
+    }
+    if (!built.some((endpoint) => !barred.has(endpoint.id) && supports(endpoint, method))) throw new EndpointCapabilityError(method);
+    const result = await sendShared(method, pinned.params, signal, idempotent, rebroadcast, barred, batchOperation);
+    if (handle && stateful?.release.includes(method) && result === true) handles.delete(handle);
+    if (!cached || cached.hit) {
       return method === policy.probeMethod && pin?.answersBlockNumber ? pin.observe(result) : result;
+    }
+    cached.fill(result, pinned.block);
+    return method === policy.probeMethod && pin?.answersBlockNumber ? pin.observe(result) : result;
   };
 
   const pool: RpcPool = {

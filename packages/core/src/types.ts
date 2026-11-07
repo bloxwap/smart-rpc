@@ -18,6 +18,7 @@ export interface RpcRequest {
 export interface SmartRpcTransport {
   readonly chainIds: readonly string[];
   request(request: RpcRequest): Promise<unknown>;
+  requestBatch?: ((requests: readonly RpcRequest[]) => Promise<PromiseSettledResult<unknown>[]>) | undefined;
   probe?: (() => Promise<void>) | undefined;
   close?: (() => void) | undefined;
   snapshot?: ((method?: string) => readonly EndpointSnapshot[]) | undefined;

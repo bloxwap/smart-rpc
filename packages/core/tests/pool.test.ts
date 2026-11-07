@@ -138,7 +138,7 @@ describe("race", () => {
         return "0x1";
       },
     }));
-    const client = pool(endpoints, { race: true, routing: "best" });
+    const client = pool(endpoints, { race: true, routing: "best", now: () => 0 });
     await client.request({ method: "eth_call", params: [{ to: "0xabc" }, "latest"] });
     expect(seen.filter((call) => call.endsWith(":eth_call")).sort()).toEqual(["a:eth_call", "b:eth_call"]);
     seen.length = 0;
