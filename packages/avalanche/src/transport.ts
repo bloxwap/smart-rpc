@@ -1,4 +1,4 @@
-import type { RpcPool } from "@smart-rpc/core";
+import { evmCachePolicy, type RpcPool } from "@smart-rpc/core";
 import { ethereum, type EthereumEndpoint, type EthereumEndpointConfig, type EthereumOptions } from "@smart-rpc/ethereum";
 
 import { AVALANCHE_MAINNET_REGISTRY, AVALANCHE_READ_METHODS, AVALANCHE_RPC_METHODS } from "./registry.js";
@@ -16,6 +16,7 @@ export function avalanche(options: AvalancheOptions = {}): RpcPool {
     chainId: AVALANCHE_CHAIN_ID,
     chainIds: [AVALANCHE_MAINNET_CAIP],
     endpoints: (options.endpoints ?? AVALANCHE_MAINNET_REGISTRY).map(endpointConfig),
+    cachePolicy: options.cachePolicy ?? evmCachePolicy({ logs: false }),
     safeMethods: [...AVALANCHE_READ_METHODS, ...(options.safeMethods ?? [])],
   });
 }

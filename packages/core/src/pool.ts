@@ -237,6 +237,32 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       )
     : undefined;
   const coalescer = new Coalescer(timeout + Math.min(timeout, INFLIGHT_GRACE_MS));
+  const routeCacheRead = (
+    method: string,
+    params: unknown,
+    originalParams: unknown,
+    pinRequired: boolean,
+    parent: AbortSignal | undefined,
+    batchOperation: Operation | undefined,
+    background: boolean,
+  ): Promise<{ result: unknown; block: number | undefined }> => {
+    const original = pin?.pinTop(method, originalParams) ?? { params: originalParams, holders: undefined, block: undefined };
+    if (pinRequired && original.block === undefined) return Promise.reject(new EndpointCapabilityError(method));
+    const pinned = pin?.pinTop(method, params) ?? { params, holders: undefined, block: undefined };
+    const sentParams = pinRequired ? params : pinned.params;
+    const holders = pinRequired ? original.holders : pinned.holders;
+    const block = pinRequired ? original.block : pinned.block;
+    const barred = new Set(barredFrom(holders));
+    for (const endpoint of built) {
+      if (!endpoint.supportsRequest({ method, params: sentParams })) barred.add(endpoint.id);
+    }
+    if (!built.some((endpoint) => !barred.has(endpoint.id) && supports(endpoint, method))) {
+      return Promise.reject(new EndpointCapabilityError(method));
+    }
+    return sendShared(method, sentParams, parent, true, false, barred, batchOperation, background).then(
+      (result) => ({ result, block }),
+    );
+  };
   const cacheConfig = resolveCache(options.cache ?? (policy.cachePolicy ? true : false));
   const cache = cacheConfig.enabled && policy.cachePolicy
     ? new ReadCache(cacheConfig, policy.cachePolicy, {
@@ -246,16 +272,15 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
         active: () => activity.active(),
         probe: () => probeBest(),
         probeMethod: policy.probeMethod,
-        read: (method: string, params: unknown) => {
-          const pinned = pin?.pinTop(method, params) ?? { params, holders: undefined, block: undefined };
-          const barred = new Set(barredFrom(pinned.holders));
-          for (const endpoint of built) {
-            if (!endpoint.supportsRequest({ method, params: pinned.params })) barred.add(endpoint.id);
-          }
-          return sendShared(method, pinned.params, undefined, true, false, barred, undefined, true).then(
-            (result) => ({ result, block: pinned.block }),
-          );
-        },
+        read: (method: string, params: unknown, readOptions) => routeCacheRead(
+          method,
+          params,
+          readOptions?.originalParams ?? params,
+          readOptions?.pinRequired ?? false,
+          undefined,
+          undefined,
+          true,
+        ),
         ready: (method: string): boolean => {
           const picked = board.pick(method, NO_BAR, "best", random);
           return picked !== undefined && !breaker.isOpen(picked.id) && budgets.has(picked.id);
@@ -897,7 +922,36 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       return cached.result;
     }
     if (cached && !cached.hit) emit({ type: "cache", method, outcome: "miss", stale: null });
-    const pinned = pin?.pin(method, params, idempotent) ?? { params, holders: undefined, block: undefined };
+    if (cached && !cached.hit && cached.fetch) {
+      const fetch = cached.fetch;
+      try {
+        const read = await routeCacheRead(
+          method,
+          fetch.params,
+          fetch.originalParams,
+          fetch.pinRequired,
+          signal,
+          batchOperation,
+          false,
+        );
+        if (signal?.aborted) throw abortError(signal);
+        if (batchOperation?.signal.aborted) throw abortError(batchOperation.signal);
+        const completed = fetch.complete(read.result);
+        if (completed !== undefined) return completed;
+      } catch (error: unknown) {
+        const wrapped = toError(error);
+        if (
+          !fetch.pinRequired || signal?.aborted || batchOperation?.signal.aborted || isAbortError(wrapped) ||
+          wrapped instanceof OperationBudgetExceededError || wrapped instanceof TransportClosedError
+        ) {
+          throw wrapped;
+        }
+        // Only a latest-derived miss has a distinct, unchanged original query to use as its fallback.
+      }
+    }
+    const pinned = cached && !cached.hit && cached.fetch
+      ? { params, holders: undefined, block: undefined }
+      : (pin?.pin(method, params, idempotent) ?? { params, holders: undefined, block: undefined });
     const barred = new Set(barredFrom(pinned.holders));
     for (const endpoint of built) {
       if ((owner && owner.endpoint !== endpoint.id) || !endpoint.supportsRequest({ method, params: pinned.params })) barred.add(endpoint.id);

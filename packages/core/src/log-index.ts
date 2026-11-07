@@ -292,6 +292,16 @@ export class LogIndex {
     this.invalidate();
   }
 
+  /** Evict least-recently-used indexes until both supplied shared-cache allowances are met. */
+  trim(maxEntries: number, maxBytes: number): void {
+    for (const [oldest, old] of this.#entries) {
+      if (this.#entries.size <= maxEntries && this.#bytes <= maxBytes) break;
+      this.#entries.delete(oldest);
+      this.#bytes -= old.bytes;
+      this.#logs -= old.logs.length;
+    }
+  }
+
   #get(key: string): Entry | undefined {
     const entry = this.#entries.get(key);
     if (!entry) return undefined;
@@ -309,23 +319,26 @@ export class LogIndex {
     generation: number,
     updatedAt: number,
   ): boolean {
-    if (generation !== this.#generation || this.#entries.get(key) !== expected) return false;
+    if (generation !== this.#generation) return false;
+    const base = this.#entries.get(key);
+    // A replaced base makes a tail stale. Concurrent first seeds may still merge into the base created by a sibling.
+    if (expected !== undefined && base !== expected) return false;
     const incoming = parseLogs(result, from, to, this.#config.copyResults);
     if (!incoming) return false;
 
     let low = from;
     let high = to;
     let logs = incoming;
-    if (expected && from === expected.to + 1) {
-      low = expected.from;
-      logs = expected.logs.concat(incoming);
-    } else if (expected && to === expected.from - 1) {
-      high = expected.to;
-      logs = incoming.concat(expected.logs);
-    } else if (expected && from <= expected.to && to >= expected.from) {
-      low = Math.min(from, expected.from);
-      high = Math.max(to, expected.to);
-      const retained = expected.logs.filter((log) => log.blockNumber < from || log.blockNumber > to);
+    if (base && from === base.to + 1) {
+      low = base.from;
+      logs = base.logs.concat(incoming);
+    } else if (base && to === base.from - 1) {
+      high = base.to;
+      logs = incoming.concat(base.logs);
+    } else if (base && from <= base.to && to >= base.from) {
+      low = Math.min(from, base.from);
+      high = Math.max(to, base.to);
+      const retained = base.logs.filter((log) => log.blockNumber < from || log.blockNumber > to);
       logs = retained.concat(incoming).sort(byPosition);
     }
 
@@ -346,12 +359,7 @@ export class LogIndex {
     this.#entries.set(key, entry);
     this.#bytes += entry.bytes;
     this.#logs += entry.logs.length;
-    for (const [oldest, old] of this.#entries) {
-      if (this.#entries.size <= this.#config.maxEntries && this.#bytes <= this.#config.maxBytes) break;
-      this.#entries.delete(oldest);
-      this.#bytes -= old.bytes;
-      this.#logs -= old.logs.length;
-    }
+    this.trim(this.#config.maxEntries, this.#config.maxBytes);
   }
 }
 

@@ -111,7 +111,9 @@ describe("endpoint capability routing", () => {
   });
 
   test("bounded log splits preserve params and reject partial results", async () => {
-    const { calls, fetchFn } = fixture((request) => request.method === "eth_getLogs" ? [{ filter: request.params[0] }] : "0x2a");
+    const { calls, fetchFn } = fixture((request) => request.method === "eth_getLogs"
+      ? [{ blockNumber: (request.params[0] as { fromBlock: string }).fromBlock, logIndex: "0x0" }]
+      : "0x2a");
     const pool = ethereum({ endpoints: [{ url: "https://logs.example", capabilities: { maxLogBlockRange: 50 } }], fetchFn, headLag: false, race: false });
     try {
       const filter = { fromBlock: "0x1", toBlock: "0x65", address: "0xabc", topics: ["0x01"] };

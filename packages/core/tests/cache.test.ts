@@ -97,6 +97,7 @@ describe("cache configuration and canonical plans", () => {
       hotIdleMs: 30_000,
       maxEntries: 1_000,
       maxBytes: 8 * 1024 * 1024,
+      logsWindow: 1_000,
       copyResults: true,
       immutableParams: false,
     });
@@ -104,6 +105,7 @@ describe("cache configuration and canonical plans", () => {
     expect(() => resolveCache({ refreshInterval: 0 })).toThrow("cache.refreshInterval");
     expect(() => resolveCache({ hotKeys: -1 })).toThrow("cache.hotKeys");
     expect(() => resolveCache({ hotIdleMs: Number.NaN })).toThrow("cache.hotIdleMs");
+    expect(() => resolveCache({ logsWindow: 0 })).toThrow("cache.logsWindow");
   });
 
   test("normalizes hex and aliases implied latest, explicit latest, and the same block", () => {
@@ -129,7 +131,8 @@ describe("cache configuration and canonical plans", () => {
     expect(evmCachePlan("eth_call", [TX, "earliest"])).toMatchObject({ kind: "number", block: 0 });
     expect(evmCachePlan("eth_getTransactionCount", [ADDRESS])).toBeUndefined();
     expect(evmCachePlan("eth_getTransactionCount", [ADDRESS, "latest"])).toBeUndefined();
-    expect(evmCachePlan("eth_getLogs", [{ fromBlock: "latest" }])).toBeUndefined();
+    expect(evmCachePlan("eth_getLogs", [{ fromBlock: "latest" }])).toMatchObject({ kind: "logs" });
+    expect(evmCachePlan("eth_getLogs", [{ fromBlock: "pending" }])).toBeUndefined();
   });
 
   test("uses one timed precompile key and opts confirmed results into immutability", () => {

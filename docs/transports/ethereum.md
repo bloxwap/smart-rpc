@@ -37,6 +37,8 @@ Batching is opt-in. `capabilities.batch: false` disables it for an endpoint, and
 
 Quantity hex, data hex and transaction extensions pass through untouched. Type-3 fields such as `blobVersionedHashes` and `maxFeePerBlobGas` remain separate from execution gas fields. Blob sidecars and beacon APIs are outside this execution transport. Pending reads are not cached; finality tags and full params, including `feeCurrency`, participate in read keys. Hash and numeric selectors are preserved. Private-relay writes, signing, filters and subscriptions are never raced, cached or coalesced. Server-local filter IDs are owned by the endpoint that created them.
 
+Recently used log filters keep rolling indexes with `cache.logsWindow` blocks (default 1000). Covered numeric subsets and fresh latest-ended queries answer from memory; misses fetch exact numeric gaps through the same capability and budget checks as other reads. Unsupported generated ranges fall back to the unchanged original query without indexing an unpinned response. Block-hash filters use ordinary fresh entries on reorg-capable chains. `requestLogs` remains the way to split explicit numeric ranges that exceed a provider limit.
+
 For a provider's documented numeric log range limit, use the shared helper:
 
 ```ts

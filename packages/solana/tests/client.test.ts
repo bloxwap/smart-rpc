@@ -93,4 +93,29 @@ describe("Solana HTTP responses", () => {
     await rejected;
     expect(receivedSignal).toBe(controller.signal);
   });
+
+  test("retains classify-based fresh cache hits after EVM log integration", async () => {
+    let balances = 0;
+    const client = solana({
+      endpoints: ["https://rpc.example"],
+      verifyIdentity: false,
+      race: false,
+      cache: { refreshInterval: false },
+      headLag: { probeInterval: false },
+      fetchFn: async (_input, init) => {
+        const body = JSON.parse(String(init?.body)) as { id: number; method: string };
+        const result = body.method === "getSlot" ? 100 : body.method === "getBalance" ? ++balances : "ok";
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result }));
+      },
+    });
+    try {
+      await client.probe();
+      await client.request({ method: "getBalance", params: ["address"] });
+      await client.request({ method: "getBalance", params: ["address"] });
+      expect(balances).toBe(1);
+      expect(client.cacheStats()).toMatchObject({ hits: 1, misses: 1, entries: 1 });
+    } finally {
+      client.close();
+    }
+  });
 });

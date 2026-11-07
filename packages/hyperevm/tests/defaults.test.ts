@@ -335,6 +335,41 @@ describe("hyperevm configuration", () => {
       client.close();
     }
   });
+
+  test("keeps latest-only public log providers on unchanged latest queries", async () => {
+    const mock = mockRpc(({ method, params }) => {
+      if (method === "eth_blockNumber") return "0x64";
+      if (method === "eth_getLogs") {
+        const filter = params[0] as { toBlock?: string };
+        if (filter.toBlock !== "latest") throw new Error("latest-only provider received a generated numeric range");
+        return [{ blockNumber: "0x64", logIndex: "0x0" }];
+      }
+      return "0x3e7";
+    });
+    const client = hyperevm({
+      chainId: 999,
+      endpoints: [HYPEREVM_RPC_URL],
+      fetchFn: mock.fetchFn,
+      verifyIdentity: false,
+      race: false,
+      retryCount: 0,
+      budget: false,
+      cache: { refreshInterval: false },
+      headLag: { probeInterval: false },
+      isActive: () => false,
+      now: () => 0,
+    });
+    try {
+      await client.probe();
+      const params = [{ address: `0x${"ab".repeat(20)}`, fromBlock: "0x5a", toBlock: "latest" }];
+      await client.request({ method: "eth_getLogs", params });
+      await client.request({ method: "eth_getLogs", params });
+      expect(mock.calls.filter((call) => call.method === "eth_getLogs")).toHaveLength(2);
+      expect(client.cacheStats().entries).toBe(0);
+    } finally {
+      client.close();
+    }
+  });
 });
 
 
