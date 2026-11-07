@@ -1,1 +1,15 @@
-export * from "@smart-rpc/arc";
+export {
+  ARC_CHAIN_ID,
+  ARC_MAINNET_CAIP,
+  ARC_MAINNET_ENDPOINTS,
+  ARC_MAINNET_REGISTRY,
+  ARC_NATIVE_CURRENCY,
+  ARC_NATIVE_TRANSFER_EMITTER,
+  ARC_RPC_SOURCE,
+  ARC_RPC_URL,
+  ARC_USDC_ERC20_ADDRESS,
+  ARC_USDC_ERC20_DECIMALS,
+  type ArcOptions,
+  type ArcPublicRpcEndpoint,
+  arc,
+} from "@smart-rpc/arc";

@@ -1,1 +1,13 @@
-export * from "@smart-rpc/opbnb";
+export {
+  OPBNB_CHAIN_ID,
+  OPBNB_MAINNET_CAIP,
+  OPBNB_MAINNET_ENDPOINTS,
+  OPBNB_MAINNET_REGISTRY,
+  OPBNB_MAINNET_WEBSOCKET_ENDPOINTS,
+  OPBNB_NATIVE_CURRENCY,
+  OPBNB_PARENT_CAIP,
+  OPBNB_PARENT_CHAIN_ID,
+  type OpBnbOptions,
+  type OpBnbPublicRpcEndpoint,
+  opbnb,
+} from "@smart-rpc/opbnb";

@@ -1,1 +1,14 @@
-export * from "@smart-rpc/polygon";
+export {
+  POLYGON_CHAIN_ID,
+  POLYGON_GAS_STATION_URL,
+  POLYGON_MAINNET_CAIP,
+  POLYGON_MAINNET_ENDPOINTS,
+  POLYGON_MAINNET_REGISTRY,
+  POLYGON_NATIVE_CURRENCY,
+  POLYGON_PUBLIC_METHODS,
+  POLYGON_RPC_URL,
+  POLYGON_WS_URL,
+  type PolygonOptions,
+  type PolygonPublicEndpoint,
+  polygon,
+} from "@smart-rpc/polygon";

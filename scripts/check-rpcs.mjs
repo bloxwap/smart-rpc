@@ -104,6 +104,12 @@ async function loadRegistries(protocol) {
       protocol: name, network: "mainnet", chainId: `eip155:${identity}`, identity,
       entries: transport[`${name.toUpperCase()}_MAINNET_REGISTRY`],
     });
+    if (name === "celo") {
+      groups.push({
+        protocol: name, network: "sepolia", chainId: "eip155:11142220", identity: 11142220,
+        entries: transport.CELO_SEPOLIA_REGISTRY,
+      });
+    }
   }
   for (const group of groups) {
     if (!Array.isArray(group.entries) || group.entries.length === 0 || group.identity === undefined) {

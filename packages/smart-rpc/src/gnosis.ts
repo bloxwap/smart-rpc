@@ -1,1 +1,14 @@
-export * from "@smart-rpc/gnosis";
+export {
+  GNOSIS_CHAIN_ID,
+  GNOSIS_CONSENSUS,
+  GNOSIS_GATEWAY_RPC_URL,
+  GNOSIS_MAINNET_CAIP,
+  GNOSIS_MAINNET_ENDPOINTS,
+  GNOSIS_MAINNET_REGISTRY,
+  GNOSIS_NATIVE_CURRENCY,
+  GNOSIS_RPC_URL,
+  GNOSIS_WEBSOCKET_URL,
+  type GnosisOptions,
+  type GnosisPublicRpcEndpoint,
+  gnosis,
+} from "@smart-rpc/gnosis";

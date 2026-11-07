@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { build } from "esbuild";
@@ -37,7 +37,7 @@ describe("all published EVM transports", () => {
           calls.push(`${name}:${body.method}`);
           return new Response(JSON.stringify({
             jsonrpc: "2.0", id: body.id,
-            result: body.method === "eth_chainId" ? `0x${chainId.toString(16)}` : `0x${chainId.toString(16)}`,
+            result: `0x${chainId.toString(16)}`,
           }), { headers: { "content-type": "application/json" } });
         },
       });
@@ -63,6 +63,9 @@ describe("all published EVM transports", () => {
     for (const [name] of chains) {
       expect(manifest.exports[`./${name}`]).toEqual({ types: `./dist/${name}.d.ts`, import: `./dist/${name}.js` });
       expect(readFileSync(`${directory}/dist/${name}.d.ts`, "utf8")).not.toMatch(/from ["']@smart-rpc\//);
+    }
+    for (const file of readdirSync(`${directory}/dist`).filter((name) => name.endsWith(".d.ts"))) {
+      expect(readFileSync(`${directory}/dist/${file}`, "utf8")).not.toMatch(/(?:from\s*|import\s*\(?\s*)["']@smart-rpc\//);
     }
     expect(Object.keys(manifest.dependencies)).toEqual(["viem"]);
   });

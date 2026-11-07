@@ -114,18 +114,20 @@ const transport = ethereum({
 
 ## Defaults
 
-These match `@bloxwap/smart-hyperevm` at `092b8f9`. Every chain uses them. Solana does not keep that repo's 150ms / 30s backoff.
+The shared scoring, breaker and retry defaults follow `@bloxwap/smart-hyperevm` at `092b8f9`. Every chain uses them. Head freshness and endpoint capabilities can vary by chain.
 
 - Score: latency mix 0.6, upward EWMA 0.4, downward 0.2, tail 0.5 / 0.05, error step 0.3, liveness step 0.15, error weight 8, prior 250ms, 5 samples to full confidence, 3 samples to blend a method.
 - In-flight penalty: `1 + n + 0.25 n²`.
 - Routing: power of two choices. Safe reads race the top 2 endpoints.
 - Breaker: eject after 3 failures. Cooldown starts at 5s and doubles up to 60s. A health probe cannot clear a streak that includes a failed call. `Retry-After` ejects immediately, capped at 60s.
 - Retries: 2 extra attempts, 10s per attempt. Another live endpoint is tried at once. Re-trying an endpoint that already failed this call waits a jittered backoff from 100ms, doubling, capped at 2s.
+- A total operation budget bounds identity checks, retries, races and batch items: 64 upstream calls and four attempt timeouts by default. Configure `operationBudget: { maxRequests, timeout }` on a transport. `requestBatch()` returns ordered settled results, preserving successful items when siblings fail.
+- EVM read safety uses an explicit allowlist. Unknown extensions are single sends unless configured with `safeMethods`; known writes and stateful filters remain unshared. Filter handles stay with the endpoint that created them. Use the Ethereum subpath's dedicated `connectViem(...).subscribe(...)` callback API for subscriptions.
 - Probes: every 4s (`eth_blockNumber` on EVM, `getSlot` on Solana). The timer stops after 60s without a request. Automatic probes preserve the last available token on budgeted endpoints for caller traffic; explicit `probe()` calls may use it. Probe success and failure update liveness, not the latency EWMA.
 - Heads older than 30s stop affecting the score. A head more than 1000 units ahead of the others' median is ignored. Two heads that far apart are not a reference.
 - EVM transports pin `"latest"` to a block the chosen endpoints hold, and quarantine an endpoint whose `eth_chainId` is wrong. Solana quarantines a `getGenesisHash` mismatch. HyperEVM also skips HyperCore precompile `eth_call`s (`0x…0800`–`0x…08ff`) when pinning, because those calls ignore the block.
 
-Pass `retryCount`, `timeout`, `race`, `breaker`, `budget`, `cache`, `endpoints`, `now`, and `random` on a transport to override a default. Registration stays explicit:
+Pass `retryCount`, `timeout`, `operationBudget`, `race`, `breaker`, `budget`, `cache`, `endpoints`, `now`, and `random` on a transport to override a default. Registration stays explicit:
 
 ```ts
 createSmartRpc({ transports: [hyperevm({ endpoints: ["https://rpc.hyperliquid.xyz/evm"] })] });
@@ -189,3 +191,5 @@ pnpm build
 ```
 
 Node 22 and pnpm 10. The workspace is `packages/*` and `examples/*`.
+
+`pnpm check:rpcs --protocol base` checks a built transport's public endpoints for chain identity and current head. Omit `--protocol` to check all registries. The manual **Public RPC smoke** GitHub Actions workflow runs the same check and saves its report; normal CI remains independent of public endpoint availability. Each chain package documents additional opt-in capability checks.

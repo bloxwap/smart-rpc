@@ -1,1 +1,13 @@
-export * from "@smart-rpc/mantle";
+export {
+  MANTLE_CHAIN_ID,
+  MANTLE_GAS_PRICE_ORACLE,
+  MANTLE_MAINNET_CAIP,
+  MANTLE_MAINNET_ENDPOINTS,
+  MANTLE_MAINNET_REGISTRY,
+  MANTLE_MAINNET_WS_URL,
+  MANTLE_NATIVE_CURRENCY,
+  MANTLE_RPC_URL,
+  type MantleOptions,
+  type MantlePublicRpcEndpoint,
+  mantle,
+} from "@smart-rpc/mantle";

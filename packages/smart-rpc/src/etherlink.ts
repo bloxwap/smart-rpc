@@ -1,1 +1,14 @@
-export * from "@smart-rpc/etherlink";
+export {
+  ETHERLINK_CHAIN_ID,
+  ETHERLINK_MAINNET_CAIP,
+  ETHERLINK_MAINNET_ENDPOINTS,
+  ETHERLINK_MAINNET_REGISTRY,
+  ETHERLINK_NATIVE_CURRENCY,
+  ETHERLINK_PRECOMPILES,
+  ETHERLINK_PUBLIC_LIMITS,
+  ETHERLINK_RELAY_URL,
+  ETHERLINK_RPC_URL,
+  type EtherlinkOptions,
+  type EtherlinkPublicRpcEndpoint,
+  etherlink,
+} from "@smart-rpc/etherlink";

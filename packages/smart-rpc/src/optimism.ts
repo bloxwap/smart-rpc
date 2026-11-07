@@ -1,1 +1,13 @@
-export * from "@smart-rpc/optimism";
+export {
+  OPTIMISM_CHAIN_ID,
+  OPTIMISM_MAINNET_CAIP,
+  OPTIMISM_MAINNET_ENDPOINTS,
+  OPTIMISM_MAINNET_REGISTRY,
+  OPTIMISM_NATIVE_CURRENCY,
+  OPTIMISM_RPC_URL,
+  OPTIMISM_SEQUENCER_URL,
+  OPTIMISM_SUBBLOCKS_URL,
+  type OptimismOptions,
+  type OptimismPublicRpcEndpoint,
+  optimism,
+} from "@smart-rpc/optimism";

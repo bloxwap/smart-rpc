@@ -1,1 +1,14 @@
-export * from "@smart-rpc/bsc";
+export {
+  BSC_CHAIN_ID,
+  BSC_EXTENSION_METHODS,
+  BSC_MAINNET_CAIP,
+  BSC_MAINNET_ENDPOINTS,
+  BSC_MAINNET_REGISTRY,
+  BSC_NATIVE_CURRENCY,
+  BSC_PROVIDER_BUDGET,
+  BSC_PUBLIC_RATE_LIMIT,
+  BSC_RPC_URL,
+  type BscOptions,
+  type BscPublicRpcEndpoint,
+  bsc,
+} from "@smart-rpc/bsc";
