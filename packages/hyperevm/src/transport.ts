@@ -8,7 +8,7 @@
  */
 
 import {
-  UnknownChainError,
+  createSmartRpc,
   type RpcEvent,
   type RpcPool,
   type RpcRequest,
@@ -67,7 +67,7 @@ export interface HyperEvmOptions
   skipPrecompiles?: boolean | undefined;
 }
 
-/** Dual-network transport. A batch must explicitly name one network for its shared operation budget. */
+/** Dual-network transport. Batch items name their network; each pool shares its operation budget. */
 export interface HyperEvmTransport extends SmartRpcTransport {
   requestBatch(requests: readonly RpcRequest[]): Promise<PromiseSettledResult<unknown>[]>;
 }
@@ -126,27 +126,14 @@ function tagOfficial(endpoint: EthereumEndpoint): EthereumEndpoint {
 }
 
 function combine(transports: readonly RpcPool[]): HyperEvmTransport {
-  const byChain = new Map<string, RpcPool>();
-  for (const transport of transports) {
-    for (const chainId of transport.chainIds) byChain.set(chainId, transport);
-  }
+  const router = createSmartRpc({ transports });
   return {
-    chainIds: [...byChain.keys()],
+    chainIds: router.chainIds,
     request(request) {
-      const transport = request.chainId ? byChain.get(request.chainId) : undefined;
-      if (!transport) throw new UnknownChainError(request.chainId ?? "");
-      return transport.request(request);
+      return router.request({ ...request, chainId: request.chainId ?? "" });
     },
-    async requestBatch(requests): Promise<PromiseSettledResult<unknown>[]> {
-      if (requests.length === 0) return [];
-      const chainId = requests[0]?.chainId;
-      if (!chainId) throw new UnknownChainError("");
-      if (requests.some((request) => request.chainId !== chainId)) {
-        throw new Error("HyperEVM batch requests must explicitly name one chain; use separate batches for mainnet and testnet.");
-      }
-      const transport = byChain.get(chainId);
-      if (!transport) throw new UnknownChainError(chainId);
-      return transport.requestBatch(requests);
+    requestBatch(requests): Promise<PromiseSettledResult<unknown>[]> {
+      return router.requestBatch(requests.map((request) => ({ ...request, chainId: request.chainId ?? "" })));
     },
     probe(): Promise<void> {
       return Promise.all(transports.map((transport) => transport.probe?.() ?? Promise.resolve())).then(() => undefined);

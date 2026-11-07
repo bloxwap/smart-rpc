@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { createSmartRpc, UnknownChainError } from "@smart-rpc/core";
 
 import {
   HYPEREVM_NATIVE_CURRENCY,
@@ -164,26 +165,79 @@ describe("HyperEVM capabilities", () => {
     } finally { client.close?.(); }
   });
 
-  test("dual-network batches stay on their declared chain and reject mixed-network operations", async () => {
-    const mock = mockRpc(({ url, method }) => method === "eth_chainId" ? url === HYPEREVM_RPC_URL ? "0x3e7" : "0x3e6" : "0x96");
+  test("dual-network batches preserve ordering while routing valid items and rejecting unknown chains", async () => {
+    const mock = mockRpc(({ url, method }) => method === "eth_chainId" ? url === HYPEREVM_RPC_URL ? "0x3e7" : "0x3e6" : url === HYPEREVM_RPC_URL ? "0x999" : "0x998");
     const client = hyperevm({
       endpoints: [HYPEREVM_RPC_URL], testnetEndpoints: [HYPEREVM_TESTNET_RPC_URL],
       headLag: { probeInterval: false }, race: false, cache: false, budget: false, fetchFn: mock.fetchFn,
     });
     try {
-      await expect(client.requestBatch([
-        { chainId: "eip155:998", method: "eth_bigBlockGasPrice" },
+      const results = await client.requestBatch([
+        { chainId: "eip155:999", method: "eth_bigBlockGasPrice" },
+        { chainId: "eip155:1", method: "eth_gasPrice" },
         { chainId: "eip155:998", method: "eth_gasPrice" },
-      ])).resolves.toEqual([{ status: "fulfilled", value: "0x96" }, { status: "fulfilled", value: "0x96" }]);
-      expect(mock.calls.every((call) => call.url === HYPEREVM_TESTNET_RPC_URL)).toBe(true);
-      mock.calls.length = 0;
-      await expect(client.requestBatch([
+        { method: "eth_gasPrice" },
+        { chainId: "eip155:999", method: "eth_gasPrice" },
+      ]);
+      expect(results).toEqual([
+        { status: "fulfilled", value: "0x999" },
+        { status: "rejected", reason: expect.any(UnknownChainError) },
+        { status: "fulfilled", value: "0x998" },
+        { status: "rejected", reason: expect.any(UnknownChainError) },
+        { status: "fulfilled", value: "0x999" },
+      ]);
+      expect(mock.calls.filter((call) => call.method !== "eth_chainId")).toEqual(expect.arrayContaining([
+        { url: HYPEREVM_RPC_URL, method: "eth_bigBlockGasPrice", params: [] },
+        { url: HYPEREVM_TESTNET_RPC_URL, method: "eth_gasPrice", params: [] },
+        { url: HYPEREVM_RPC_URL, method: "eth_gasPrice", params: [] },
+      ]));
+      expect(mock.calls.filter((call) => call.method !== "eth_chainId")).toHaveLength(3);
+      await expect(client.requestBatch([])).resolves.toEqual([]);
+    } finally { client.close?.(); }
+  });
+
+  test("the root batch router handles both HyperEVM networks and an unknown chain independently", async () => {
+    const mock = mockRpc(({ url, method }) => method === "eth_chainId" ? url === HYPEREVM_RPC_URL ? "0x3e7" : "0x3e6" : url === HYPEREVM_RPC_URL ? "0x999" : "0x998");
+    const rpc = createSmartRpc({ transports: [hyperevm({
+      endpoints: [HYPEREVM_RPC_URL], testnetEndpoints: [HYPEREVM_TESTNET_RPC_URL],
+      headLag: { probeInterval: false }, race: false, cache: false, budget: false, fetchFn: mock.fetchFn,
+    })] });
+    try {
+      const results = await rpc.requestBatch([
         { chainId: "eip155:999", method: "eth_bigBlockGasPrice" },
         { chainId: "eip155:998", method: "eth_gasPrice" },
-      ])).rejects.toThrow(/one chain/);
-      await expect(client.requestBatch([{ method: "eth_gasPrice" }])).rejects.toThrow();
-      expect(mock.calls).toEqual([]);
-      await expect(client.requestBatch([])).resolves.toEqual([]);
+        { chainId: "eip155:1", method: "eth_gasPrice" },
+      ]);
+      expect(results).toEqual([
+        { status: "fulfilled", value: "0x999" },
+        { status: "fulfilled", value: "0x998" },
+        { status: "rejected", reason: expect.any(UnknownChainError) },
+      ]);
+      expect(mock.calls.filter((call) => call.method !== "eth_chainId")).toEqual(expect.arrayContaining([
+        { url: HYPEREVM_RPC_URL, method: "eth_bigBlockGasPrice", params: [] },
+        { url: HYPEREVM_TESTNET_RPC_URL, method: "eth_gasPrice", params: [] },
+      ]));
+      expect(mock.calls.filter((call) => call.method !== "eth_chainId")).toHaveLength(2);
+    } finally { rpc.close(); }
+  });
+
+  test("mixed-network batch items share one operation budget per underlying pool", async () => {
+    const mock = mockRpc(({ url }) => url === HYPEREVM_RPC_URL ? "0x999" : "0x998");
+    const client = hyperevm({
+      endpoints: [HYPEREVM_RPC_URL], testnetEndpoints: [HYPEREVM_TESTNET_RPC_URL],
+      headLag: false, race: false, cache: false, budget: false, verifyIdentity: false,
+      operationBudget: { maxRequests: 1 }, fetchFn: mock.fetchFn,
+    });
+    try {
+      const results = await client.requestBatch([
+        { chainId: "eip155:999", method: "eth_bigBlockGasPrice" },
+        { chainId: "eip155:998", method: "eth_bigBlockGasPrice" },
+        { chainId: "eip155:999", method: "eth_gasPrice" },
+        { chainId: "eip155:998", method: "eth_gasPrice" },
+      ]);
+      expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled", "rejected", "rejected"]);
+      expect(mock.calls.filter((call) => call.url === HYPEREVM_RPC_URL)).toHaveLength(1);
+      expect(mock.calls.filter((call) => call.url === HYPEREVM_TESTNET_RPC_URL)).toHaveLength(1);
     } finally { client.close?.(); }
   });
 
