@@ -352,3 +352,39 @@ describe("shared transport release regressions", () => {
     expect(isAlreadyKnownError(new Error("duplicate transaction hash"))).toBe(true);
   });
 });
+
+
+describe("review regressions", () => {
+  test("speculative identity verification cannot starve the foreground provider token", async () => {
+    const seen: string[] = [];
+    const client = pool(["a", "b"].map((id) => ({ id, url: id,
+      providerGroup: "shared", providerBudget: { rps: 0.01, burst: 2 },
+      call: async ({ method }: { method: string }) => { seen.push(`${id}:${method}`); return "0x1"; },
+    })), { verifyIdentity: true, race: true, retryCount: 0, routing: "best" });
+    await expect(client.request(read)).resolves.toBe("0x1");
+    expect(seen).toEqual(["a:eth_chainId", "a:eth_getBalance"]);
+    client.close();
+  });
+
+  test("cancelling one caller abandons unrelated keys even when another caller keeps one key alive", async () => {
+    const signals = new Map<string, AbortSignal | undefined>();
+    const releases = new Map<string, (result: string) => void>();
+    const client = pool([{ url: "a", call: ({ params }, options) => {
+      const key = (params as string[])[0] as string;
+      signals.set(key, options?.signal);
+      return new Promise<string>((resolve) => releases.set(key, resolve));
+    } }], { coalesce: true });
+    const caller = new AbortController();
+    const firstA = client.request({ method: read.method, params: ["A"], signal: caller.signal }).catch((error: unknown) => error);
+    const firstB = client.request({ method: read.method, params: ["B"], signal: caller.signal }).catch((error: unknown) => error);
+    const otherA = client.request({ method: read.method, params: ["A"] });
+    await Promise.resolve();
+    caller.abort();
+    await Promise.all([firstA, firstB]);
+    expect(signals.get("A")?.aborted).toBe(false);
+    expect(signals.get("B")?.aborted).toBe(true);
+    releases.get("A")?.("kept alive");
+    await expect(otherA).resolves.toBe("kept alive");
+    client.close();
+  });
+});

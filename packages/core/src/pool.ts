@@ -492,16 +492,18 @@ export function createPool(options: PoolOptions): RpcPool {
     race: boolean,
   ): Promise<unknown> => {
     const operation = parent ? operations.get(parent) : undefined;
-    const rivals = race && (operation?.remaining ?? 2) > 1 ? pickRivals(method, exclude, parent) : [];
-    if (rivals.length > 0) {
-      emit({ type: "race", endpoints: [endpoint.url, ...rivals.map((rival) => rival.url)], method });
-    }
+    // Reserve the foreground request before speculative identity checks can spend
+    // the last provider token shared by its URLs.
     const lead = start(endpoint, method, params, parent, false, true);
+    const rivals = race && (operation?.remaining ?? 1) > 0 ? pickRivals(method, exclude, parent) : [];
     const started = [lead];
+    const raced = [endpoint.url];
     for (const rival of rivals) {
       if (!budgets.has(rival.id) || (operation?.remaining ?? 1) === 0) continue;
       started.push(start(rival, method, params, parent, false, true));
+      raced.push(rival.url);
     }
+    if (started.length > 1) emit({ type: "race", endpoints: raced, method });
     const primary = started.length === 1 ? lead : raceCalls(
       started,
       (error) => (!failoverOf(error) && !isUnsupportedMethod(error)) || options.shouldThrow?.(error) === true,
