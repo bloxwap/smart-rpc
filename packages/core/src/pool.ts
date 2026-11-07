@@ -511,14 +511,25 @@ export function createPool(options: PoolOptions): RpcPool {
     );
     if (!hedge.enabled || !idempotent) return primary.promise;
     const wait = board.hedgeDelay(endpoint.id, method, hedge.minDelay, hedge.multiplier);
-    return raceHedge(primary, wait, () => {
+    return raceHedge(primary, wait, (active) => {
       const next = board.pick(method, exclude, "best", random);
-      if ((operation?.remaining ?? 1) === 0 || !next || breaker.isOpen(next.id) || !budgets.has(next.id) || gates.get(next.id)?.verified === false) {
+      if ((operation?.remaining ?? 1) === 0 || !next || breaker.isOpen(next.id) || !budgets.has(next.id)) {
         return undefined;
       }
       exclude.add(next.id);
-      emit({ type: "hedge", endpoint: next.url, method });
-      return start(next, method, params, parent, true, true);
+      const launch = (): Inflight => {
+        emit({ type: "hedge", endpoint: next.url, method });
+        return start(next, method, params, parent, true, true);
+      };
+      const target = byId.get(next.id);
+      if (!target || gates.get(next.id)?.verified !== false) return launch();
+      return untilAborted(checkChain(target, operation), parent).then(
+        (reason) =>
+          reason || !active() || breaker.isOpen(next.id) || quarantined(next.id) || !supports(target, method) || !budgets.has(next.id)
+            ? undefined
+            : launch(),
+        () => undefined,
+      );
     });
   };
 
@@ -679,9 +690,11 @@ export function createPool(options: PoolOptions): RpcPool {
 
   let closed = false;
   let probing: Promise<void> | undefined;
+  let lastProbeAt = Number.NEGATIVE_INFINITY;
   const runProbe = (reserveToken: boolean): Promise<void> => {
     if (closed) return Promise.resolve();
     if (probing) return probing;
+    lastProbeAt = now();
     // Background maintenance leaves one token for a foreground call. This matters
     // for low-quota public RPCs whose refill is slower than the probe interval.
     const funded = (id: string): boolean => {
@@ -729,11 +742,16 @@ export function createPool(options: PoolOptions): RpcPool {
     if (!activity.active()) return;
     void runProbe(true);
   };
+  const probeOnVisible = (): void => {
+    if (probing !== undefined || now() - lastProbeAt < probeEvery) return;
+    probeTick();
+  };
   const touch = (): void => {
     lastRequestAt = now();
     if (probeEvery === 0 || probeTimer !== undefined) return;
     probeTimer = setInterval(probeTick, probeEvery);
     unrefTimer(probeTimer);
+    activity.watch(probeOnVisible);
   };
 
   const newestHead = (method: string): { block: number; ageMs: number } | undefined => {
@@ -895,23 +913,39 @@ function buildEndpoints(options: PoolOptions): BuiltEndpoint[] {
 function raceHedge(
   primary: Inflight,
   waitMs: number,
-  startHedge: () => Inflight | undefined,
+  startHedge: (active: () => boolean) => Inflight | undefined | Promise<Inflight | undefined>,
 ): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let pending = 1;
     let settled = false;
     let hedge: Inflight | undefined;
     let primaryError: Error | undefined;
+    const track = (call: Inflight | undefined): void => {
+      if (!call) {
+        fail(undefined, new Error("The hedge did not start."), false);
+        return;
+      }
+      hedge = call;
+      call.promise.then(
+        (result) => finish(result, primary),
+        (error: unknown) => fail(call, toError(error), false),
+      );
+    };
     const timer = setTimeout(() => {
       if (settled) return;
-      const started = startHedge();
-      if (!started) return;
-      hedge = started;
+      let started: Inflight | undefined | Promise<Inflight | undefined>;
+      try {
+        started = startHedge(() => !settled);
+      } catch {
+        return;
+      }
+      if (started === undefined) return;
       pending += 1;
-      started.promise.then(
-        (result) => finish(result, primary),
-        (error: unknown) => fail(started, toError(error), false),
-      );
+      if (started instanceof Promise) {
+        started.then(track, (error: unknown) => fail(undefined, toError(error), false));
+      } else {
+        track(started);
+      }
     }, waitMs);
     unrefTimer(timer);
     const finish = (result: unknown, loser: Inflight | undefined): void => {
