@@ -1,0 +1,16 @@
+export {
+  ARBITRUM_CHAIN_ID,
+  ARBITRUM_MAINNET_CAIP,
+  ARBITRUM_MAINNET_ENDPOINTS,
+  ARBITRUM_MAINNET_REGISTRY,
+  ARBITRUM_NATIVE_CURRENCY,
+  ARBITRUM_PRECOMPILES,
+  ARBITRUM_RPC_URL,
+  ARBITRUM_SEQUENCER_FEED_URL,
+  ARBITRUM_SEQUENCER_URL,
+  type ArbitrumBlockFields,
+  type ArbitrumHex,
+  type ArbitrumOptions,
+  type ArbitrumReceiptFields,
+  arbitrum,
+} from "@smart-rpc/arbitrum";

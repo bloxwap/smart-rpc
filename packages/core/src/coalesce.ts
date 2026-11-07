@@ -89,15 +89,9 @@ function writeValue(value: unknown, out: string[], path: Set<object>): boolean {
 
 interface Entry {
   promise: Promise<unknown>;
-  cancel: Cancel | undefined;
+  cancel: AbortController;
   waiting: number;
-  abandoned: boolean;
   deadline: number;
-}
-
-interface Cancel {
-  controller: AbortController;
-  live: Set<Entry>;
 }
 
 type Run = (signal: AbortSignal | undefined, progress: (waitMs?: number) => void) => Promise<unknown>;
@@ -105,7 +99,6 @@ type Run = (signal: AbortSignal | undefined, progress: (waitMs?: number) => void
 /** One pool's table of shared in-flight reads. */
 export class Coalescer {
   readonly #entries = new Map<string, Entry>();
-  readonly #cancels = new WeakMap<AbortSignal, Cancel>();
   readonly #maxWaitMs: number;
 
   constructor(maxWaitMs: number) {
@@ -121,22 +114,21 @@ export class Coalescer {
    * `onJoin` fires for a caller that joined an existing request.
    */
   request(key: string, signal: AbortSignal | undefined, run: Run, onJoin: () => void): Promise<unknown> {
-    if (signal?.aborted) return run(signal, ignore);
+    if (signal?.aborted) return Promise.reject(abortReason(signal));
     const existing = this.#entries.get(key);
     if (existing && Date.now() < existing.deadline) {
       onJoin();
       return this.#wait(key, existing, signal, () => this.request(key, signal, run, ignore));
     }
-    return this.#wait(key, this.#start(key, signal, run), signal, undefined);
+    return this.#wait(key, this.#start(key, run), signal, undefined);
   }
 
-  #start(key: string, signal: AbortSignal | undefined, run: Run): Entry {
-    const cancel = signal === undefined ? undefined : this.#cancelFor(signal);
+  #start(key: string, run: Run): Entry {
+    const cancel = new AbortController();
     const entry: Entry = {
       promise: Promise.resolve(),
       cancel,
       waiting: 0,
-      abandoned: false,
       deadline: Date.now() + this.#maxWaitMs,
     };
     const progress = (waitMs = 0): void => {
@@ -144,17 +136,12 @@ export class Coalescer {
     };
     let started: Promise<unknown>;
     try {
-      started = run(cancel?.controller.signal, progress);
+      started = run(cancel.signal, progress);
     } catch (error) {
       started = Promise.reject(error);
     }
-    cancel?.live.add(entry);
     entry.promise = started.finally(() => {
       if (this.#entries.get(key) === entry) this.#entries.delete(key);
-      if (cancel) {
-        cancel.live.delete(entry);
-        this.#cancelIfAbandoned(cancel);
-      }
     });
     entry.promise.catch(ignore);
     this.#entries.set(key, entry);
@@ -213,24 +200,9 @@ export class Coalescer {
 
   #leave(key: string, entry: Entry): void {
     entry.waiting -= 1;
-    if (entry.waiting > 0 || !entry.cancel) return;
-    entry.abandoned = true;
+    if (entry.waiting > 0) return;
     if (this.#entries.get(key) === entry) this.#entries.delete(key);
-    this.#cancelIfAbandoned(entry.cancel);
-  }
-
-  #cancelFor(signal: AbortSignal): Cancel {
-    const existing = this.#cancels.get(signal);
-    if (existing && !existing.controller.signal.aborted) return existing;
-    const cancel: Cancel = { controller: new AbortController(), live: new Set() };
-    this.#cancels.set(signal, cancel);
-    return cancel;
-  }
-
-  #cancelIfAbandoned(cancel: Cancel): void {
-    if (cancel.live.size === 0) return;
-    for (const entry of cancel.live) if (!entry.abandoned) return;
-    cancel.controller.abort();
+    entry.cancel.abort();
   }
 }
 

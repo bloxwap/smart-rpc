@@ -1,9 +1,8 @@
 /**
  * Racing a safe read across the best-scored endpoints at once.
  *
- * The first answer wins. Losers are not cancelled: they finish under their own
- * attempt deadline, so every race also re-measures the runners-up. A loser the
- * caller aborts is not an endpoint failure.
+ * The first answer wins and cancels pending losers. Intentional cancellation is
+ * excluded from endpoint failure and latency accounting.
  * @module
  */
 
@@ -74,8 +73,7 @@ export function pickRacers<T extends { readonly id: string }>(
 /**
  * Settle with the first success among `calls`. A failure waits for the others unless `decisive` says the
  * failover loop would stop on it anyway. When every call fails, reject with the last error and hand the
- * earlier ones to `failed`. `cancel()` only marks the race as lost. Its calls keep running so their latency
- * is still scored.
+ * earlier ones to `failed`. Finishing or cancelling the race cancels every pending loser.
  */
 export function raceCalls(
   calls: readonly RaceCall[],
@@ -96,6 +94,7 @@ export function raceCalls(
         (result) => {
           if (settled) return;
           settled = true;
+          for (const other of calls) if (other !== call) other.cancel();
           resolve(result);
         },
         (error: unknown) => {
@@ -107,6 +106,7 @@ export function raceCalls(
             return;
           }
           settled = true;
+          for (const other of calls) if (other !== call) other.cancel();
           failed(errors);
           reject(wrapped);
         },
@@ -117,6 +117,7 @@ export function raceCalls(
     promise,
     cancel(): void {
       cancelled = true;
+      for (const call of calls) call.cancel();
     },
     cancelled: (): boolean => cancelled,
   };

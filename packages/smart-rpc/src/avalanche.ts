@@ -1,0 +1,16 @@
+export {
+  AVALANCHE_CHAIN_ID,
+  AVALANCHE_MAINNET_CAIP,
+  AVALANCHE_MAINNET_ENDPOINTS,
+  AVALANCHE_MAINNET_REGISTRY,
+  AVALANCHE_NATIVE_CURRENCY,
+  AVALANCHE_READ_METHODS,
+  AVALANCHE_RPC_METHODS,
+  AVALANCHE_RPC_URL,
+  AVALANCHE_WS_URL,
+  type AcceptedTransactionsOptions,
+  type AvalancheOptions,
+  type AvalanchePublicRpcEndpoint,
+  avalanche,
+  subscribeAcceptedTransactions,
+} from "@smart-rpc/avalanche";

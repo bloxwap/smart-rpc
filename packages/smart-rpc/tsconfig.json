@@ -4,11 +4,76 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@smart-rpc/core": ["../core/src/index.ts"],
-      "@smart-rpc/ethereum": ["../ethereum/src/index.ts"],
-      "@smart-rpc/hyperevm": ["../hyperevm/src/index.ts"],
-      "@smart-rpc/solana": ["../solana/src/index.ts"]
+      "@smart-rpc/core": [
+        "../core/src/index.ts"
+      ],
+      "@smart-rpc/ethereum": [
+        "../ethereum/src/index.ts"
+      ],
+      "@smart-rpc/hyperevm": [
+        "../hyperevm/src/index.ts"
+      ],
+      "@smart-rpc/solana": [
+        "../solana/src/index.ts"
+      ],
+      "@smart-rpc/bsc": [
+        "../bsc/src/index.ts"
+      ],
+      "@smart-rpc/polygon": [
+        "../polygon/src/index.ts"
+      ],
+      "@smart-rpc/base": [
+        "../base/src/index.ts"
+      ],
+      "@smart-rpc/arbitrum": [
+        "../arbitrum/src/index.ts"
+      ],
+      "@smart-rpc/monad": [
+        "../monad/src/index.ts"
+      ],
+      "@smart-rpc/xlayer": [
+        "../xlayer/src/index.ts"
+      ],
+      "@smart-rpc/robinhood": [
+        "../robinhood/src/index.ts"
+      ],
+      "@smart-rpc/plasma": [
+        "../plasma/src/index.ts"
+      ],
+      "@smart-rpc/ink": [
+        "../ink/src/index.ts"
+      ],
+      "@smart-rpc/optimism": [
+        "../optimism/src/index.ts"
+      ],
+      "@smart-rpc/opbnb": [
+        "../opbnb/src/index.ts"
+      ],
+      "@smart-rpc/arc": [
+        "../arc/src/index.ts"
+      ],
+      "@smart-rpc/etherlink": [
+        "../etherlink/src/index.ts"
+      ],
+      "@smart-rpc/avalanche": [
+        "../avalanche/src/index.ts"
+      ],
+      "@smart-rpc/celo": [
+        "../celo/src/index.ts"
+      ],
+      "@smart-rpc/gnosis": [
+        "../gnosis/src/index.ts"
+      ],
+      "@smart-rpc/mantle": [
+        "../mantle/src/index.ts"
+      ],
+      "@smart-rpc/flare": [
+        "../flare/src/index.ts"
+      ]
     }
   },
-  "include": ["src", "tests"]
+  "include": [
+    "src",
+    "tests"
+  ]
 }

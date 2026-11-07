@@ -18,6 +18,7 @@ export interface RpcRequest {
 export interface SmartRpcTransport {
   readonly chainIds: readonly string[];
   request(request: RpcRequest): Promise<unknown>;
+  requestBatch?: ((requests: readonly RpcRequest[]) => Promise<PromiseSettledResult<unknown>[]>) | undefined;
   probe?: (() => Promise<void>) | undefined;
   close?: (() => void) | undefined;
   snapshot?: ((method?: string) => readonly EndpointSnapshot[]) | undefined;
@@ -43,6 +44,15 @@ export interface PoolEndpointConfig {
   call: EndpointCall;
   /** False when the endpoint cannot serve `method`. Default: every method. */
   supports?: ((method: string) => boolean) | undefined;
+  /** Parameter-sensitive capability check, evaluated before routing. */
+  supportsRequest?: ((request: { method: string; params?: unknown }) => boolean) | undefined;
+  /** False for latest-only endpoints that cannot serve numeric state reads. */
+  pinning?: boolean | undefined;
+  /** URLs sharing a provider quota use the same group inside this pool. */
+  providerGroup?: string | undefined;
+  providerBudget?: BudgetOptions | undefined;
+  /** Release transport resources when the pool closes. */
+  close?: (() => void) | undefined;
   /**
    * Milliseconds a recent rate-limited response asked for in `Retry-After`.
    * Reading it clears it. viem drops headers on some JSON-RPC errors, so HTTP transports keep a copy here.
@@ -82,6 +92,12 @@ export interface ChainPolicy {
   /** Hash to return when a rebroadcast is answered "already known". */
   rebroadcastResult?: ((method: string, params: unknown) => unknown) | undefined;
   uncoalescedMethods?: ReadonlySet<string> | undefined;
+  /** Server-local handles. The pool returns opaque handles and keeps followups on their owner. */
+  statefulMethods?: {
+    create: readonly string[];
+    use: readonly string[];
+    release: readonly string[];
+  } | undefined;
   cachePolicy?: CachePolicy | undefined;
   /**
    * Block-tag pinning. Default: off. EVM transports turn it on.
@@ -113,6 +129,14 @@ export interface HedgeOptions {
   minDelay?: number | undefined;
   /** After three samples, hedge once the call exceeds this multiple of the tail. Default: 2. */
   multiplier?: number | undefined;
+}
+
+/** Total upstream work allowed for one request or requestBatch operation. */
+export interface OperationBudgetOptions {
+  /** Includes identity checks, races, retries and every batch item. Default: 64. */
+  maxRequests?: number | undefined;
+  /** Total milliseconds including queueing and retries. Default: four attempt timeouts. */
+  timeout?: number | undefined;
 }
 
 /** Options for {@link createPool}. Defaults match the HyperEVM transport at 092b8f9. */
@@ -149,6 +173,8 @@ export interface PoolOptions {
    * Default: none, unless an endpoint sets `budget` or `rps`.
    */
   budget?: BudgetOptions | false | undefined;
+  /** One shared ceiling for attempts, hedges, identity checks and batch items. */
+  operationBudget?: OperationBudgetOptions | undefined;
   /** Share identical in-flight safe reads. Default: true. */
   coalesce?: boolean | undefined;
   /** Answer safe reads from memory while they are fresh. Default: on when `policy.cachePolicy` is set, else off. */
@@ -171,6 +197,8 @@ export interface PoolOptions {
 export interface RpcPool extends SmartRpcTransport {
   readonly chainIds: readonly string[];
   request(request: RpcRequest): Promise<unknown>;
+  /** Ordered per-item results; one failure never discards successful siblings. */
+  requestBatch(requests: readonly RpcRequest[]): Promise<PromiseSettledResult<unknown>[]>;
   probe(): Promise<void>;
   close(): void;
   snapshot(method?: string): readonly EndpointSnapshot[];

@@ -4,14 +4,22 @@
  * @module
  */
 
-import { http, webSocket, type Transport } from "viem";
+import { http, webSocket, type WebSocketTransport, type WebSocketTransportConfig } from "viem";
 
-import { retryAfterMs, type EndpointCall } from "@smart-rpc/core";
+import { abortError, isIdempotentMethod, parseQuantity, retryAfterMs, type EndpointCall } from "@smart-rpc/core";
+
+type SocketValue = NonNullable<ReturnType<WebSocketTransport>["value"]>;
+export type EthereumSubscriptionOptions = Parameters<SocketValue["subscribe"]>[0];
+export type EthereumSubscription = Awaited<ReturnType<SocketValue["subscribe"]>>;
 
 export interface ViemConnectionOptions {
   timeout: number;
   batch?: boolean | { batchSize?: number; wait?: number } | undefined;
   fetchFn?: ((input: string | URL | Request, init?: RequestInit) => Promise<Response>) | undefined;
+  headers?: Readonly<Record<string, string>> | undefined;
+  /** Required for a dedicated subscription session, verified on its own connection. */
+  expectedChainId?: number | undefined;
+  reconnect?: WebSocketTransportConfig["reconnect"] | undefined;
 }
 
 export interface ViemConnection {
@@ -20,6 +28,10 @@ export interface ViemConnection {
   call: EndpointCall;
   /** Milliseconds left of a recorded `Retry-After`. Reading it clears it. */
   retryAfter: () => number;
+  /** Dedicated WS session: viem owns reconnect/resubscribe on this same endpoint. */
+  subscribe: (options: EthereumSubscriptionOptions) => Promise<EthereumSubscription>;
+  /** Stop owned subscriptions; never close viem's URL-shared socket for other clients. */
+  close: () => void;
 }
 
 /** Build the viem child transport for one URL and adapt it to a pool call. */
@@ -31,26 +43,74 @@ export function connectViem(url: string, options: ViemConnectionOptions): ViemCo
     throw new Error(`RPC URL must be http(s) or ws(s): ${parsed.protocol}`);
   }
   const hint = retryHint();
-  const transport: Transport = websocket
-    ? webSocket(url, { retryCount: 0, timeout: options.timeout })
+  if (websocket && options.headers && Object.keys(options.headers).length > 0) {
+    throw new Error("WebSocket headers are not supported by viem's browser-compatible transport. Use a provider's documented authenticated WS URL.");
+  }
+  const transport = websocket
+    ? webSocket(url, { retryCount: 0, timeout: options.timeout, reconnect: options.reconnect ?? true })
     : http(url, {
         batch: options.batch,
         fetchFn: options.fetchFn,
+        fetchOptions: { headers: options.headers },
         onFetchResponse: hint.record,
         retryCount: 0,
         timeout: options.timeout,
       });
   const instance = transport({ retryCount: 0, timeout: options.timeout });
   const request = instance.request.bind(instance);
+  const batches = new BatchCancellation(options.batch);
+  const subscriptions = new Set<EthereumSubscription>();
+  let closed = false;
   return {
     url,
     kind: websocket ? "websocket" : "http",
     retryAfter: hint.take,
+    close(): void {
+      if (closed) return;
+      closed = true;
+      batches.close();
+      for (const subscription of subscriptions) void subscription.unsubscribe().catch(() => undefined);
+      subscriptions.clear();
+    },
+    async subscribe(args): Promise<EthereumSubscription> {
+      if (closed) throw new Error("Connection is closed.");
+      const value = instance.value;
+      if (!websocket || !value || !("subscribe" in value)) throw new Error("Subscriptions require a documented WebSocket endpoint.");
+      if (options.expectedChainId === undefined) throw new Error("Subscriptions require expectedChainId for connection identity verification.");
+      const identity = await request({ method: "eth_chainId" });
+      if (parseQuantity(identity) !== options.expectedChainId) throw new Error("Subscription endpoint returned a different chain identity.");
+      if (closed) throw new Error("Connection is closed.");
+      const upstream = await value.subscribe(args);
+      let released = false;
+      const owned: EthereumSubscription = {
+        get subscriptionId() { return upstream.subscriptionId; },
+        unsubscribe() {
+          released = true;
+          subscriptions.delete(owned);
+          return upstream.unsubscribe();
+        },
+      };
+      if (closed) {
+        await owned.unsubscribe();
+        throw new Error("Connection closed while subscribing.");
+      }
+      if (!released) subscriptions.add(owned);
+      return owned;
+    },
     call: async (args, callOptions) => {
+      if (closed) throw new Error("Connection is closed.");
       try {
+        const body = { method: args.method, params: args.params ?? [] } as Parameters<typeof request>[0];
+        if (!websocket && options.batch && isIdempotentMethod(args.method)) {
+          // viem groups by URL and signal. A connection-local shared signal permits a
+          // real wire batch without one cancelled caller aborting its live neighbors.
+          return await batches.run(callOptions?.signal, (signal) => request(body, { signal }));
+        }
         return await request(
-          { method: args.method, params: args.params ?? [] } as Parameters<typeof request>[0],
-          callOptions?.signal ? { signal: callOptions.signal } : undefined,
+          body,
+          // Stateful calls and writes never join another caller's cancellation group.
+          // A unique signal also prevents viem mixing credentials across connections.
+          { signal: callOptions?.signal ?? new AbortController().signal },
         );
       } catch (error) {
         const waited = hint.take();
@@ -59,6 +119,86 @@ export function connectViem(url: string, options: ViemConnectionOptions): ViemCo
       }
     },
   };
+}
+
+interface BatchGroup {
+  controller: AbortController;
+  members: number;
+  scheduled: number;
+  timer?: ReturnType<typeof setTimeout> | undefined;
+}
+
+/** Cancellation ownership around viem's scheduler, without implementing another batcher. */
+class BatchCancellation {
+  #current: BatchGroup | undefined;
+  readonly #groups = new Set<BatchGroup>();
+  readonly #wait: number;
+  readonly #size: number;
+
+  constructor(options: ViemConnectionOptions["batch"]) {
+    const config = typeof options === "object" ? options : {};
+    this.#wait = config.wait ?? 0;
+    this.#size = config.batchSize ?? 1_000; // viem's default wire batch size.
+    if (!Number.isFinite(this.#wait) || this.#wait < 0) throw new Error("batch.wait must be a non-negative finite number.");
+    if (!Number.isSafeInteger(this.#size) || this.#size < 1) throw new Error("batch.batchSize must be a positive safe integer.");
+  }
+
+  #seal(group: BatchGroup): void {
+    if (this.#current === group) this.#current = undefined;
+    if (group.timer !== undefined) clearTimeout(group.timer);
+    group.timer = undefined;
+  }
+
+  #open(): BatchGroup {
+    const group: BatchGroup = { controller: new AbortController(), members: 0, scheduled: 0 };
+    this.#current = group;
+    this.#groups.add(group);
+    // This boundary is scheduled before viem's dispatch timer, so a later window
+    // can never reuse the signal belonging to an already-dispatched HTTP batch.
+    group.timer = setTimeout(() => this.#seal(group), this.#wait);
+    return group;
+  }
+
+  close(): void {
+    for (const group of this.#groups) {
+      this.#seal(group);
+      group.controller.abort(new Error("Connection is closed."));
+    }
+    this.#groups.clear();
+  }
+
+  run<T>(signal: AbortSignal | undefined, send: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    if (signal?.aborted) return Promise.reject(abortError(signal));
+    const group = this.#current ?? this.#open();
+    group.members += 1;
+    group.scheduled += 1;
+    if (group.scheduled === this.#size) this.#seal(group);
+    return new Promise<T>((resolve, reject) => {
+      let released = false;
+      const release = (): void => {
+        if (released) return;
+        released = true;
+        signal?.removeEventListener("abort", onAbort);
+        group.members -= 1;
+        if (group.members === 0) {
+          this.#seal(group);
+          this.#groups.delete(group);
+          // Completed participants no longer need the request either. Only the last
+          // participant can abort the single wire batch owned by this group.
+          group.controller.abort();
+        }
+      };
+      const onAbort = (): void => {
+        reject(signal ? abortError(signal) : new Error("This operation was aborted"));
+        release();
+      };
+      signal?.addEventListener("abort", onAbort, { once: true });
+      Promise.resolve().then(() => send(group.controller.signal)).then(
+        (value) => { resolve(value); release(); },
+        (error: unknown) => { reject(error); release(); },
+      );
+    });
+  }
 }
 
 function retryHint(): { record: (response: Response) => void; take: () => number } {

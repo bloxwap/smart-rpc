@@ -7,4 +7,12 @@ export {
   type EthereumOptions,
 } from "./transport.js";
 export { ETHEREUM_MAINNET_REGISTRY } from "./registry.js";
-export { connectViem, type ViemConnection, type ViemConnectionOptions } from "./viem.js";
+export {
+  connectViem,
+  type ViemConnection,
+  type ViemConnectionOptions,
+  type EthereumSubscriptionOptions,
+  type EthereumSubscription,
+} from "./viem.js";
+export { supportsEvmRequest, type EthereumEndpointCapabilities, type EvmBlockTag } from "./capabilities.js";
+export { requestLogs, type LogRangeOptions } from "./logs.js";

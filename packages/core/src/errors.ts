@@ -73,3 +73,19 @@ export class UnknownChainError extends Error {
     this.chainId = chainId;
   }
 }
+
+/** The total operation ceiling was reached before another upstream call could start. */
+export class OperationBudgetExceededError extends Error {
+  constructor(readonly maxRequests: number) {
+    super(`RPC operation exhausted its ${maxRequests} upstream request budget.`);
+    this.name = "OperationBudgetExceededError";
+  }
+}
+
+/** No endpoint can serve the requested method and state. */
+export class EndpointCapabilityError extends Error {
+  constructor(readonly method: string) {
+    super(`No RPC endpoint supports the requested ${method} operation.`);
+    this.name = "EndpointCapabilityError";
+  }
+}

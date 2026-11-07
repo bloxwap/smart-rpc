@@ -8,8 +8,10 @@
  */
 
 import {
-  UnknownChainError,
+  createSmartRpc,
   type RpcEvent,
+  type RpcPool,
+  type RpcRequest,
   type SmartRpcTransport,
 } from "@smart-rpc/core";
 import {
@@ -20,11 +22,24 @@ import {
 
 import {
   HYPEREVM_MAINNET_REGISTRY,
+  HYPEREVM_OFFICIAL_CAPABILITIES,
   HYPEREVM_RPC_URL,
   HYPEREVM_TESTNET_REGISTRY,
+  HYPEREVM_TESTNET_RPC_URL,
 } from "./registry.js";
 
 export { HYPEREVM_RPC_URL, HYPEREVM_TESTNET_RPC_URL } from "./registry.js";
+
+/** Native gas balances use HYPE with 18 decimals on both networks. */
+export const HYPEREVM_NATIVE_CURRENCY = { name: "HYPE", symbol: "HYPE", decimals: 18 } as const;
+
+/** Read-only HyperEVM extensions; their parameters and result fields pass through unchanged. */
+export const HYPEREVM_SAFE_METHODS: readonly string[] = [
+  "eth_bigBlockGasPrice",
+  "eth_usingBigBlocks",
+  "eth_getSystemTxsByBlockHash",
+  "eth_getSystemTxsByBlockNumber",
+];
 
 /** HyperEVM mainnet chain id. */
 export const HYPEREVM_CHAIN_ID = 999;
@@ -52,8 +67,16 @@ export interface HyperEvmOptions
   skipPrecompiles?: boolean | undefined;
 }
 
+/** Dual-network transport. Batch items name their network; each pool shares its operation budget. */
+export interface HyperEvmTransport extends SmartRpcTransport {
+  requestBatch(requests: readonly RpcRequest[]): Promise<PromiseSettledResult<unknown>[]>;
+}
+
+/** A selected HyperEVM network also exposes batch requests and pool statistics. */
+export function hyperevm(options: HyperEvmOptions & { chainId: 999 | 998 }): RpcPool;
 /** HyperEVM transport for `createSmartRpc({ transports })`. */
-export function hyperevm(options: HyperEvmOptions = {}): SmartRpcTransport {
+export function hyperevm(options?: HyperEvmOptions): HyperEvmTransport;
+export function hyperevm(options: HyperEvmOptions = {}): HyperEvmTransport {
   const chains: readonly (999 | 998)[] = options.chainId === undefined ? [999, 998] : [options.chainId];
   const pools = chains.map((chainId) =>
     ethereum({
@@ -62,6 +85,7 @@ export function hyperevm(options: HyperEvmOptions = {}): SmartRpcTransport {
       chainIds: [`eip155:${chainId}`],
       endpoints: endpointsFor(options, chainId),
       skipPrecompiles: options.skipPrecompiles ?? true,
+      safeMethods: [...HYPEREVM_SAFE_METHODS, ...(options.safeMethods ?? [])],
     }),
   );
   const first = pools[0];
@@ -85,31 +109,31 @@ function endpointsFor(options: HyperEvmOptions, chainId: 999 | 998): readonly Et
     : options.endpoints;
   if (configured !== undefined) return configured.map((endpoint) => tagOfficial(endpoint));
   const registry = chainId === 999 ? HYPEREVM_MAINNET_REGISTRY : HYPEREVM_TESTNET_REGISTRY;
-  return registry.map(({ url, rps, burst, unsupportedMethods }) => ({ url, rps, burst, unsupportedMethods }));
+  return registry.map(({ url, rps, burst, unsupportedMethods, capabilities }) => ({
+    url, rps, burst, unsupportedMethods, capabilities,
+  }));
 }
 
-/** The official mainnet RPC keeps the reference per-IP budget unless the caller set one. */
+/** Keep documented official restrictions and the reference budget for both networks. */
 function tagOfficial(endpoint: EthereumEndpoint): EthereumEndpoint {
-  if (typeof endpoint === "string") {
-    return endpoint === HYPEREVM_RPC_URL ? { url: endpoint, rps: 1.5, burst: 3 } : endpoint;
-  }
-  if (endpoint.url === HYPEREVM_RPC_URL && endpoint.rps === undefined && endpoint.burst === undefined) {
-    return { ...endpoint, rps: 1.5, burst: 3 };
-  }
-  return endpoint;
+  const config = typeof endpoint === "string" ? { url: endpoint } : endpoint;
+  if (config.url !== HYPEREVM_RPC_URL && config.url !== HYPEREVM_TESTNET_RPC_URL) return endpoint;
+  return {
+    ...config,
+    ...(config.rps === undefined && config.burst === undefined ? { rps: 1.5, burst: 3 } : {}),
+    capabilities: { ...HYPEREVM_OFFICIAL_CAPABILITIES, ...config.capabilities },
+  };
 }
 
-function combine(transports: readonly SmartRpcTransport[]): SmartRpcTransport {
-  const byChain = new Map<string, SmartRpcTransport>();
-  for (const transport of transports) {
-    for (const chainId of transport.chainIds) byChain.set(chainId, transport);
-  }
+function combine(transports: readonly RpcPool[]): HyperEvmTransport {
+  const router = createSmartRpc({ transports });
   return {
-    chainIds: [...byChain.keys()],
+    chainIds: router.chainIds,
     request(request) {
-      const transport = request.chainId ? byChain.get(request.chainId) : undefined;
-      if (!transport) throw new UnknownChainError(request.chainId ?? "");
-      return transport.request(request);
+      return router.request({ ...request, chainId: request.chainId ?? "" });
+    },
+    requestBatch(requests): Promise<PromiseSettledResult<unknown>[]> {
+      return router.requestBatch(requests.map((request) => ({ ...request, chainId: request.chainId ?? "" })));
     },
     probe(): Promise<void> {
       return Promise.all(transports.map((transport) => transport.probe?.() ?? Promise.resolve())).then(() => undefined);

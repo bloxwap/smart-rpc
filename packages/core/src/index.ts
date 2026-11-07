@@ -58,6 +58,8 @@ export { abortError, isAbortError, toError } from "./error-util.js";
 export {
   AllEndpointsFailedError,
   BudgetExhaustedError,
+  EndpointCapabilityError,
+  OperationBudgetExceededError,
   ChainMismatchError,
   TimeoutError,
   TransportClosedError,
@@ -69,6 +71,7 @@ export {
   isIdempotentMethod,
   isRebroadcastMethod,
   NON_IDEMPOTENT_METHODS,
+  SAFE_EVM_METHODS,
   REBROADCAST_METHODS,
   shouldFailover,
 } from "./evm-methods.js";
@@ -124,6 +127,7 @@ export type {
   HedgeOptions,
   PoolEndpointConfig,
   PoolOptions,
+  OperationBudgetOptions,
   RpcPool,
   RpcRequest,
   SmartRpcTransport,

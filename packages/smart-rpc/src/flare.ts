@@ -1,0 +1,15 @@
+export {
+  FLARE_CHAIN_ID,
+  FLARE_HEAD_LAG,
+  FLARE_MAINNET_CAIP,
+  FLARE_MAINNET_ENDPOINTS,
+  FLARE_MAINNET_REGISTRY,
+  FLARE_NATIVE_CURRENCY,
+  FLARE_QUICKNODE_RPC_URL,
+  FLARE_QUICKNODE_WS_URL,
+  FLARE_RPC_URL,
+  FLARE_WS_URL,
+  type FlareOptions,
+  type FlarePublicRpcEndpoint,
+  flare,
+} from "@smart-rpc/flare";

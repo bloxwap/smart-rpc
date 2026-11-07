@@ -1,8 +1,8 @@
 /** Parse a hex quantity such as an `eth_blockNumber` result. */
 export function parseQuantity(value: unknown): number | null {
-  if (typeof value !== "string" || !value.startsWith("0x")) return null;
+  if (typeof value !== "string" || !/^0x[0-9a-f]+$/i.test(value)) return null;
   const parsed = Number.parseInt(value, 16);
-  if (!Number.isFinite(parsed)) return null;
+  if (!Number.isSafeInteger(parsed)) return null;
   return parsed;
 }
 

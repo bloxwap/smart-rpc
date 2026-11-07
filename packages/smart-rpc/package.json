@@ -30,7 +30,79 @@
       "types": "./dist/hyperevm.d.ts",
       "import": "./dist/hyperevm.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./bsc": {
+      "types": "./dist/bsc.d.ts",
+      "import": "./dist/bsc.js"
+    },
+    "./polygon": {
+      "types": "./dist/polygon.d.ts",
+      "import": "./dist/polygon.js"
+    },
+    "./base": {
+      "types": "./dist/base.d.ts",
+      "import": "./dist/base.js"
+    },
+    "./arbitrum": {
+      "types": "./dist/arbitrum.d.ts",
+      "import": "./dist/arbitrum.js"
+    },
+    "./monad": {
+      "types": "./dist/monad.d.ts",
+      "import": "./dist/monad.js"
+    },
+    "./xlayer": {
+      "types": "./dist/xlayer.d.ts",
+      "import": "./dist/xlayer.js"
+    },
+    "./robinhood": {
+      "types": "./dist/robinhood.d.ts",
+      "import": "./dist/robinhood.js"
+    },
+    "./plasma": {
+      "types": "./dist/plasma.d.ts",
+      "import": "./dist/plasma.js"
+    },
+    "./ink": {
+      "types": "./dist/ink.d.ts",
+      "import": "./dist/ink.js"
+    },
+    "./optimism": {
+      "types": "./dist/optimism.d.ts",
+      "import": "./dist/optimism.js"
+    },
+    "./opbnb": {
+      "types": "./dist/opbnb.d.ts",
+      "import": "./dist/opbnb.js"
+    },
+    "./arc": {
+      "types": "./dist/arc.d.ts",
+      "import": "./dist/arc.js"
+    },
+    "./etherlink": {
+      "types": "./dist/etherlink.d.ts",
+      "import": "./dist/etherlink.js"
+    },
+    "./avalanche": {
+      "types": "./dist/avalanche.d.ts",
+      "import": "./dist/avalanche.js"
+    },
+    "./celo": {
+      "types": "./dist/celo.d.ts",
+      "import": "./dist/celo.js"
+    },
+    "./gnosis": {
+      "types": "./dist/gnosis.d.ts",
+      "import": "./dist/gnosis.js"
+    },
+    "./mantle": {
+      "types": "./dist/mantle.d.ts",
+      "import": "./dist/mantle.js"
+    },
+    "./flare": {
+      "types": "./dist/flare.d.ts",
+      "import": "./dist/flare.js"
+    }
   },
   "files": [
     "dist"
@@ -53,6 +125,25 @@
     "@smart-rpc/solana": "workspace:*",
     "tsup": "^8.5.0",
     "typescript": "5.9.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "@smart-rpc/bsc": "workspace:*",
+    "@smart-rpc/polygon": "workspace:*",
+    "@smart-rpc/base": "workspace:*",
+    "@smart-rpc/arbitrum": "workspace:*",
+    "@smart-rpc/monad": "workspace:*",
+    "@smart-rpc/xlayer": "workspace:*",
+    "@smart-rpc/robinhood": "workspace:*",
+    "@smart-rpc/plasma": "workspace:*",
+    "@smart-rpc/ink": "workspace:*",
+    "@smart-rpc/optimism": "workspace:*",
+    "@smart-rpc/opbnb": "workspace:*",
+    "@smart-rpc/arc": "workspace:*",
+    "@smart-rpc/etherlink": "workspace:*",
+    "@smart-rpc/avalanche": "workspace:*",
+    "@smart-rpc/celo": "workspace:*",
+    "@smart-rpc/gnosis": "workspace:*",
+    "@smart-rpc/mantle": "workspace:*",
+    "@smart-rpc/flare": "workspace:*",
+    "esbuild": "^0.27.7"
   }
 }

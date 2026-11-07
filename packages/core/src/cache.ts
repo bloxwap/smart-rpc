@@ -112,10 +112,18 @@ export class ReadCache {
   #bytes = 0;
   #hits = 0;
   #misses = 0;
+  #generation = 0;
 
   constructor(config: CacheConfig, policy: CachePolicy) {
     this.#config = config;
     this.#policy = policy;
+  }
+
+  /** Discard state after an observed reorg, including fills begun before that observation. */
+  invalidate(): void {
+    this.#generation += 1;
+    this.#entries.clear();
+    this.#bytes = 0;
   }
 
   stats(): CacheStats {
@@ -149,9 +157,12 @@ export class ReadCache {
       return { hit: true, result: this.#copy(hit.result), stale: hit.stale };
     }
     this.#misses += 1;
+    const generation = this.#generation;
     return {
       hit: false,
       fill: (result: unknown, block: number | undefined): void => {
+        // Missing/pending transaction results are never permanent negative entries.
+        if (generation !== this.#generation || result === null || result === undefined) return;
         this.#fill(key, kind, result, block, context.now);
       },
     };
@@ -229,8 +240,6 @@ const NEVER: ReadonlySet<string> = new Set([
 
 const IMMUTABLE: ReadonlySet<string> = new Set([
   "eth_getBlockByHash",
-  "eth_getTransactionByHash",
-  "eth_getTransactionReceipt",
   "eth_getBlockTransactionCountByHash",
   "eth_getTransactionByBlockHashAndIndex",
   "eth_chainId",
@@ -243,21 +252,25 @@ const FRESH: ReadonlySet<string> = new Set([
   "eth_getStorageAt",
   "eth_getBlockByNumber",
   "eth_blockNumber",
+  "eth_getTransactionByHash",
+  "eth_getTransactionReceipt",
 ]);
 
 /**
  * EVM cache policy. Nonces at `"latest"` or `"pending"` are never cached.
- * Reads named by hash are immutable. State reads are fresh.
+ * Blocks named by hash are immutable. Transaction inclusion and numbered state are fresh.
  */
 export function evmCachePolicy(): CachePolicy {
   return {
     classify(method: string, params: unknown): CacheKind | false {
       if (NEVER.has(method)) return false;
+      // Pending is mutable independently of the chain head.
+      if (Array.isArray(params) && params.includes("pending")) return false;
       if (IMMUTABLE.has(method)) return "immutable";
       if (method === "eth_getTransactionCount") {
         const tag: unknown = Array.isArray(params) ? params[1] : undefined;
         if (tag === undefined || tag === "latest" || tag === "pending") return false;
-        return "immutable";
+        return "fresh";
       }
       if (FRESH.has(method)) return "fresh";
       return false;

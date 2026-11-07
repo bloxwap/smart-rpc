@@ -129,6 +129,7 @@ describe("hyperevm public defaults", () => {
     const mock = mockRpc(({ url, method }) => {
       if (method === "eth_blockNumber") return "0x10";
       if (url.endsWith(".drpc.org")) throw new Error("A disabled filter method reached dRPC.");
+      if (method === "eth_newFilter") return "0x1";
       return [];
     });
     const client = hyperevm({
@@ -149,8 +150,9 @@ describe("hyperevm public defaults", () => {
       });
       await client.request({ method: "eth_blockNumber" });
       unsubscribe?.();
+      const handle = await client.request({ method: "eth_newFilter", params: [{}] });
       mock.calls.length = 0;
-      await expect(client.request({ method: "eth_getFilterLogs", params: ["0x1"] })).resolves.toEqual([]);
+      await expect(client.request({ method: "eth_getFilterLogs", params: [handle] })).resolves.toEqual([]);
       expect(mock.calls.map((call) => call.url)).toEqual([HYPEREVM_TESTNET_RPC_URL]);
     } finally {
       client.close?.();
