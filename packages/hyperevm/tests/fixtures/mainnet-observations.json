@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "chainId": 999,
+  "observations": [
+    {
+      "at": "2026-10-10T00:00:00.000Z",
+      "url": "https://veteran.example/evm",
+      "ok": true,
+      "chainIdOk": true,
+      "head": 1000,
+      "lag": 0,
+      "methods": {
+        "eth_chainId": { "ms": 20, "ok": true },
+        "eth_blockNumber": { "ms": 30, "ok": true },
+        "hypercore_l1BlockNumber": { "ms": 40, "ok": true },
+        "eth_getLogs_range": { "ms": 100, "ok": true }
+      }
+    },
+    {
+      "at": "2026-10-20T00:00:00.000Z",
+      "url": "https://veteran.example/evm",
+      "ok": true,
+      "chainIdOk": true,
+      "head": 2000,
+      "lag": 1,
+      "methods": {
+        "eth_chainId": { "ms": 20, "ok": true },
+        "eth_blockNumber": { "ms": 30, "ok": true },
+        "hypercore_l1BlockNumber": { "ms": 40, "ok": true },
+        "eth_getLogs_range": { "ms": 100, "ok": true }
+      }
+    },
+    {
+      "at": "2026-10-29T00:00:00.000Z",
+      "url": "https://veteran.example/evm",
+      "ok": true,
+      "chainIdOk": true,
+      "head": 3000,
+      "lag": 0,
+      "methods": {
+        "eth_chainId": { "ms": 20, "ok": true },
+        "eth_blockNumber": { "ms": 30, "ok": true },
+        "hypercore_l1BlockNumber": { "ms": 40, "ok": true },
+        "eth_getLogs_range": { "ms": 100, "ok": true }
+      }
+    },
+    {
+      "at": "2026-10-30T00:00:00.000Z",
+      "url": "https://new.example/evm",
+      "ok": true,
+      "chainIdOk": true,
+      "head": 3000,
+      "lag": 0,
+      "methods": {
+        "eth_chainId": { "ms": 10, "ok": true },
+        "eth_blockNumber": { "ms": 10, "ok": true },
+        "hypercore_l1BlockNumber": { "ms": 10, "ok": true },
+        "eth_getLogs_range": { "ms": 10, "ok": true }
+      }
+    }
+  ]
+}

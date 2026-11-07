@@ -109,9 +109,11 @@ function endpointsFor(options: HyperEvmOptions, chainId: 999 | 998): readonly Et
     : options.endpoints;
   if (configured !== undefined) return configured.map((endpoint) => tagOfficial(endpoint));
   const registry = chainId === 999 ? HYPEREVM_MAINNET_REGISTRY : HYPEREVM_TESTNET_REGISTRY;
-  return registry.map(({ url, rps, burst, unsupportedMethods, capabilities }) => ({
-    url, rps, burst, unsupportedMethods, capabilities,
-  }));
+  return registry
+    .filter((endpoint) => endpoint.eligible && endpoint.weight > 0)
+    .map(({ url, weight, rps, burst, unsupportedMethods, capabilities }) => ({
+      url, weight, rps, burst, unsupportedMethods, capabilities,
+    }));
 }
 
 /** Keep documented official restrictions and the reference budget for both networks. */

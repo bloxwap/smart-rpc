@@ -23,7 +23,8 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "rank": "tsup --config tsup.rank.config.ts && node .dev-dist/rank.js"
   },
   "dependencies": {
     "@smart-rpc/core": "workspace:*",
