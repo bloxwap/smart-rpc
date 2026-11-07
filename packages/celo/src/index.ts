@@ -1,0 +1,21 @@
+export {
+  celo,
+  CELO_CHAIN_ID,
+  CELO_MAINNET_CAIP,
+  CELO_SEPOLIA_CHAIN_ID,
+  CELO_SEPOLIA_CAIP,
+  CELO_NATIVE_CURRENCY,
+  type CeloOptions,
+  type CeloFeeCurrencyFields,
+} from "./transport.js";
+export {
+  CELO_RPC_URL,
+  CELO_WEBSOCKET_URL,
+  CELO_SEPOLIA_RPC_URL,
+  CELO_SEPOLIA_WEBSOCKET_URL,
+  CELO_MAINNET_REGISTRY,
+  CELO_MAINNET_ENDPOINTS,
+  CELO_SEPOLIA_REGISTRY,
+  CELO_SEPOLIA_ENDPOINTS,
+  type CeloPublicRpcEndpoint,
+} from "./registry.js";
