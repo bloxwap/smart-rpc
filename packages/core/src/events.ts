@@ -81,9 +81,10 @@ export type RpcEvent =
       endpoint: string;
     }
   | {
+      /** A cacheable read hit memory, went upstream, or was re-read in the background. */
       type: "cache";
       method: string;
-      outcome: "hit" | "miss";
+      outcome: "hit" | "miss" | "refresh";
       stale: number | null;
     };
 

@@ -212,6 +212,11 @@ export class LatestPin {
     return this.#pinAt(method, params, {});
   }
 
+  /** Pin a cache refresh to the newest servable head, whether foreground pinning is enabled or not. */
+  pinTop(method: string, params: unknown): PinnedParams {
+    return this.#pinAt(method, params, { top: true, fresh: false });
+  }
+
   #pinAt(method: string, params: unknown, options: TargetOptions): PinnedParams {
     if (method !== "eth_getLogs" && !BLOCK_SLOTS.has(method)) return unpinned(params);
     const target = this.target(method, options);

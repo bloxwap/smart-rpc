@@ -275,7 +275,7 @@ describe("reorg and finality cache semantics", () => {
     let hash = "0xold";
     let reads = 0;
     const client = pool([{ url: "a", call: async ({ method }) => {
-      if (method === "eth_getBlockByNumber") return { number: "0xa", hash };
+      if (method === "eth_getBlockByNumber" || method === "eth_getBlockByHash") return { number: "0xa", hash };
       if (method === "eth_blockNumber") return "0xa";
       reads += 1; return hash;
     } }], { cache: true, coalesce: false });
@@ -284,8 +284,8 @@ describe("reorg and finality cache semantics", () => {
     await client.request(read);
     expect(reads).toBe(1);
     hash = "0xnew";
-    // Different block selector avoids answering this observation from the prior entry.
-    await client.request({ method: "eth_getBlockByNumber", params: ["0xa", false] });
+    // A hash selector cannot be answered by the latest-to-number alias.
+    await client.request({ method: "eth_getBlockByHash", params: ["0xhash", false] });
     await expect(client.request(read)).resolves.toBe("0xnew");
     expect(reads).toBe(2);
     client.close();

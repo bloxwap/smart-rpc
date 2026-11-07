@@ -9,6 +9,8 @@
 
 import {
   createSmartRpc,
+  evmCachePolicy,
+  isPrecompileCall,
   type RpcEvent,
   type RpcPool,
   type RpcRequest,
@@ -54,7 +56,7 @@ export const HYPEREVM_MAINNET_CAIP = "eip155:999";
 export const HYPEREVM_TESTNET_CAIP = "eip155:998";
 
 export interface HyperEvmOptions
-  extends Omit<EthereumOptions, "chainId" | "chainIds" | "endpoints" | "skipPrecompiles"> {
+  extends Omit<EthereumOptions, "chainId" | "chainIds" | "endpoints" | "skipPrecompiles" | "cachePolicy"> {
   /**
    * One HyperEVM chain. Omit to serve both `eip155:999` and `eip155:998`.
    */
@@ -85,6 +87,7 @@ export function hyperevm(options: HyperEvmOptions = {}): HyperEvmTransport {
       chainIds: [`eip155:${chainId}`],
       endpoints: endpointsFor(options, chainId),
       skipPrecompiles: options.skipPrecompiles ?? true,
+      cachePolicy: evmCachePolicy({ immutable: true, isTimedCall: isPrecompileCall }),
       safeMethods: [...HYPEREVM_SAFE_METHODS, ...(options.safeMethods ?? [])],
     }),
   );
