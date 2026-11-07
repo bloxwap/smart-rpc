@@ -2,12 +2,19 @@
  * Freshness-bounded read cache with canonical chain-policy plans and hot-key refresh.
  *
  * Sends, errors, filters, subscriptions, nonces at `"latest"`, and gas estimates are not cached.
- * The reference's rolling `eth_getLogs` index is deliberately separate; log queries go upstream.
+ * Recently used log filters keep rolling indexes; exact numeric gaps are fetched through the pool.
  * @module
  */
 
 import { coalesceKey } from "./coalesce.js";
 import type { RpcEvent } from "./events.js";
+import {
+  DEFAULT_LOG_INDEX_WINDOW,
+  LogIndex,
+  planLogQuery,
+  type LogIndexFetch,
+  type RollingLogQueryPlan,
+} from "./log-index.js";
 import { parseQuantity, toHexQuantity } from "./quantity.js";
 
 /** Freshness units a cached `"latest"` answer may trail the newest head. */
@@ -31,6 +38,9 @@ export const DEFAULT_CACHE_MAX_ENTRIES = 1_000;
 /** Approximate bytes kept. */
 export const DEFAULT_CACHE_MAX_BYTES = 8 * 1024 * 1024;
 
+/** Blocks retained by each rolling log filter index. */
+export const DEFAULT_CACHE_LOGS_WINDOW = DEFAULT_LOG_INDEX_WINDOW;
+
 export interface CacheOptions {
   /** Units a cached fresh answer may trail the newest known head. Default: 1. */
   maxStaleBlocks?: number | undefined;
@@ -49,6 +59,8 @@ export interface CacheOptions {
   maxEntries?: number | undefined;
   /** Approximate bytes kept. Default: 8 MiB. */
   maxBytes?: number | undefined;
+  /** Blocks retained by each rolling log filter index. Default: 1000. */
+  logsWindow?: number | undefined;
   /** Deep-copy answers when they are stored and returned. Default: true. */
   copyResults?: boolean | undefined;
   /**
@@ -67,6 +79,7 @@ export interface CacheConfig {
   hotIdleMs: number;
   maxEntries: number;
   maxBytes: number;
+  logsWindow: number;
   copyResults: boolean;
   immutableParams: boolean;
 }
@@ -84,7 +97,7 @@ export interface CacheStats {
 /** `"fresh"` is bounded by head lag and age. `"immutable"` is kept until eviction. */
 export type CacheKind = "fresh" | "immutable";
 
-export type CachePlanKind = "latest" | "timed" | "number" | "immutable";
+export type CachePlanKind = "latest" | "timed" | "number" | "immutable" | "logs";
 
 /** A canonical cache key and the normalized params used for background reads. */
 export interface CachePlan {
@@ -92,6 +105,8 @@ export interface CachePlan {
   method: string;
   key: string;
   params: unknown;
+  /** Rolling filter and bounds for an `eth_getLogs` plan. */
+  log?: RollingLogQueryPlan | undefined;
   /** Explicit block for a numbered plan. */
   block?: number | undefined;
   /** Separate exact-block key for a numbered plan. */
@@ -121,6 +136,7 @@ export function resolveCache(value: boolean | CacheOptions | undefined): CacheCo
     hotIdleMs: options.hotIdleMs ?? DEFAULT_CACHE_HOT_IDLE_MS,
     maxEntries: options.maxEntries ?? DEFAULT_CACHE_MAX_ENTRIES,
     maxBytes: options.maxBytes ?? DEFAULT_CACHE_MAX_BYTES,
+    logsWindow: options.logsWindow ?? DEFAULT_CACHE_LOGS_WINDOW,
     copyResults: options.copyResults ?? true,
     immutableParams: options.immutableParams ?? false,
   };
@@ -128,6 +144,9 @@ export function resolveCache(value: boolean | CacheOptions | undefined): CacheCo
     if (!Number.isFinite(config[name]) || config[name] < 0) {
       throw new Error(`smart-rpc cache.${name} must be a finite number, 0 or more, got ${String(config[name])}.`);
     }
+  }
+  if (!Number.isInteger(config.logsWindow) || config.logsWindow < 1) {
+    throw new Error(`smart-rpc cache.logsWindow must be a positive integer, got ${String(config.logsWindow)}.`);
   }
   if (config.refreshInterval !== false && !(Number.isFinite(config.refreshInterval) && config.refreshInterval > 0)) {
     throw new Error(
@@ -143,9 +162,20 @@ export interface CacheHit {
   stale: number | null;
 }
 
+/** An exact numeric log fetch for the pool to execute, and its full-query completion on success. */
+export interface CacheLogFetch {
+  params: unknown;
+  originalParams: unknown;
+  /** True when a latest-derived numeric fetch requires a pinned, known head. */
+  pinRequired: boolean;
+  /** Merge a complete successful response and answer the original query, or return undefined to use its fallback. */
+  complete: (result: unknown) => unknown | undefined;
+}
+
 export interface CacheMiss {
   hit: false;
   fill: (result: unknown, block: number | undefined) => void;
+  fetch?: CacheLogFetch | undefined;
 }
 
 interface Stored {
@@ -168,6 +198,13 @@ export interface CacheRead {
   block: number | undefined;
 }
 
+export interface CacheReadOptions {
+  /** Original canonical params before a log index generated an exact numeric fetch. */
+  originalParams?: unknown | undefined;
+  /** Require a known pinned head for latest-derived numeric log fetches. */
+  pinRequired?: boolean | undefined;
+}
+
 /** What the cache reads from, and sends through, its pool. */
 export interface CacheSource {
   now: () => number;
@@ -179,7 +216,7 @@ export interface CacheSource {
   probe: () => Promise<void>;
   probeMethod: string;
   /** A read pinned to the newest servable head and coalesced, but never raced or hedged. */
-  read: (method: string, params: unknown) => Promise<CacheRead>;
+  read: (method: string, params: unknown, options?: CacheReadOptions) => Promise<CacheRead>;
   /** True when an endpoint can take this read now without waiting for a budget token. */
   ready: (method: string) => boolean;
   emit: (event: RpcEvent) => void;
@@ -203,6 +240,7 @@ export class ReadCache {
   readonly #entries = new Map<string, Stored>();
   readonly #hot = new Map<string, HotKey>();
   readonly #plans = new WeakMap<object, Map<string, CachePlan | null>>();
+  readonly #logIndex: LogIndex;
   #bytes = 0;
   #hits = 0;
   #misses = 0;
@@ -218,23 +256,31 @@ export class ReadCache {
     this.#config = config;
     this.#policy = policy;
     this.#source = source;
+    this.#logIndex = new LogIndex({
+      window: config.logsWindow,
+      maxEntries: config.maxEntries,
+      maxBytes: config.maxBytes,
+      copyResults: config.copyResults,
+    });
   }
 
   /** Discard state after an observed reorg, including fills begun before that observation. */
   invalidate(): void {
     this.#generation += 1;
     this.#entries.clear();
+    this.#logIndex.invalidate();
     this.#bytes = 0;
     this.#servedHead = -1;
   }
 
   stats(): CacheStats {
+    const logs = this.#logIndex.stats();
     return {
       hits: this.#hits,
       misses: this.#misses,
       refreshes: this.#refreshes,
-      entries: this.#entries.size,
-      bytes: this.#bytes,
+      entries: this.#entries.size + logs.entries,
+      bytes: this.#bytes + logs.bytes,
       hotKeys: this.#hot.size,
     };
   }
@@ -257,8 +303,13 @@ export class ReadCache {
     const plan = this.#plan(method, params);
     if (!plan) return undefined;
     const now = this.#source?.now() ?? context?.now ?? Date.now();
-    const hit = this.#serve(plan, now, context);
-    const hot = this.#source && (plan.kind === "latest" || plan.kind === "timed")
+    const log = plan.kind === "logs" ? this.#lookupLogs(plan, now, context) : undefined;
+    const hit = log?.hit
+      ? { result: log.result, stale: log.stale }
+      : plan.kind === "logs"
+        ? undefined
+        : this.#serve(plan, now, context);
+    const hot = this.#source && (plan.kind === "latest" || plan.kind === "timed" || plan.kind === "logs")
       ? this.#watch(plan, now)
       : undefined;
     if (hit) {
@@ -269,13 +320,19 @@ export class ReadCache {
     if (hot) hot.pending = true;
     this.#misses += 1;
     const generation = this.#generation;
-    return {
+    const miss: CacheMiss = {
       hit: false,
       fill: (result: unknown, block: number | undefined): void => {
-        if (generation !== this.#generation) return;
-        this.#fill(plan, result, block, context);
+        if (generation !== this.#generation || this.#closed) return;
+        if (plan.kind === "logs") {
+          if (log && !log.hit) this.#fillLog(plan, log.fetch, result, block, now);
+        } else {
+          this.#fill(plan, result, block, context);
+        }
       },
     };
+    if (plan.kind === "logs" && log && !log.hit) miss.fetch = this.#logFetch(plan, log.fetch, now);
+    return miss;
   }
 
   /** Re-arm a tick timer a Worker runtime dropped with the invocation that set it. */
@@ -324,6 +381,70 @@ export class ReadCache {
     const plan = compute();
     methods.set(method, plan ?? null);
     return plan;
+  }
+
+  #lookupLogs(plan: CachePlan, now: number, context: CacheLookupContext | undefined) {
+    if (!plan.log) return undefined;
+    return this.#logIndex.lookup(plan.log, {
+      head: this.#head("eth_getLogs", context)?.block,
+      now,
+      maxStaleBlocks: this.#config.maxStaleBlocks,
+      maxAgeMs: this.#config.maxAgeMs,
+    });
+  }
+
+  #logFetch(plan: CachePlan, fetch: LogIndexFetch, now: number): CacheLogFetch {
+    return {
+      params: fetch.params,
+      originalParams: plan.params,
+      pinRequired: plan.log?.from === "latest" || plan.log?.to === "latest",
+      complete: (result: unknown): unknown | undefined => {
+        this.#storeLogFetch(plan, fetch, result, now);
+        if (!plan.log) return undefined;
+        // A coalesced caller may have merged this range first. Serve its coverage instead of repeating the query.
+        const completed = this.#logIndex.lookup(plan.log, {
+          head: plan.log.to === "latest" ? fetch.to : undefined,
+          now: this.#source?.now() ?? now,
+          maxStaleBlocks: this.#config.maxStaleBlocks,
+          maxAgeMs: this.#config.maxAgeMs,
+        });
+        return completed?.hit ? completed.result : undefined;
+      },
+    };
+  }
+
+  #fillLog(
+    plan: CachePlan,
+    fetch: LogIndexFetch,
+    result: unknown,
+    block: number | undefined,
+    now: number,
+  ): void {
+    if (plan.log?.from === "latest" && block !== fetch.from) return;
+    if (plan.log?.to === "latest" && block !== fetch.to) return;
+    this.#storeLogFetch(plan, fetch, result, now);
+  }
+
+  #storeLogFetch(plan: CachePlan, fetch: LogIndexFetch, result: unknown, now: number): boolean {
+    if (this.#closed || !fetch.fill(result, this.#source?.now() ?? now)) return false;
+    const hot = this.#hot.get(plan.key);
+    if (hot) hot.pending = false;
+    this.#accountLogs();
+    return true;
+  }
+
+  #accountLogs(): void {
+    const logs = this.#logIndex.stats();
+    while (
+      this.#entries.size + logs.entries > this.#config.maxEntries ||
+      this.#bytes + logs.bytes > this.#config.maxBytes
+    ) {
+      const oldest = this.#entries.keys().next().value;
+      if (oldest === undefined) break;
+      const entry = this.#entries.get(oldest);
+      this.#entries.delete(oldest);
+      if (entry) this.#bytes -= entry.bytes;
+    }
   }
 
   #serve(
@@ -380,6 +501,8 @@ export class ReadCache {
     context: CacheLookupContext | undefined,
   ): void {
     if (this.#closed || result === null || result === undefined) return;
+    // Fresh block-hash logs need a trusted observation head; HyperEVM alone may keep them without one.
+    if (plan.method === "eth_getLogs" && plan.kind === "latest" && !this.#head(plan.method, context)) return;
     // Pending inclusion is mutable even on a chain whose confirmed results are immutable.
     if (INCLUSION.has(plan.method) && blockOf(result) === null) return;
     const now = this.#source?.now() ?? context?.now ?? Date.now();
@@ -475,6 +598,16 @@ export class ReadCache {
     if (!source || this.#closed || !source.active()) return;
     for (const hot of [...this.#hot.values()]) {
       if (hot.refreshing || hot.pending) continue;
+      if (hot.plan.kind === "logs") {
+        if (hot.plan.log?.to !== "latest" || !source.ready(hot.plan.method)) continue;
+        const pending = this.#lookupLogs(hot.plan, source.now(), undefined);
+        if (!pending || pending.hit) continue;
+        hot.refreshing = true;
+        void this.#readLog(hot.plan, pending.fetch).finally(() => {
+          hot.refreshing = false;
+        });
+        continue;
+      }
       const params = this.#stale(hot.plan, tick);
       if (params === undefined || !source.ready(hot.plan.method)) continue;
       hot.refreshing = true;
@@ -516,6 +649,22 @@ export class ReadCache {
     }
   }
 
+  async #readLog(plan: CachePlan, fetch: LogIndexFetch): Promise<boolean> {
+    const source = this.#source;
+    if (!source || this.#closed) return false;
+    this.#refreshes += 1;
+    source.emit({ type: "cache", method: "eth_getLogs", outcome: "refresh", stale: null });
+    try {
+      const read = await source.read("eth_getLogs", fetch.params, {
+        originalParams: plan.params,
+        pinRequired: true,
+      });
+      return this.#storeLogFetch(plan, fetch, read.result, source.now());
+    } catch {
+      return false;
+    }
+  }
+
   #head(
     method: string,
     context: CacheLookupContext | undefined,
@@ -546,6 +695,10 @@ export class ReadCache {
       this.#entries.delete(oldest);
       this.#bytes -= old.bytes;
     }
+    this.#logIndex.trim(
+      Math.max(0, this.#config.maxEntries - this.#entries.size),
+      Math.max(0, this.#config.maxBytes - this.#bytes),
+    );
   }
 
   #store(value: unknown): { result: unknown; bytes: number } {
@@ -616,10 +769,11 @@ const NEVER: ReadonlySet<string> = new Set([
   "eth_sendTransaction",
   "eth_sign",
   "eth_signTransaction",
-  "eth_getLogs",
 ]);
 
 export interface EvmCachePolicyOptions {
+  /** Allow rolling and block-hash log plans. Disable for chains with nonstandard empty-log finality. Default: true. */
+  logs?: boolean | undefined;
   /**
    * Keep confirmed numbered, EIP-1898 hash, transaction, and receipt results until eviction. Enable only for a chain
    * without reorganizations. Default: false.
@@ -641,6 +795,22 @@ export function evmCachePlan(
   }
   if (!Array.isArray(params)) return undefined;
   const normalized = normalize(params) as unknown[];
+  if (method === "eth_getLogs") {
+    if (options.logs === false) return undefined;
+    const log = planLogQuery(normalized);
+    if (log?.kind === "rolling") {
+      return { kind: "logs", method, key: log.key, params: rollingLogParams(log), log };
+    }
+    if (log?.kind === "blockHash") {
+      return {
+        kind: options.immutable ? "immutable" : "latest",
+        method,
+        key: log.key,
+        params: [log.filter],
+      };
+    }
+    return undefined;
+  }
   if (BY_HASH.has(method)) {
     const key = coalesceKey(method, normalized);
     if (key === undefined) return undefined;
@@ -709,6 +879,14 @@ function withTag(params: readonly unknown[], index: number, tag: string): unknow
   const next = params.slice();
   next[index] = tag;
   return next;
+}
+
+function rollingLogParams(plan: RollingLogQueryPlan): unknown {
+  return [{
+    ...plan.filter,
+    fromBlock: plan.from === "latest" ? "latest" : toHexQuantity(plan.from),
+    toBlock: plan.to === "latest" ? "latest" : toHexQuantity(plan.to),
+  }];
 }
 
 /** The block number of a block or transaction result, or null when it has none. */

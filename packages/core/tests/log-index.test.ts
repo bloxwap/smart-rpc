@@ -182,6 +182,18 @@ describe("rolling log index", () => {
     expect(index.stats().logs).toBe(4);
   });
 
+  test("merges concurrent first seeds into a sibling-created base in the same generation", () => {
+    const index = new LogIndex();
+    const first = miss(index, range(1, 50), 50);
+    const second = miss(index, range(51, 100), 100);
+    expect(first.fetch.fill([log(1, 0)])).toBe(true);
+    expect(second.fetch.fill([log(100, 0)])).toBe(true);
+    expect(index.lookup(rolling(range(1, 100)), { head: 100, now: 0 })).toMatchObject({
+      hit: true,
+      result: [log(1, 0), log(100, 0)],
+    });
+  });
+
   test("prepends an adjacent earlier range while preserving order", () => {
     const index = new LogIndex();
     seed(index, 90, 100, [log(95, 0), log(100, 0)]);

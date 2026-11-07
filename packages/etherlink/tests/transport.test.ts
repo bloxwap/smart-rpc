@@ -135,7 +135,11 @@ describe("Etherlink EVM transport", () => {
   });
 
   test("rejects a 501-block public log request before upstream and splits explicitly into bounded ranges", async () => {
-    const mock = mockRpc(({ method, params }) => method === "eth_chainId" ? chain : method === "eth_getLogs" ? [{ range: params[0] }] : "0x64");
+    const mock = mockRpc(({ method, params }) => method === "eth_chainId"
+      ? chain
+      : method === "eth_getLogs"
+        ? [{ blockNumber: (params[0] as { fromBlock: string }).fromBlock, logIndex: "0x0" }]
+        : "0x64");
     const pool = etherlink({ fetchFn: mock.fetchFn, headLag: idle, race: false });
     const filter = { address: account, fromBlock: "0x1", toBlock: "0x1f5", topics: ["0x1234"] };
     try {
@@ -151,7 +155,7 @@ describe("Etherlink EVM transport", () => {
   test("preserves provider too-many-logs errors without returning a partial split result", async () => {
     const mock = mockRpc(({ id, method, params }) => method === "eth_chainId" ? chain : method === "eth_getLogs" && (params[0] as { fromBlock: string }).fromBlock === "0x1f5"
       ? Response.json({ jsonrpc: "2.0", id, error: { code: -32005, message: "more than 5000 logs" } })
-      : [{ data: "0x12" }]);
+      : [{ blockNumber: (params[0] as { fromBlock: string }).fromBlock, logIndex: "0x0", data: "0x12" }]);
     const pool = etherlink({ fetchFn: mock.fetchFn, headLag: idle, race: false, retryCount: 0 });
     try {
       await expect(requestLogs(pool, { fromBlock: "0x1", toBlock: "0x1f5" }, { maxBlockRange: 500 })).rejects.toThrow(/no partial result/);

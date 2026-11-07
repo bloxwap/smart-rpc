@@ -36,6 +36,8 @@ Only enable tags that the selected provider supports. Endpoint URLs are opaque; 
 
 The official log query limits are 50 blocks and four topic positions. Use the exported `requestLogs(pool, filter, { maxBlockRange: 50 })` helper with a selected-network pool to split explicit numeric ranges while preserving filters and ordering. Direct oversized requests and excessive topic positions are rejected before sending a log call. Historical-state gating does not prevent historical log queries. Range splitting consumes the same operation budget as retries and hedges. No HTTP batch maximum is assumed for HyperEVM.
 
+Rolling log indexes share the cache's entry/byte bounds and reorg invalidation. Public latest-only endpoints never receive a latest-derived numeric cache fetch: the transport sends the unchanged original latest query and does not index that unpinned response. Confirmed block-hash log results are immutable under HyperEVM policy; other chains keep them fresh and reorg-bounded.
+
 ## HyperCore and gas behavior
 
 HyperEVM's small and large blocks share an increasing EVM block-number sequence. `eth_gasPrice` and `eth_bigBlockGasPrice` return separate base fees, and `eth_usingBigBlocks` reports an account's block mode. The transport forwards those values unchanged and does not calculate Ethereum slot or finality timing. The [dual-block specification](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/dual-block-architecture) explains this distinction.
