@@ -50,6 +50,34 @@ describe("factory-scoped pools", () => {
     scope.close();
   });
 
+  test("closed leases cannot restore scores into a pool used by peers", () => {
+    const scope = createPoolScope();
+    const acquire = () => pool([{
+      id: "endpoint",
+      url: "https://endpoint.example",
+      call: async () => "0x1",
+    }], { now: () => 0, sharing: sharing(scope, "equivalent") });
+    const first = acquire();
+    const second = acquire();
+    const snapshot = (method: string) => ({
+      version: 1,
+      savedAt: 0,
+      endpoints: { endpoint: { [method]: { ewma: 25, tail: 25, error: 0, n: 1 } } },
+    });
+
+    expect(second.restoreScores(snapshot("*"))).toBe(true);
+    expect(second.scores().endpoints.endpoint?.["*"]).toMatchObject({ ewma: 25, n: 1 });
+
+    first.close();
+    expect(first.restoreScores(snapshot("eth_call"))).toBe(false);
+    expect(second.scores().endpoints.endpoint?.eth_call).toBeUndefined();
+
+    scope.close();
+    expect(second.restoreScores(snapshot("eth_blockNumber"))).toBe(false);
+    expect(second.scores().endpoints.endpoint?.eth_blockNumber).toBeUndefined();
+    second.close();
+  });
+
   test("different keys and different scopes never share pool state", async () => {
     const firstScope = createPoolScope();
     const secondScope = createPoolScope();

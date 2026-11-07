@@ -175,7 +175,7 @@ export function rankRegistry<T extends { readonly url: string }>(
     const mine = fresh.filter((observation) => endpointKey(observation.url) === key);
     const successes = mine.filter(isSuccess);
     const uptime = mine.length === 0 ? 0 : successes.length / mine.length;
-    const times = mine.map((observation) => Date.parse(observation.at)).sort((a, b) => a - b);
+    const times = successes.map((observation) => Date.parse(observation.at)).sort((a, b) => a - b);
     const first = times[0];
     const last = times[times.length - 1];
     const span = first !== undefined && last !== undefined ? last - first : 0;
