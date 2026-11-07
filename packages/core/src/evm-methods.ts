@@ -29,10 +29,29 @@ export const NON_IDEMPOTENT_METHODS: readonly string[] = [
   "wallet_sendCalls",
   "eth_subscribe",
   "eth_getFilterChanges",
+  "eth_getFilterLogs",
+  "eth_uninstallFilter",
+  "eth_unsubscribe",
   "eth_newFilter",
   "eth_newBlockFilter",
   "eth_newPendingTransactionFilter",
 ];
+
+/** Explicit read allowlist. Unknown/custom methods must never be guessed to be safe. */
+export const SAFE_EVM_METHODS: readonly string[] = [
+  "web3_clientVersion", "web3_sha3", "net_version", "net_listening", "net_peerCount",
+  "eth_chainId", "eth_syncing", "eth_coinbase", "eth_accounts", "eth_blockNumber",
+  "eth_gasPrice", "eth_maxPriorityFeePerGas", "eth_blobBaseFee", "eth_feeHistory",
+  "eth_call", "eth_estimateGas", "eth_createAccessList", "eth_getBalance", "eth_getStorageAt",
+  "eth_getTransactionCount", "eth_getCode", "eth_getProof", "eth_getLogs",
+  "eth_getBlockByHash", "eth_getBlockByNumber", "eth_getBlockReceipts",
+  "eth_getBlockTransactionCountByHash", "eth_getBlockTransactionCountByNumber",
+  "eth_getTransactionByHash", "eth_getTransactionByBlockHashAndIndex",
+  "eth_getTransactionByBlockNumberAndIndex", "eth_getTransactionReceipt",
+  "eth_getUncleCountByBlockHash", "eth_getUncleCountByBlockNumber",
+  "eth_getUncleByBlockHashAndIndex", "eth_getUncleByBlockNumberAndIndex",
+];
+const SAFE: ReadonlySet<string> = new Set(SAFE_EVM_METHODS);
 
 const DEFAULT_NON_IDEMPOTENT: ReadonlySet<string> = new Set(NON_IDEMPOTENT_METHODS);
 
@@ -46,6 +65,7 @@ const TERMINAL_CODES: ReadonlySet<number> = new Set([
   3, // execution reverted
   -32700, // parse error
   -32600, // invalid request
+  -32601, // method not found is a capability failure, not a retryable outage
   -32602, // invalid params
   -32003, // transaction rejected
   4001, // user rejected
@@ -56,10 +76,10 @@ const TERMINAL_MESSAGE = /execution reverted|gas required exceeds allowance/i;
 
 /** Node-side verdicts on a signed transaction. Every endpoint would say the same. */
 const REJECTED_TRANSACTION_MESSAGE =
-  /nonce too (?:low|high)|insufficient funds|intrinsic gas too low|transaction underpriced|exceeds block gas limit|max fee per gas less than block base fee|invalid sender|already known|\bknown transaction|already imported|already in (?:the )?(?:mem)?pool/i;
+  /nonce too (?:low|high)|insufficient funds|intrinsic gas too low|(?:replacement )?transaction underpriced|exceeds block gas limit|max fee per gas less than block base fee|invalid sender|duplicate transaction hash|already known|\bknown transaction|already imported|already in (?:the )?(?:mem)?pool/i;
 
 /** A node already holds this transaction. On a rebroadcast, an earlier attempt landed. */
-const ALREADY_KNOWN_MESSAGE = /already known|\bknown transaction|already imported|already in (?:the )?(?:mem)?pool/i;
+const ALREADY_KNOWN_MESSAGE = /duplicate transaction hash|already known|\bknown transaction|already imported|already in (?:the )?(?:mem)?pool/i;
 
 /**
  * Provider limits that some nodes report as invalid params (`-32602`).
@@ -81,7 +101,7 @@ const INVALID_PARAMS_CODE = -32602;
 /** True when the method is safe to send again to a different endpoint. */
 export function isIdempotentMethod(method: string, extra: readonly string[] = []): boolean {
   if (DEFAULT_NON_IDEMPOTENT.has(method)) return false;
-  return !extra.includes(method);
+  return SAFE.has(method) && !extra.includes(method);
 }
 
 function errorText(error: Error): string {

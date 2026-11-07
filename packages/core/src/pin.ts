@@ -173,6 +173,9 @@ export class LatestPin {
     this.#probeMethod = probeMethod;
   }
 
+  /** Forget the previous monotonic answer after an observed chain reorganization. */
+  reset(): void { this.#served = 0; }
+
   /** True when the probe method is answered locally. */
   get answersBlockNumber(): boolean {
     return this.#config.enabled && this.#config.blockNumber;

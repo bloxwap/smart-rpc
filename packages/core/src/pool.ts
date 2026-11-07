@@ -32,6 +32,8 @@ import { abortError, isAbortError, toError } from "./error-util.js";
 import {
   AllEndpointsFailedError,
   BudgetExhaustedError,
+  EndpointCapabilityError,
+  OperationBudgetExceededError,
   ChainMismatchError,
   TimeoutError,
   TransportClosedError,
@@ -39,6 +41,7 @@ import {
 } from "./errors.js";
 import type { EndpointSnapshot, RpcEvent } from "./events.js";
 import { isAlreadyKnownError, isBlockNotHeldError, shouldFailover } from "./evm-methods.js";
+import { Operation } from "./operation.js";
 import { LatestPin, resolvePin } from "./pin.js";
 import { pickRacers, raceCalls, resolveRace } from "./race.js";
 import { backoffMs } from "./retry.js";
@@ -60,6 +63,11 @@ interface BuiltEndpoint {
   weight: number;
   call: EndpointCall;
   supports: (method: string) => boolean;
+  supportsRequest: (request: { method: string; params?: unknown }) => boolean;
+  pinning: boolean;
+  providerGroup: string | undefined;
+  providerBudget: BudgetConfig | undefined;
+  close: (() => void) | undefined;
   retryAfter: () => number;
   budget: BudgetConfig | undefined;
 }
@@ -115,7 +123,16 @@ export function createPool(options: PoolOptions): RpcPool {
   const breaker = new Breaker(resolveBreaker(options.breaker), now);
   const built = buildEndpoints(options);
   const budgets = new Budgets(now);
-  for (const endpoint of built) budgets.configure(endpoint.id, endpoint.budget);
+  for (const endpoint of built) budgets.configure(endpoint.id, endpoint.budget, endpoint.providerGroup, endpoint.providerBudget);
+  const operations = new WeakMap<AbortSignal, Operation>();
+  const stateful = policy.statefulMethods;
+  const handles = new Map<string, { endpoint: string; upstream: unknown }>();
+  let handleSequence = 0n;
+  const learnedUnsupported = new Map<string, Set<string>>();
+  const supports = (endpoint: BuiltEndpoint, method: string): boolean =>
+    endpoint.supports(method) && !learnedUnsupported.get(endpoint.id)?.has(method);
+  const isStateful = (method: string): boolean =>
+    stateful !== undefined && [...stateful.create, ...stateful.use, ...stateful.release].includes(method);
   const scoreConfig = { ...defaultScoreConfig, ...options.score };
   const failoverOf = policy.shouldFailover ?? shouldFailover;
   const benignMiss = policy.isBenignMiss ?? isBlockNotHeldError;
@@ -140,7 +157,7 @@ export function createPool(options: PoolOptions): RpcPool {
     built.map((endpoint) => [
       endpoint.id,
       {
-        verified: !verifyIdentity || !endpoint.supports(policy.identityMethod),
+        verified: !verifyIdentity,
         mismatch: undefined,
         pending: undefined,
       },
@@ -154,7 +171,7 @@ export function createPool(options: PoolOptions): RpcPool {
       url: endpoint.url,
       weight: endpoint.weight,
       index,
-      supports: (method: string): boolean => !quarantined(endpoint.id) && endpoint.supports(method),
+      supports: (method: string): boolean => !quarantined(endpoint.id) && supports(endpoint, method),
     })),
     {
       perMethod,
@@ -170,7 +187,7 @@ export function createPool(options: PoolOptions): RpcPool {
     },
   );
   const servable = (id: string, method: string): boolean =>
-    gates.get(id)?.verified === true && !quarantined(id) && !breaker.isOpen(id) && byId.get(id)?.supports(method) === true;
+    gates.get(id)?.verified === true && !quarantined(id) && !breaker.isOpen(id) && byId.get(id)?.supports(method) === true && !learnedUnsupported.get(id)?.has(method);
   const pinConfig = resolvePin(policy.pin ?? false, false);
   const pin =
     pinConfig.enabled && headLag.enabled
@@ -179,7 +196,7 @@ export function createPool(options: PoolOptions): RpcPool {
           {
             heads: (maxAgeMs: number) => board.heads(maxAgeMs),
             maxLag: headLag.maxLag,
-            servable,
+            servable: (id: string, method: string): boolean => servable(id, method) && byId.get(id)?.pinning === true,
           },
           policy.probeMethod,
         )
@@ -207,23 +224,28 @@ export function createPool(options: PoolOptions): RpcPool {
     });
   };
 
-  const checkChain = (endpoint: BuiltEndpoint): Promise<Error | undefined> => {
+  const checkChain = (endpoint: BuiltEndpoint, operation?: Operation): Promise<Error | undefined> => {
     const gate = gates.get(endpoint.id);
     if (!gate || gate.verified) return Promise.resolve(undefined);
     if (gate.mismatch) return Promise.resolve(gate.mismatch);
-    const pending = gate.pending ?? startCheck(endpoint, gate);
+    if (!endpoint.supports(policy.identityMethod)) return Promise.resolve(new EndpointCapabilityError(policy.identityMethod));
+    let pending: Promise<Error | undefined>;
+    try { pending = gate.pending ?? startCheck(endpoint, gate, operation); }
+    catch (error: unknown) { return Promise.resolve(toError(error)); }
     return pending.catch((error: unknown): Error => {
       if (gate.pending === pending) gate.pending = undefined;
       return toError(error);
     });
   };
 
-  const startCheck = (endpoint: BuiltEndpoint, gate: ChainGate): Promise<Error | undefined> => {
+  const startCheck = (endpoint: BuiltEndpoint, gate: ChainGate, operation?: Operation): Promise<Error | undefined> => {
+    operation?.check();
+    if (!budgets.take(endpoint.id)) return Promise.resolve(new BudgetExhaustedError([endpoint.id], budgets.refillMs([endpoint.id])));
+    operation?.take();
     const started = now();
     // Identity checks are shared by concurrent callers. Only their own deadline,
     // not one caller's cancellation, aborts the upstream request.
     const controller = new AbortController();
-    budgets.take(endpoint.id);
     const pending = withDeadline(
       Promise.resolve().then(() =>
         endpoint.call({ method: policy.identityMethod, params: policy.identityParams }, { signal: controller.signal }),
@@ -293,7 +315,7 @@ export function createPool(options: PoolOptions): RpcPool {
     if (skipEjected && breaker.isOpen(endpoint.id)) return undefined;
     const target = byId.get(endpoint.id);
     if (!target || gates.get(endpoint.id)?.verified !== false || !budgets.has(endpoint.id)) return endpoint;
-    return untilAborted(checkChain(target), parent).then((reason) => {
+    return untilAborted(checkChain(target, parent ? operations.get(parent) : undefined), parent).then((reason) => {
       if (!reason) return false;
       exclude.add(endpoint.id);
       errors.push(reason);
@@ -301,13 +323,27 @@ export function createPool(options: PoolOptions): RpcPool {
     });
   };
 
+  const observedHeads = new Map<string, number>();
+  const observedHashes = new Map<number, string>();
   const noteHead = (endpoint: BuiltEndpoint, method: string, result: unknown, params: unknown): void => {
+    if (result && typeof result === "object" && "number" in result && "hash" in result && typeof result.hash === "string") {
+      const height = policy.parseHead(result.number);
+      if (height !== null) {
+        const previousHash = observedHashes.get(height);
+        if (previousHash !== undefined && previousHash !== result.hash) { cache?.invalidate(); pin?.reset(); }
+        observedHashes.set(height, result.hash);
+        if (observedHashes.size > 128) observedHashes.delete(observedHashes.keys().next().value as number);
+      }
+    }
     if (!headLag.enabled) return;
     const head =
       method === policy.probeMethod
         ? policy.parseHead(result)
         : (policy.headFromResult?.(method, result, params) ?? null);
     if (head === null) return;
+    const previousHead = observedHeads.get(endpoint.id);
+    if (previousHead !== undefined && head < previousHead) { cache?.invalidate(); pin?.reset(); }
+    observedHeads.set(endpoint.id, head);
     const recorded = board.noteHead(endpoint.id, head);
     emit({
       type: "head",
@@ -327,6 +363,10 @@ export function createPool(options: PoolOptions): RpcPool {
     hedged: boolean,
     sampleLatency: boolean,
   ): Inflight => {
+    const operation = parent ? operations.get(parent) : undefined;
+    operation?.check();
+    if (!budgets.take(endpoint.id)) throw new BudgetExhaustedError([endpoint.id], budgets.refillMs([endpoint.id]));
+    operation?.take();
     const state = { ignore: false, timedOut: false };
     const controller = new AbortController();
     const unlink = linkAbort(controller, parent);
@@ -338,7 +378,6 @@ export function createPool(options: PoolOptions): RpcPool {
     const target = byId.get(endpoint.id);
     if (!target) throw new Error(`Unknown RPC endpoint: ${endpoint.id}`);
     const end = board.begin(endpoint.id, timeout + INFLIGHT_GRACE_MS);
-    budgets.take(endpoint.id);
     emit({ type: "request", endpoint: endpoint.url, method });
     const started = now();
     const requestPromise = Promise.resolve().then(() =>
@@ -375,7 +414,12 @@ export function createPool(options: PoolOptions): RpcPool {
         }
         const wrapped = state.timedOut && !state.ignore ? new TimeoutError(timeout) : toError(outcome.error);
         const callerAbort = parent?.aborted === true || isAbortError(wrapped);
-        if (!state.ignore && !callerAbort && target.supports(method) && benignMiss(wrapped)) {
+        if (!state.ignore && !callerAbort && isUnsupportedMethod(wrapped)) {
+          const methods = learnedUnsupported.get(endpoint.id) ?? new Set<string>();
+          methods.add(method);
+          learnedUnsupported.set(endpoint.id, methods);
+          emit({ type: "error", endpoint: endpoint.url, method, latencyMs, error: wrapped, terminal: false });
+        } else if (!state.ignore && !callerAbort && target.supports(method) && benignMiss(wrapped)) {
           emit({ type: "error", endpoint: endpoint.url, method, latencyMs, error: wrapped, terminal: false });
         } else if (!state.ignore && !callerAbort && target.supports(method)) {
           const terminal = !failoverOf(wrapped);
@@ -414,13 +458,13 @@ export function createPool(options: PoolOptions): RpcPool {
         (endpoint) =>
           !exclude.has(endpoint.id) &&
           !quarantined(endpoint.id) &&
-          endpoint.supports(method) &&
+          supports(endpoint, method) &&
           breaker.isOpen(endpoint.id) === open,
       )
       .map((endpoint) => endpoint.id);
   };
 
-  const pickRivals = (method: string, exclude: Set<string>): RankedEndpoint[] => {
+  const pickRivals = (method: string, exclude: Set<string>, parent?: AbortSignal): RankedEndpoint[] => {
     const rivals = pickRacers(raceRivals, exclude, {
       next: (skip: ReadonlySet<string>): RankedEndpoint | undefined => board.pick(method, skip, "best", random),
       state: (endpoint: RankedEndpoint): "ready" | "unverified" | "unavailable" => {
@@ -429,7 +473,8 @@ export function createPool(options: PoolOptions): RpcPool {
       },
       verify: (endpoint: RankedEndpoint): void => {
         const target = byId.get(endpoint.id);
-        if (target) void checkChain(target);
+        const operation = parent ? operations.get(parent) : undefined;
+        if (target && (operation?.remaining ?? 2) > 1) void checkChain(target, operation);
       },
     });
     for (const rival of rivals) exclude.add(rival.id);
@@ -446,24 +491,27 @@ export function createPool(options: PoolOptions): RpcPool {
     errors: Error[],
     race: boolean,
   ): Promise<unknown> => {
-    const rivals = race ? pickRivals(method, exclude) : [];
+    const operation = parent ? operations.get(parent) : undefined;
+    const rivals = race && (operation?.remaining ?? 2) > 1 ? pickRivals(method, exclude, parent) : [];
     if (rivals.length > 0) {
       emit({ type: "race", endpoints: [endpoint.url, ...rivals.map((rival) => rival.url)], method });
     }
     const lead = start(endpoint, method, params, parent, false, true);
-    const primary =
-      rivals.length === 0
-        ? lead
-        : raceCalls(
-            [lead, ...rivals.map((rival) => start(rival, method, params, parent, false, true))],
-            (error) => !failoverOf(error) || options.shouldThrow?.(error) === true,
-            (lost) => errors.push(...lost),
-          );
+    const started = [lead];
+    for (const rival of rivals) {
+      if (!budgets.has(rival.id) || (operation?.remaining ?? 1) === 0) continue;
+      started.push(start(rival, method, params, parent, false, true));
+    }
+    const primary = started.length === 1 ? lead : raceCalls(
+      started,
+      (error) => (!failoverOf(error) && !isUnsupportedMethod(error)) || options.shouldThrow?.(error) === true,
+      (lost) => errors.push(...lost),
+    );
     if (!hedge.enabled || !idempotent) return primary.promise;
     const wait = board.hedgeDelay(endpoint.id, method, hedge.minDelay, hedge.multiplier);
     return raceHedge(primary, wait, () => {
       const next = board.pick(method, exclude, "best", random);
-      if (!next || breaker.isOpen(next.id) || !budgets.has(next.id) || gates.get(next.id)?.verified === false) {
+      if ((operation?.remaining ?? 1) === 0 || !next || breaker.isOpen(next.id) || !budgets.has(next.id) || gates.get(next.id)?.verified === false) {
         return undefined;
       }
       exclude.add(next.id);
@@ -494,6 +542,8 @@ export function createPool(options: PoolOptions): RpcPool {
     let round = 0;
     let ejectionWaitMs = 0;
     for (let attempt = 0; attempt < attempts; attempt += 1) {
+      if (parent?.aborted) throw abortError(parent);
+      if (parent) operations.get(parent)?.check();
       let wait = attempt > 0 ? retryDelay : 0;
       let mode: "best" | "p2c" = attempt === 0 && !racing ? routing : "best";
       let allowEjected = false;
@@ -517,7 +567,7 @@ export function createPool(options: PoolOptions): RpcPool {
             const target = byId.get(picked.id);
             if (!target) break;
             progress();
-            const reason = await untilAborted(checkChain(target), parent);
+            const reason = await untilAborted(checkChain(target, parent ? operations.get(parent) : undefined), parent);
             if (reason) {
               exclude.add(picked.id);
               errors.push(reason);
@@ -570,7 +620,13 @@ export function createPool(options: PoolOptions): RpcPool {
       }
       progress();
       try {
-        return await dispatch(endpoint, method, params, parent, idempotent, exclude, errors, attempt === 0 && racing);
+        const result = await dispatch(endpoint, method, params, parent, idempotent, exclude, errors, attempt === 0 && racing);
+        if (stateful?.create.includes(method) && typeof result === "string") {
+          const handle = `0x${(++handleSequence).toString(16)}`;
+          handles.set(handle, { endpoint: endpoint.id, upstream: result });
+          return handle;
+        }
+        return result;
       } catch (error: unknown) {
         const wrapped = toError(error);
         errors.push(wrapped);
@@ -578,7 +634,8 @@ export function createPool(options: PoolOptions): RpcPool {
           const hash = policy.rebroadcastResult?.(method, params);
           if (hash !== undefined) return hash;
         }
-        const stop = !retries || !failoverOf(wrapped) || options.shouldThrow?.(wrapped) === true;
+        const stop = parent?.aborted === true || wrapped instanceof OperationBudgetExceededError || !retries ||
+          (!failoverOf(wrapped) && !isUnsupportedMethod(wrapped)) || options.shouldThrow?.(wrapped) === true;
         if (stop) throw wrapped;
         previous = endpoint;
       }
@@ -597,15 +654,23 @@ export function createPool(options: PoolOptions): RpcPool {
     idempotent: boolean,
     rebroadcast: boolean,
     barred: ReadonlySet<string>,
+    batchOperation?: Operation,
   ): Promise<unknown> => {
-    const share =
+    const run = async (caller: AbortSignal | undefined, progress = noProgress): Promise<unknown> => {
+      const operation = batchOperation ?? new Operation(options.operationBudget, timeout, caller);
+      const signal = batchOperation && caller ? AbortSignal.any([operation.signal, caller]) : operation.signal;
+      operations.set(signal, operation);
+      try { return await send(method, params, signal, idempotent, rebroadcast, barred, progress); }
+      finally { if (!batchOperation) operation.close(); }
+    };
+    const share = batchOperation === undefined &&
       (options.coalesce ?? true) && isCoalescableMethod(method, idempotent, policy.uncoalescedMethods);
     const key = share ? coalesceKey(method, params) : undefined;
-    if (key === undefined) return send(method, params, signal, idempotent, rebroadcast, barred);
+    if (key === undefined) return run(signal);
     return coalescer.request(
       key,
       signal,
-      (sharedSignal, progress) => send(method, params, sharedSignal, idempotent, rebroadcast, barred, progress),
+      (sharedSignal, progress) => run(sharedSignal, progress),
       () => emit({ type: "coalesce", method }),
     );
   };
@@ -621,7 +686,7 @@ export function createPool(options: PoolOptions): RpcPool {
       const remaining = budgets.remaining(id);
       return remaining === null || remaining >= (reserveToken ? 2 : 1);
     };
-    const pending = built.map((endpoint) =>
+    const pending = built.map(async (endpoint) =>
       breaker.isOpen(endpoint.id) || !endpoint.supports(policy.probeMethod) || !funded(endpoint.id)
         ? Promise.resolve()
         : checkChain(endpoint).then((reason) =>
@@ -633,7 +698,7 @@ export function createPool(options: PoolOptions): RpcPool {
                 ),
           ),
     );
-    const done = Promise.all(pending).then(() => undefined);
+    const done = Promise.allSettled(pending).then(() => undefined);
     probing = done;
     void done.finally(() => {
       if (probing === done) probing = undefined;
@@ -678,6 +743,52 @@ export function createPool(options: PoolOptions): RpcPool {
     return best;
   };
 
+  const execute = async (request: RpcRequest, batchOperation?: Operation): Promise<unknown> => {
+      if (closed) throw new TransportClosedError();
+      if (request.chainId !== undefined && !policy.chainIds.includes(request.chainId)) {
+        throw new UnknownChainError(request.chainId);
+      }
+      touch();
+      const method = request.method;
+      const idempotent = !isStateful(method) && policy.isSafeMethod(method);
+      const rebroadcast = policy.isRebroadcastMethod?.(method) ?? false;
+      let params = request.params;
+      let owner: { endpoint: string; upstream: unknown } | undefined;
+      let handle: string | undefined;
+      if (stateful && [...stateful.use, ...stateful.release].includes(method)) {
+        handle = Array.isArray(params) && typeof params[0] === "string" ? params[0] : undefined;
+        owner = handle === undefined ? undefined : handles.get(handle);
+        if (!owner || !Array.isArray(params)) throw new Error("Unknown or expired RPC stateful handle.");
+        params = [owner.upstream, ...params.slice(1)];
+      }
+      const signal = request.signal;
+      if (signal?.aborted) throw abortError(signal);
+      if (method === policy.probeMethod && idempotent && pin?.answersBlockNumber) {
+        if (signal?.aborted) throw abortError(signal);
+        const local = pin.blockNumber();
+        if (local !== undefined) return local;
+      }
+      const cached = cache?.lookup(method, params, idempotent, { now: now(), head: newestHead(method) });
+      if (cached?.hit) {
+        emit({ type: "cache", method, outcome: "hit", stale: cached.stale });
+        return cached.result;
+      }
+      if (cached && !cached.hit) emit({ type: "cache", method, outcome: "miss", stale: null });
+      const pinned = pin?.pin(method, params, idempotent) ?? { params, holders: undefined, block: undefined };
+      const barred = new Set(barredFrom(pinned.holders));
+      for (const endpoint of built) {
+        if ((owner && owner.endpoint !== endpoint.id) || !endpoint.supportsRequest({ method, params: pinned.params })) barred.add(endpoint.id);
+      }
+      if (!built.some((endpoint) => !barred.has(endpoint.id) && supports(endpoint, method))) throw new EndpointCapabilityError(method);
+      const result = await sendShared(method, pinned.params, signal, idempotent, rebroadcast, barred, batchOperation);
+      if (handle && stateful?.release.includes(method) && result === true) handles.delete(handle);
+      if (!cached || cached.hit) {
+        return method === policy.probeMethod && pin?.answersBlockNumber ? pin.observe(result) : result;
+      }
+      cached.fill(result, pinned.block);
+      return method === policy.probeMethod && pin?.answersBlockNumber ? pin.observe(result) : result;
+  };
+
   const pool: RpcPool = {
     chainIds: policy.chainIds,
     endpoints: built.map((endpoint) => ({ id: endpoint.id, url: endpoint.url, weight: endpoint.weight })),
@@ -700,37 +811,15 @@ export function createPool(options: PoolOptions): RpcPool {
       if (closed) return;
       closed = true;
       stopProbes();
+      handles.clear();
+      for (const endpoint of built) endpoint.close?.();
     },
-    async request(request: RpcRequest): Promise<unknown> {
-      if (closed) throw new TransportClosedError();
-      if (request.chainId !== undefined && !policy.chainIds.includes(request.chainId)) {
-        throw new UnknownChainError(request.chainId);
-      }
-      touch();
-      const method = request.method;
-      const idempotent = policy.isSafeMethod(method);
-      const rebroadcast = policy.isRebroadcastMethod?.(method) ?? false;
-      const params = request.params;
-      const signal = request.signal;
-      if (method === policy.probeMethod && idempotent && pin?.answersBlockNumber) {
-        if (signal?.aborted) throw abortError(signal);
-        const local = pin.blockNumber();
-        if (local !== undefined) return local;
-      }
-      const cached = cache?.lookup(method, params, idempotent, { now: now(), head: newestHead(method) });
-      if (cached?.hit) {
-        emit({ type: "cache", method, outcome: "hit", stale: cached.stale });
-        return cached.result;
-      }
-      if (cached && !cached.hit) emit({ type: "cache", method, outcome: "miss", stale: null });
-      const pinned = pin?.pin(method, params, idempotent) ?? { params, holders: undefined, block: undefined };
-      const result = await sendShared(method, pinned.params, signal, idempotent, rebroadcast, barredFrom(pinned.holders));
-      if (!cached || cached.hit) {
-        return method === policy.probeMethod && pin?.answersBlockNumber ? pin.observe(result) : result;
-      }
-      cached.fill(result, pinned.block);
-      return method === policy.probeMethod && pin?.answersBlockNumber ? pin.observe(result) : result;
-    },
+    request: (request: RpcRequest): Promise<unknown> => execute(request),
+    async requestBatch(requests: readonly RpcRequest[]): Promise<PromiseSettledResult<unknown>[]> {
+      const operation = new Operation(options.operationBudget, timeout);
+      try { return await Promise.allSettled(requests.map((request) => execute(request, operation))); }
+      finally { operation.close(); }
+    }
   };
   return pool;
 }
@@ -790,6 +879,11 @@ function buildEndpoints(options: PoolOptions): BuiltEndpoint[] {
       weight,
       call: endpoint.call,
       supports: endpoint.supports ?? ((): boolean => true),
+      supportsRequest: endpoint.supportsRequest ?? ((): boolean => true),
+      pinning: endpoint.pinning !== false,
+      providerGroup: endpoint.providerGroup,
+      providerBudget: options.budget === false ? undefined : resolveEndpointBudget(endpoint.providerBudget ?? {}, undefined, `smart-rpc endpoints[${index}].providerBudget`),
+      close: endpoint.close,
       retryAfter: endpoint.retryAfter ?? ((): number => 0),
       budget,
     };
@@ -901,4 +995,13 @@ function unrefTimer(timer: ReturnType<typeof setTimeout> | ReturnType<typeof set
   if (typeof timer === "object" && timer !== null && "unref" in timer && typeof timer.unref === "function") {
     timer.unref();
   }
+}
+
+function isUnsupportedMethod(error: Error): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 8 && current && typeof current === "object"; depth += 1) {
+    if ("code" in current && current.code === -32601) return true;
+    current = "cause" in current ? current.cause : undefined;
+  }
+  return false;
 }

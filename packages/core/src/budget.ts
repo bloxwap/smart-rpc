@@ -72,50 +72,62 @@ function validBudget(rps: number, burst: number | undefined, where: string): Bud
 /** Token buckets keyed by endpoint id. Endpoints without a budget are unlimited and hold no bucket. */
 export class Budgets {
   readonly #buckets = new Map<string, Bucket>();
+  readonly #providers = new Map<string, Bucket>();
+  readonly #groups = new Map<string, string>();
   readonly #now: () => number;
 
-  constructor(now: () => number) {
-    this.#now = now;
+  constructor(now: () => number) { this.#now = now; }
+
+  /** Endpoint and provider buckets are charged together; adding a URL never refills a provider. */
+  configure(id: string, config: BudgetConfig | undefined, group?: string, provider?: BudgetConfig): void {
+    if (config && !this.#buckets.has(id)) this.#buckets.set(id, this.#make(config));
+    if (group !== undefined) this.#groups.set(id, group);
+    if (provider) {
+      if (group === undefined) throw new Error("providerBudget requires providerGroup.");
+      const existing = this.#providers.get(group);
+      if (existing && (existing.rps !== provider.rps || existing.burst !== provider.burst)) {
+        throw new Error(`Conflicting request budgets for provider group ${group}.`);
+      }
+      if (!existing) this.#providers.set(group, this.#make(provider));
+    }
   }
 
-  /** Give `id` a bucket, full. An existing bucket is kept, so a later configure does not refill it. */
-  configure(id: string, config: BudgetConfig | undefined): void {
-    if (!config || this.#buckets.has(id)) return;
-    this.#buckets.set(id, { rps: config.rps, burst: config.burst, tokens: config.burst, at: undefined });
+  has(id: string): boolean { return this.#for(id).every((bucket) => bucket.tokens >= 1); }
+
+  /** Atomic check and charge prevent simultaneous racers from overspending a shared quota. */
+  take(id: string): boolean {
+    const buckets = this.#for(id);
+    if (buckets.some((bucket) => bucket.tokens < 1)) return false;
+    for (const bucket of buckets) bucket.tokens -= 1;
+    return true;
   }
 
-  /** True when `id` is unlimited or holds a whole token. */
-  has(id: string): boolean {
-    const bucket = this.#refilled(id);
-    return bucket === undefined || bucket.tokens >= 1;
-  }
-
-  /** Spend one token. An unlimited endpoint spends nothing. */
-  take(id: string): void {
-    const bucket = this.#refilled(id);
-    if (bucket) bucket.tokens = Math.max(0, bucket.tokens - 1);
-  }
-
-  /** Whole tokens left, or null when `id` is unlimited. */
   remaining(id: string): number | null {
-    const bucket = this.#refilled(id);
-    return bucket === undefined ? null : Math.floor(bucket.tokens);
+    const buckets = this.#for(id);
+    return buckets.length === 0 ? null : Math.floor(Math.min(...buckets.map((bucket) => bucket.tokens)));
   }
 
-  /** Milliseconds until the first of `ids` holds a whole token. Zero when one already does. */
   refillMs(ids: Iterable<string>): number {
     let soonest = Number.POSITIVE_INFINITY;
     for (const id of ids) {
-      const bucket = this.#refilled(id);
-      if (bucket === undefined || bucket.tokens >= 1) return 0;
-      soonest = Math.min(soonest, Math.ceil(((1 - bucket.tokens) * 1_000) / bucket.rps));
+      const wait = Math.max(0, ...this.#for(id).map((bucket) => Math.ceil(((1 - bucket.tokens) * 1_000) / bucket.rps)));
+      soonest = Math.min(soonest, wait);
     }
     return Number.isFinite(soonest) ? soonest : 0;
   }
 
-  #refilled(id: string): Bucket | undefined {
-    const bucket = this.#buckets.get(id);
-    if (!bucket) return undefined;
+  #make(config: BudgetConfig): Bucket {
+    return { ...config, tokens: config.burst, at: undefined };
+  }
+
+  #for(id: string): Bucket[] {
+    const own = this.#buckets.get(id);
+    const group = this.#groups.get(id);
+    const shared = group === undefined ? undefined : this.#providers.get(group);
+    return [own, shared].filter((bucket): bucket is Bucket => bucket !== undefined).map((bucket) => this.#refill(bucket));
+  }
+
+  #refill(bucket: Bucket): Bucket {
     const now = this.#now();
     if (bucket.at !== undefined && now > bucket.at) {
       bucket.tokens = Math.min(bucket.burst, bucket.tokens + ((now - bucket.at) * bucket.rps) / 1_000);
