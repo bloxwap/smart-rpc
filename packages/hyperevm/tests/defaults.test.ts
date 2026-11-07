@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { RpcEvent } from "@smart-rpc/core";
+import { createPoolScope, type RpcEvent } from "@smart-rpc/core";
 
 import {
   HYPEREVM_MAINNET_CAIP,
@@ -279,6 +279,35 @@ describe("hyperevm configuration", () => {
       ]);
     } finally {
       client.close?.();
+    }
+  });
+});
+
+
+describe("hyperevm scoped sharing", () => {
+  test("one key remains isolated between mainnet and testnet", async () => {
+    const mainnetUrl = "https://shared-mainnet.example/rpc";
+    const testnetUrl = "https://shared-testnet.example/rpc";
+    const mock = mockRpc(({ url, method }) => method === "eth_chainId"
+      ? url === mainnetUrl ? "0x3e7" : "0x3e6"
+      : "0x10");
+    const scope = createPoolScope();
+    const client = hyperevm({
+      endpoints: [mainnetUrl],
+      testnetEndpoints: [testnetUrl],
+      fetchFn: mock.fetchFn,
+      headLag: false,
+      race: false,
+      sharing: { scope, key: "dual-network" },
+    });
+    try {
+      expect(client.chainIds).toEqual([HYPEREVM_MAINNET_CAIP, HYPEREVM_TESTNET_CAIP]);
+      await expect(client.request({ chainId: HYPEREVM_MAINNET_CAIP, method: "eth_blockNumber" })).resolves.toBe("0x10");
+      await expect(client.request({ chainId: HYPEREVM_TESTNET_CAIP, method: "eth_blockNumber" })).resolves.toBe("0x10");
+      expect(new Set(mock.calls.map((call) => call.url))).toEqual(new Set([mainnetUrl, testnetUrl]));
+    } finally {
+      client.close?.();
+      scope.close();
     }
   });
 });
