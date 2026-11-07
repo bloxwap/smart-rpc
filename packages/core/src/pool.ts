@@ -1,0 +1,890 @@
+/**
+ * Chain-agnostic JSON-RPC pool.
+ *
+ * Scoring, power-of-two-choices, top-2 racing, the circuit breaker, retries, budgets,
+ * coalescing, caching, cancellation, and health probes live here. Chain packages supply
+ * the probe, the identity check, and method safety through {@link ChainPolicy}.
+ *
+ * Defaults match `@bloxwap/smart-hyperevm` at 092b8f9: 2 extra retries, a 10s attempt
+ * timeout, immediate failover when another endpoint is up, and a jittered backoff from
+ * 100ms to 2s only when every candidate has already failed this call.
+ * @module
+ */
+
+import { Activity } from "./activity.js";
+import { Breaker, retryAfterMs, resolveBreaker } from "./breaker.js";
+import { type BudgetConfig, Budgets, resolveDefaultBudget, resolveEndpointBudget } from "./budget.js";
+import { type CacheStats, ReadCache, resolveCache } from "./cache.js";
+import { Coalescer, coalesceKey, isCoalescableMethod } from "./coalesce.js";
+import {
+  DEFAULT_MAX_AHEAD,
+  DEFAULT_MAX_LAG,
+  DEFAULT_PROBE_IDLE_MS,
+  DEFAULT_PROBE_MS,
+  DEFAULT_RETRY_BACKOFF_MS,
+  DEFAULT_RETRY_COUNT,
+  DEFAULT_STALE_MS,
+  DEFAULT_TIMEOUT_MS,
+  INFLIGHT_GRACE_MS,
+  MAX_RETRY_BACKOFF_MS,
+} from "./constants.js";
+import { abortError, isAbortError, toError } from "./error-util.js";
+import {
+  AllEndpointsFailedError,
+  BudgetExhaustedError,
+  ChainMismatchError,
+  TimeoutError,
+  TransportClosedError,
+  UnknownChainError,
+} from "./errors.js";
+import type { EndpointSnapshot, RpcEvent } from "./events.js";
+import { isAlreadyKnownError, isBlockNotHeldError, shouldFailover } from "./evm-methods.js";
+import { LatestPin, resolvePin } from "./pin.js";
+import { pickRacers, raceCalls, resolveRace } from "./race.js";
+import { backoffMs } from "./retry.js";
+import { defaultScoreConfig } from "./score.js";
+import { type RankedEndpoint, Scoreboard } from "./scoreboard.js";
+import type {
+  ChainPolicy,
+  EndpointCall,
+  HeadLagOptions,
+  HedgeOptions,
+  PoolOptions,
+  RpcPool,
+  RpcRequest,
+} from "./types.js";
+
+interface BuiltEndpoint {
+  id: string;
+  url: string;
+  weight: number;
+  call: EndpointCall;
+  supports: (method: string) => boolean;
+  retryAfter: () => number;
+  budget: BudgetConfig | undefined;
+}
+
+interface Inflight {
+  promise: Promise<unknown>;
+  cancel: () => void;
+  cancelled: () => boolean;
+}
+
+interface ChainGate {
+  verified: boolean;
+  mismatch: ChainMismatchError | undefined;
+  pending: Promise<Error | undefined> | undefined;
+}
+
+interface ResolvedHeadLag {
+  enabled: boolean;
+  maxLag: number;
+  probeInterval: number | false;
+  probeIdleTimeout: number | false;
+  staleMs: number;
+  maxAhead: number;
+}
+
+interface ResolvedHedge {
+  enabled: boolean;
+  minDelay: number;
+  multiplier: number;
+}
+
+const NO_BAR: ReadonlySet<string> = new Set();
+const noProgress = (): void => undefined;
+
+/** Build a pool. Registration with {@link createSmartRpc} is separate and explicit. */
+export function createPool(options: PoolOptions): RpcPool {
+  const policy = options.policy;
+  const now = options.now ?? ((): number => Date.now());
+  const random = options.random ?? Math.random;
+  const headLag = resolveHeadLag(options.headLag);
+  const hedge = resolveHedge(options.hedge);
+  const raceRivals = resolveRace(options.race);
+  const routing = options.routing ?? "p2c";
+  const perMethod = options.perMethod ?? true;
+  const retryCount = options.retryCount ?? DEFAULT_RETRY_COUNT;
+  const retryDelay = options.retryDelay ?? 0;
+  const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS;
+  if (!Number.isFinite(timeout) || timeout <= 0) {
+    throw new Error(`smart-rpc timeout must be a positive number of milliseconds, got ${String(timeout)}.`);
+  }
+  const retryBackoff = retryDelay > 0 ? retryDelay : DEFAULT_RETRY_BACKOFF_MS;
+  const verifyIdentity = options.verifyIdentity ?? true;
+  const breaker = new Breaker(resolveBreaker(options.breaker), now);
+  const built = buildEndpoints(options);
+  const budgets = new Budgets(now);
+  for (const endpoint of built) budgets.configure(endpoint.id, endpoint.budget);
+  const scoreConfig = { ...defaultScoreConfig, ...options.score };
+  const failoverOf = policy.shouldFailover ?? shouldFailover;
+  const benignMiss = policy.isBenignMiss ?? isBlockNotHeldError;
+  const alreadyKnown = policy.isAlreadyKnown ?? isAlreadyKnownError;
+  const listeners = new Set<(event: RpcEvent) => void>();
+  const emit = (event: RpcEvent): void => {
+    try {
+      options.onEvent?.(event);
+    } catch {
+      // A listener must not break routing.
+    }
+    for (const listener of listeners) {
+      try {
+        listener(event);
+      } catch {
+        // Same for subscribers.
+      }
+    }
+  };
+
+  const gates = new Map<string, ChainGate>(
+    built.map((endpoint) => [
+      endpoint.id,
+      {
+        verified: !verifyIdentity || !endpoint.supports(policy.identityMethod),
+        mismatch: undefined,
+        pending: undefined,
+      },
+    ]),
+  );
+  const quarantined = (id: string): boolean => gates.get(id)?.mismatch !== undefined;
+  const byId = new Map(built.map((endpoint) => [endpoint.id, endpoint]));
+  const board = new Scoreboard(
+    built.map((endpoint, index) => ({
+      id: endpoint.id,
+      url: endpoint.url,
+      weight: endpoint.weight,
+      index,
+      supports: (method: string): boolean => !quarantined(endpoint.id) && endpoint.supports(method),
+    })),
+    {
+      perMethod,
+      headLag: headLag.enabled,
+      maxLag: headLag.maxLag,
+      staleMs: headLag.staleMs,
+      maxAhead: headLag.maxAhead,
+      maxUnitsPerSecond: policy.maxUnitsPerSecond,
+      config: scoreConfig,
+      now,
+      ejected: (id: string): boolean => breaker.isOpen(id),
+      spent: (id: string): boolean => !budgets.has(id),
+    },
+  );
+  const servable = (id: string, method: string): boolean =>
+    gates.get(id)?.verified === true && !quarantined(id) && !breaker.isOpen(id) && byId.get(id)?.supports(method) === true;
+  const pinConfig = resolvePin(policy.pin ?? false, false);
+  const pin =
+    pinConfig.enabled && headLag.enabled
+      ? new LatestPin(
+          pinConfig,
+          {
+            heads: (maxAgeMs: number) => board.heads(maxAgeMs),
+            maxLag: headLag.maxLag,
+            servable,
+          },
+          policy.probeMethod,
+        )
+      : undefined;
+  const coalescer = new Coalescer(timeout + Math.min(timeout, INFLIGHT_GRACE_MS));
+  const cacheConfig = resolveCache(options.cache ?? (policy.cachePolicy ? true : false));
+  const cache =
+    cacheConfig.enabled && policy.cachePolicy ? new ReadCache(cacheConfig, policy.cachePolicy) : undefined;
+
+  const closeCircuit = (endpoint: RankedEndpoint, call: boolean): void => {
+    if (!call && breaker.isOpen(endpoint.id)) return;
+    if (breaker.success(endpoint.id, !call)) emit({ type: "restore", endpoint: endpoint.url });
+  };
+
+  const openCircuit = (endpoint: RankedEndpoint, error: Error, call: boolean): void => {
+    const asked = Math.max(retryAfterMs(error, now()), byId.get(endpoint.id)?.retryAfter() ?? 0);
+    const ejection = breaker.failure(endpoint.id, asked, !call);
+    if (!ejection) return;
+    emit({
+      type: "eject",
+      endpoint: endpoint.url,
+      failures: ejection.failures,
+      cooldownMs: ejection.cooldownMs,
+      error,
+    });
+  };
+
+  const checkChain = (endpoint: BuiltEndpoint): Promise<Error | undefined> => {
+    const gate = gates.get(endpoint.id);
+    if (!gate || gate.verified) return Promise.resolve(undefined);
+    if (gate.mismatch) return Promise.resolve(gate.mismatch);
+    const pending = gate.pending ?? startCheck(endpoint, gate);
+    return withDeadline(pending, timeout).catch((error: unknown): Error => {
+      if (gate.pending === pending) gate.pending = undefined;
+      return toError(error);
+    });
+  };
+
+  const startCheck = (endpoint: BuiltEndpoint, gate: ChainGate): Promise<Error | undefined> => {
+    const started = now();
+    budgets.take(endpoint.id);
+    const pending = withDeadline(
+      endpoint.call({ method: policy.identityMethod, params: policy.identityParams }),
+      timeout,
+    ).then(
+      (result): Error | undefined => {
+        const reported = policy.parseIdentity(result);
+        const equals = policy.identityEquals ?? Object.is;
+        if (reported !== null && reported !== undefined && equals(reported, policy.expectedIdentity)) {
+          gate.verified = true;
+          closeCircuit(endpoint, false);
+          return undefined;
+        }
+        if (reported === null || reported === undefined) {
+          return new Error(`${endpoint.url} returned no chain identity.`);
+        }
+        gate.mismatch = new ChainMismatchError(endpoint.url, policy.expectedIdentity, reported);
+        emit({
+          type: "quarantine",
+          endpoint: endpoint.url,
+          reported,
+          expected: policy.expectedIdentity,
+        });
+        return gate.mismatch;
+      },
+      (error: unknown): Error => {
+        const wrapped = toError(error);
+        const latencyMs = Math.max(0, now() - started);
+        const terminal = !failoverOf(wrapped);
+        board.failure(endpoint.id, policy.identityMethod, latencyMs, false, timeout);
+        emit({
+          type: "error",
+          endpoint: endpoint.url,
+          method: policy.identityMethod,
+          latencyMs,
+          error: wrapped,
+          terminal,
+        });
+        if (!terminal) openCircuit(endpoint, wrapped, false);
+        return wrapped;
+      },
+    );
+    gate.pending = pending;
+    void pending.finally(() => {
+      if (gate.pending === pending) gate.pending = undefined;
+    });
+    return pending;
+  };
+
+  const pickVerified = (
+    method: string,
+    exclude: Set<string>,
+    mode: "best" | "p2c",
+    parent: AbortSignal | undefined,
+    errors: Error[],
+    skipEjected: boolean,
+  ): RankedEndpoint | undefined | Promise<boolean> => {
+    const endpoint = board.pick(method, exclude, mode, random);
+    if (!endpoint) {
+      if (errors.length === 0) {
+        for (const gate of gates.values()) if (gate.mismatch) errors.push(gate.mismatch);
+      }
+      return undefined;
+    }
+    if (skipEjected && breaker.isOpen(endpoint.id)) return undefined;
+    const target = byId.get(endpoint.id);
+    if (!target || gates.get(endpoint.id)?.verified !== false || !budgets.has(endpoint.id)) return endpoint;
+    return untilAborted(checkChain(target), parent).then((reason) => {
+      if (!reason) return false;
+      exclude.add(endpoint.id);
+      errors.push(reason);
+      return true;
+    });
+  };
+
+  const noteHead = (endpoint: BuiltEndpoint, method: string, result: unknown, params: unknown): void => {
+    if (!headLag.enabled) return;
+    const head =
+      method === policy.probeMethod
+        ? policy.parseHead(result)
+        : (policy.headFromResult?.(method, result, params) ?? null);
+    if (head === null) return;
+    const recorded = board.noteHead(endpoint.id, head);
+    emit({
+      type: "head",
+      endpoint: endpoint.url,
+      head,
+      best: recorded.best,
+      lag: recorded.lag,
+      trusted: recorded.trusted,
+    });
+  };
+
+  const start = (
+    endpoint: RankedEndpoint,
+    method: string,
+    params: unknown,
+    parent: AbortSignal | undefined,
+    hedged: boolean,
+    sampleLatency: boolean,
+  ): Inflight => {
+    const state = { ignore: false, timedOut: false };
+    const controller = new AbortController();
+    const unlink = linkAbort(controller, parent);
+    const timer = setTimeout(() => {
+      state.timedOut = true;
+      controller.abort();
+    }, timeout);
+    unrefTimer(timer);
+    const target = byId.get(endpoint.id);
+    if (!target) throw new Error(`Unknown RPC endpoint: ${endpoint.id}`);
+    const end = board.begin(endpoint.id, timeout + INFLIGHT_GRACE_MS);
+    budgets.take(endpoint.id);
+    emit({ type: "request", endpoint: endpoint.url, method });
+    const started = now();
+    const requestPromise = Promise.resolve().then(() =>
+      target.call({ method, params }, parent ? { signal: parent } : undefined),
+    );
+    const abortPromise = new Promise<never>((_resolve, reject) => {
+      const fail = (): void => reject(abortError(controller.signal));
+      if (controller.signal.aborted) {
+        fail();
+        return;
+      }
+      controller.signal.addEventListener("abort", fail, { once: true });
+    });
+    const promise = Promise.race([
+      requestPromise.then(
+        (result) => ({ kind: "result" as const, result }),
+        (error: unknown) => ({ kind: "error" as const, error }),
+      ),
+      abortPromise.then(
+        () => ({ kind: "abort" as const, error: undefined }),
+        (error: unknown) => ({ kind: "abort" as const, error }),
+      ),
+    ])
+      .then((outcome) => {
+        const latencyMs = Math.max(0, now() - started);
+        if (outcome.kind === "result") {
+          if (!state.ignore) {
+            board.success(endpoint.id, method, latencyMs, sampleLatency);
+            noteHead(target, method, outcome.result, params);
+            emit({ type: "success", endpoint: endpoint.url, method, latencyMs, hedged });
+            closeCircuit(endpoint, sampleLatency);
+          }
+          return outcome.result;
+        }
+        const wrapped = state.timedOut && !state.ignore ? new TimeoutError(timeout) : toError(outcome.error);
+        const callerAbort = parent?.aborted === true || isAbortError(wrapped);
+        if (!state.ignore && !callerAbort && target.supports(method) && benignMiss(wrapped)) {
+          emit({ type: "error", endpoint: endpoint.url, method, latencyMs, error: wrapped, terminal: false });
+        } else if (!state.ignore && !callerAbort && target.supports(method)) {
+          const terminal = !failoverOf(wrapped);
+          if (terminal) board.success(endpoint.id, method, latencyMs, sampleLatency);
+          else board.failure(endpoint.id, method, latencyMs, sampleLatency, timeout);
+          emit({ type: "error", endpoint: endpoint.url, method, latencyMs, error: wrapped, terminal });
+          if (terminal) closeCircuit(endpoint, sampleLatency);
+          else openCircuit(endpoint, wrapped, sampleLatency);
+        }
+        throw wrapped;
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        unlink();
+        if (!controller.signal.aborted) controller.abort();
+        end();
+      });
+    return {
+      promise,
+      cancelled: (): boolean => state.ignore,
+      cancel(): void {
+        state.ignore = true;
+        clearTimeout(timer);
+        controller.abort();
+      },
+    };
+  };
+
+  const barredFrom = (holders: ReadonlySet<string> | undefined): ReadonlySet<string> =>
+    holders === undefined ? NO_BAR : new Set(built.filter((endpoint) => !holders.has(endpoint.id)).map((endpoint) => endpoint.id));
+
+  const spentPeers = (picked: RankedEndpoint, method: string, exclude: ReadonlySet<string>): string[] => {
+    const open = breaker.isOpen(picked.id);
+    return built
+      .filter(
+        (endpoint) =>
+          !exclude.has(endpoint.id) &&
+          !quarantined(endpoint.id) &&
+          endpoint.supports(method) &&
+          breaker.isOpen(endpoint.id) === open,
+      )
+      .map((endpoint) => endpoint.id);
+  };
+
+  const pickRivals = (method: string, exclude: Set<string>): RankedEndpoint[] => {
+    const rivals = pickRacers(raceRivals, exclude, {
+      next: (skip: ReadonlySet<string>): RankedEndpoint | undefined => board.pick(method, skip, "best", random),
+      state: (endpoint: RankedEndpoint): "ready" | "unverified" | "unavailable" => {
+        if (breaker.isOpen(endpoint.id) || !budgets.has(endpoint.id)) return "unavailable";
+        return gates.get(endpoint.id)?.verified === false ? "unverified" : "ready";
+      },
+      verify: (endpoint: RankedEndpoint): void => {
+        const target = byId.get(endpoint.id);
+        if (target) void checkChain(target);
+      },
+    });
+    for (const rival of rivals) exclude.add(rival.id);
+    return rivals;
+  };
+
+  const dispatch = (
+    endpoint: RankedEndpoint,
+    method: string,
+    params: unknown,
+    parent: AbortSignal | undefined,
+    idempotent: boolean,
+    exclude: Set<string>,
+    errors: Error[],
+    race: boolean,
+  ): Promise<unknown> => {
+    const rivals = race ? pickRivals(method, exclude) : [];
+    if (rivals.length > 0) {
+      emit({ type: "race", endpoints: [endpoint.url, ...rivals.map((rival) => rival.url)], method });
+    }
+    const lead = start(endpoint, method, params, parent, false, true);
+    const primary =
+      rivals.length === 0
+        ? lead
+        : raceCalls(
+            [lead, ...rivals.map((rival) => start(rival, method, params, parent, false, true))],
+            (error) => !failoverOf(error) || options.shouldThrow?.(error) === true,
+            (lost) => errors.push(...lost),
+          );
+    if (!hedge.enabled || !idempotent) return primary.promise;
+    const wait = board.hedgeDelay(endpoint.id, method, hedge.minDelay, hedge.multiplier);
+    return raceHedge(primary, wait, () => {
+      const next = board.pick(method, exclude, "best", random);
+      if (!next || breaker.isOpen(next.id) || !budgets.has(next.id) || gates.get(next.id)?.verified === false) {
+        return undefined;
+      }
+      exclude.add(next.id);
+      emit({ type: "hedge", endpoint: next.url, method });
+      return start(next, method, params, parent, true, true);
+    });
+  };
+
+  const send = async (
+    method: string,
+    params: unknown,
+    parent: AbortSignal | undefined,
+    idempotent: boolean,
+    rebroadcast: boolean,
+    barred: ReadonlySet<string>,
+    progress: (waitMs?: number) => void = noProgress,
+  ): Promise<unknown> => {
+    const pause = (ms: number): Promise<void> => {
+      progress(ms);
+      return delay(ms, parent);
+    };
+    const exclude = new Set<string>(barred);
+    const errors: Error[] = [];
+    const retries = idempotent || rebroadcast;
+    const racing = idempotent && raceRivals > 0;
+    const attempts = retries ? retryCount + 1 : 1;
+    let previous: RankedEndpoint | undefined;
+    let round = 0;
+    let ejectionWaitMs = 0;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      let wait = attempt > 0 ? retryDelay : 0;
+      let mode: "best" | "p2c" = attempt === 0 && !racing ? routing : "best";
+      let allowEjected = false;
+      let newRound = false;
+      let exhausted: BudgetExhaustedError | undefined;
+      let endpoint: RankedEndpoint | undefined;
+      for (;;) {
+        const picked = pickVerified(method, exclude, mode, parent, errors, !allowEjected);
+        if (picked instanceof Promise) {
+          progress();
+          if (await picked) allowEjected = false;
+          continue;
+        }
+        if (picked && wait > 0) {
+          await pause(wait);
+          wait = 0;
+          continue;
+        }
+        if (picked && budgets.has(picked.id)) {
+          if (gates.get(picked.id)?.verified === false) {
+            const target = byId.get(picked.id);
+            if (!target) break;
+            progress();
+            const reason = await untilAborted(checkChain(target), parent);
+            if (reason) {
+              exclude.add(picked.id);
+              errors.push(reason);
+            }
+            continue;
+          }
+          endpoint = picked;
+          break;
+        }
+        if (picked) {
+          const spent = spentPeers(picked, method, exclude);
+          const refillMs = Math.max(1, budgets.refillMs(spent));
+          if (ejectionWaitMs + refillMs <= MAX_RETRY_BACKOFF_MS) {
+            ejectionWaitMs += refillMs;
+            await pause(refillMs);
+            continue;
+          }
+          exhausted = new BudgetExhaustedError(spent, refillMs);
+          if (exclude.size === barred.size || newRound) break;
+        }
+        if (attempt === 0 && !allowEjected && !newRound && errors.length === 0 && exclude.size === barred.size) {
+          allowEjected = true;
+          continue;
+        }
+        if (exclude.size > barred.size && !newRound) {
+          exclude.clear();
+          for (const id of barred) exclude.add(id);
+          const candidate = board.pick(method, exclude, "best", random);
+          if (!candidate || ejectionWaitMs + breaker.remaining(candidate.id) > MAX_RETRY_BACKOFF_MS) break;
+          await pause(backoffMs(round, retryBackoff, random));
+          round += 1;
+          wait = 0;
+          mode = "best";
+          newRound = true;
+          continue;
+        }
+        const candidate = board.pick(method, exclude, "best", random);
+        const leftMs = candidate ? breaker.remaining(candidate.id) : 0;
+        if (leftMs <= 0 || ejectionWaitMs + leftMs > MAX_RETRY_BACKOFF_MS) break;
+        ejectionWaitMs += leftMs;
+        await pause(leftMs);
+      }
+      if (!endpoint) {
+        if (exhausted) errors.push(exhausted);
+        break;
+      }
+      exclude.add(endpoint.id);
+      if (previous && previous.id !== endpoint.id) {
+        emit({ type: "failover", from: previous.url, to: endpoint.url, method });
+      }
+      progress();
+      try {
+        return await dispatch(endpoint, method, params, parent, idempotent, exclude, errors, attempt === 0 && racing);
+      } catch (error: unknown) {
+        const wrapped = toError(error);
+        errors.push(wrapped);
+        if (rebroadcast && attempt > 0 && alreadyKnown(wrapped)) {
+          const hash = policy.rebroadcastResult?.(method, params);
+          if (hash !== undefined) return hash;
+        }
+        const stop = !retries || !failoverOf(wrapped) || options.shouldThrow?.(wrapped) === true;
+        if (stop) throw wrapped;
+        previous = endpoint;
+      }
+    }
+    if (errors.length === 1) {
+      const only = errors[0];
+      if (only) throw only;
+    }
+    throw new AllEndpointsFailedError(errors);
+  };
+
+  const sendShared = (
+    method: string,
+    params: unknown,
+    signal: AbortSignal | undefined,
+    idempotent: boolean,
+    rebroadcast: boolean,
+    barred: ReadonlySet<string>,
+  ): Promise<unknown> => {
+    const share =
+      (options.coalesce ?? true) && isCoalescableMethod(method, idempotent, policy.uncoalescedMethods);
+    const key = share ? coalesceKey(method, params) : undefined;
+    if (key === undefined) return send(method, params, signal, idempotent, rebroadcast, barred);
+    return coalescer.request(
+      key,
+      signal,
+      (sharedSignal, progress) => send(method, params, sharedSignal, idempotent, rebroadcast, barred, progress),
+      () => emit({ type: "coalesce", method }),
+    );
+  };
+
+  let closed = false;
+  let probing: Promise<void> | undefined;
+  const probe = (): Promise<void> => {
+    if (closed) return Promise.resolve();
+    const pending = built.map((endpoint) =>
+      breaker.isOpen(endpoint.id) || !endpoint.supports(policy.probeMethod) || !budgets.has(endpoint.id)
+        ? Promise.resolve()
+        : checkChain(endpoint).then((reason) =>
+            reason || !budgets.has(endpoint.id)
+              ? undefined
+              : start(endpoint, policy.probeMethod, policy.probeParams, undefined, false, false).promise.then(
+                  () => undefined,
+                  () => undefined,
+                ),
+          ),
+    );
+    const done = Promise.all(pending).then(() => undefined);
+    probing = done;
+    void done.finally(() => {
+      if (probing === done) probing = undefined;
+    });
+    return done;
+  };
+
+  const probeEvery =
+    headLag.enabled && headLag.probeInterval !== false && headLag.probeInterval > 0 ? headLag.probeInterval : 0;
+  let probeTimer: ReturnType<typeof setInterval> | undefined;
+  let lastRequestAt = 0;
+  const activity = new Activity(options.isActive);
+  const stopProbes = (): void => {
+    if (probeTimer === undefined) return;
+    clearInterval(probeTimer);
+    probeTimer = undefined;
+    activity.unwatch();
+  };
+  const probeTick = (): void => {
+    const idle = headLag.probeIdleTimeout;
+    if (idle !== false && now() - lastRequestAt >= idle) {
+      stopProbes();
+      return;
+    }
+    if (!activity.active()) return;
+    void probe();
+  };
+  const touch = (): void => {
+    lastRequestAt = now();
+    if (probeEvery === 0 || probeTimer !== undefined) return;
+    probeTimer = setInterval(probeTick, probeEvery);
+    unrefTimer(probeTimer);
+  };
+
+  const newestHead = (method: string): { block: number; ageMs: number } | undefined => {
+    let best: { block: number; ageMs: number } | undefined;
+    for (const reading of board.heads(Number.POSITIVE_INFINITY)) {
+      if (!reading.trusted || !servable(reading.id, method)) continue;
+      if (!best || reading.head > best.block) best = { block: reading.head, ageMs: reading.ageMs };
+    }
+    return best;
+  };
+
+  const pool: RpcPool = {
+    chainIds: policy.chainIds,
+    endpoints: built.map((endpoint) => ({ id: endpoint.id, url: endpoint.url, weight: endpoint.weight })),
+    onEvent(listener: (event: RpcEvent) => void): () => void {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    snapshot: (method = policy.probeMethod): readonly EndpointSnapshot[] =>
+      board.snapshot(method).map((entry) => ({
+        ...entry,
+        quarantined: quarantined(entry.id),
+        ejected: breaker.isOpen(entry.id),
+        tokens: budgets.remaining(entry.id),
+      })),
+    probe,
+    cacheStats: (): CacheStats => cache?.stats() ?? { hits: 0, misses: 0, refreshes: 0, entries: 0, bytes: 0, hotKeys: 0 },
+    close(): void {
+      if (closed) return;
+      closed = true;
+      stopProbes();
+    },
+    async request(request: RpcRequest): Promise<unknown> {
+      if (closed) throw new TransportClosedError();
+      if (request.chainId !== undefined && !policy.chainIds.includes(request.chainId)) {
+        throw new UnknownChainError(request.chainId);
+      }
+      touch();
+      const method = request.method;
+      const idempotent = policy.isSafeMethod(method);
+      const rebroadcast = policy.isRebroadcastMethod?.(method) ?? false;
+      const params = request.params;
+      const signal = request.signal;
+      if (method === policy.probeMethod && idempotent && pin?.answersBlockNumber) {
+        if (signal?.aborted) throw abortError(signal);
+        const local = pin.blockNumber();
+        if (local !== undefined) return local;
+      }
+      const cached = cache?.lookup(method, params, idempotent, { now: now(), head: newestHead(method) });
+      if (cached?.hit) {
+        emit({ type: "cache", method, outcome: "hit", stale: cached.stale });
+        return cached.result;
+      }
+      if (cached && !cached.hit) emit({ type: "cache", method, outcome: "miss", stale: null });
+      const pinned = pin?.pin(method, params, idempotent) ?? { params, holders: undefined, block: undefined };
+      const result = await sendShared(method, pinned.params, signal, idempotent, rebroadcast, barredFrom(pinned.holders));
+      if (!cached || cached.hit) {
+        return method === policy.probeMethod && pin?.answersBlockNumber ? pin.observe(result) : result;
+      }
+      cached.fill(result, pinned.block);
+      return method === policy.probeMethod && pin?.answersBlockNumber ? pin.observe(result) : result;
+    },
+  };
+  return pool;
+}
+
+function resolveHeadLag(value: boolean | HeadLagOptions | undefined): ResolvedHeadLag {
+  if (value === false) {
+    return {
+      enabled: false,
+      maxLag: DEFAULT_MAX_LAG,
+      probeInterval: false,
+      probeIdleTimeout: DEFAULT_PROBE_IDLE_MS,
+      staleMs: DEFAULT_STALE_MS,
+      maxAhead: DEFAULT_MAX_AHEAD,
+    };
+  }
+  const options = value === true || value === undefined ? {} : value;
+  return {
+    enabled: true,
+    maxLag: options.maxLag ?? DEFAULT_MAX_LAG,
+    probeInterval: options.probeInterval === undefined ? DEFAULT_PROBE_MS : options.probeInterval,
+    probeIdleTimeout: options.probeIdleTimeout === undefined ? DEFAULT_PROBE_IDLE_MS : options.probeIdleTimeout,
+    staleMs: options.staleMs ?? DEFAULT_STALE_MS,
+    maxAhead: options.maxAhead ?? DEFAULT_MAX_AHEAD,
+  };
+}
+
+function resolveHedge(value: boolean | HedgeOptions | undefined): ResolvedHedge {
+  if (!value) return { enabled: false, minDelay: 250, multiplier: 2 };
+  const options = value === true ? {} : value;
+  return {
+    enabled: true,
+    minDelay: options.minDelay ?? 250,
+    multiplier: options.multiplier ?? 2,
+  };
+}
+
+function buildEndpoints(options: PoolOptions): BuiltEndpoint[] {
+  if (options.endpoints.length === 0) throw new Error("smart-rpc requires at least one endpoint.");
+  const fallback = resolveDefaultBudget(options.budget);
+  const ids = new Set<string>();
+  return options.endpoints.map((endpoint, index) => {
+    const id = endpoint.id ?? endpoint.url;
+    if (id.trim() === "") throw new Error(`smart-rpc endpoints[${index}].id must not be empty.`);
+    if (ids.has(id)) throw new Error(`smart-rpc endpoint "${id}" is used more than once.`);
+    ids.add(id);
+    const weight = endpoint.weight ?? 1;
+    if (!(Number.isFinite(weight) && weight > 0)) {
+      throw new Error(`smart-rpc endpoints[${index}].weight must be a finite number above 0.`);
+    }
+    const budget =
+      fallback === false
+        ? undefined
+        : (endpoint.budget ?? resolveEndpointBudget(endpoint, fallback, `smart-rpc endpoints[${index}]`));
+    return {
+      id,
+      url: endpoint.url,
+      weight,
+      call: endpoint.call,
+      supports: endpoint.supports ?? ((): boolean => true),
+      retryAfter: endpoint.retryAfter ?? ((): number => 0),
+      budget,
+    };
+  });
+}
+
+function raceHedge(
+  primary: Inflight,
+  waitMs: number,
+  startHedge: () => Inflight | undefined,
+): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    let pending = 1;
+    let settled = false;
+    let hedge: Inflight | undefined;
+    let primaryError: Error | undefined;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      const started = startHedge();
+      if (!started) return;
+      hedge = started;
+      pending += 1;
+      started.promise.then(
+        (result) => finish(result, primary),
+        (error: unknown) => fail(started, toError(error), false),
+      );
+    }, waitMs);
+    unrefTimer(timer);
+    const finish = (result: unknown, loser: Inflight | undefined): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      loser?.cancel();
+      resolve(result);
+    };
+    const fail = (call: Inflight | undefined, error: Error, isPrimary: boolean): void => {
+      if (call?.cancelled()) return;
+      if (settled) return;
+      if (isPrimary) primaryError = error;
+      pending -= 1;
+      if (pending > 0) return;
+      settled = true;
+      clearTimeout(timer);
+      hedge?.cancel();
+      reject(primaryError ?? error);
+    };
+    primary.promise.then(
+      (result) => finish(result, hedge),
+      (error: unknown) => {
+        clearTimeout(timer);
+        fail(primary, toError(error), true);
+      },
+    );
+  });
+}
+
+function delay(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(abortError(signal));
+      return;
+    }
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(signal ? abortError(signal) : new Error("This operation was aborted"));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+function withDeadline<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new TimeoutError(ms)), ms);
+    unrefTimer(timer);
+    promise.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
+
+function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(abortError(signal));
+  return new Promise((resolve, reject) => {
+    const onAbort = (): void => reject(abortError(signal));
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+  });
+}
+
+function linkAbort(controller: AbortController, signal: AbortSignal | undefined): () => void {
+  if (!signal) return () => undefined;
+  if (signal.aborted) {
+    controller.abort(signal.reason);
+    return () => undefined;
+  }
+  const onAbort = (): void => {
+    controller.abort(signal.reason);
+  };
+  signal.addEventListener("abort", onAbort, { once: true });
+  return () => {
+    signal.removeEventListener("abort", onAbort);
+  };
+}
+
+function unrefTimer(timer: ReturnType<typeof setTimeout> | ReturnType<typeof setInterval>): void {
+  if (typeof timer === "object" && timer !== null && "unref" in timer && typeof timer.unref === "function") {
+    timer.unref();
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "name": "smart-rpc",
+  "version": "0.1.0",
+  "description": "Unified smart RPC. Core at the package root; chain transports only through subpaths.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./solana": {
+      "types": "./dist/solana.d.ts",
+      "import": "./dist/solana.js"
+    },
+    "./ethereum": {
+      "types": "./dist/ethereum.d.ts",
+      "import": "./dist/ethereum.js"
+    },
+    "./hyperevm": {
+      "types": "./dist/hyperevm.d.ts",
+      "import": "./dist/hyperevm.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@smart-rpc/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@smart-rpc/ethereum": "workspace:*",
+    "@smart-rpc/hyperevm": "workspace:*",
+    "@smart-rpc/solana": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@smart-rpc/ethereum": {
+      "optional": true
+    },
+    "@smart-rpc/hyperevm": {
+      "optional": true
+    },
+    "@smart-rpc/solana": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@smart-rpc/ethereum": "workspace:*",
+    "@smart-rpc/hyperevm": "workspace:*",
+    "@smart-rpc/solana": "workspace:*",
+    "tsup": "^8.5.0",
+    "typescript": "5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

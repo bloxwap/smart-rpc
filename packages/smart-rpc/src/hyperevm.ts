@@ -1,0 +1,10 @@
+export {
+  HYPEREVM_CHAIN_ID,
+  HYPEREVM_MAINNET_CAIP,
+  HYPEREVM_RPC_URL,
+  HYPEREVM_TESTNET_CAIP,
+  HYPEREVM_TESTNET_CHAIN_ID,
+  HYPEREVM_TESTNET_RPC_URL,
+  hyperevm,
+  type HyperEvmOptions,
+} from "@smart-rpc/hyperevm";
