@@ -56,6 +56,17 @@ describe("HyperEVM registry ranking", () => {
     expect(burst?.weight).toBe(defaultRankPolicy.newNodeWeightCap);
   });
 
+  test("does not count failed observations toward the establishment span", () => {
+    const url = "https://burst.example/evm";
+    const observations = [
+      observation(url, 20, 40, false),
+      ...Array.from({ length: 4 }, () => observation(url, 0, 40)),
+    ];
+    const [ranked] = rankRegistry([endpoint(url)], observations, NOW);
+    expect(ranked?.stats).toMatchObject({ successes: 4, uptime: 0.8, established: false });
+    expect(ranked).toMatchObject({ eligible: true, weight: defaultRankPolicy.newNodeWeightCap });
+  });
+
   test("keeps low-uptime, wrong-chain, unobserved, and expired endpoints ineligible", () => {
     const flaky = "https://flaky.example/evm";
     const wrong = "https://wrong.example/evm";

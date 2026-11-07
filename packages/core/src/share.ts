@@ -72,7 +72,7 @@ function lease(entry: Entry, release: () => void): RpcPool {
     },
     snapshot: (method?: string) => entry.pool.snapshot(method),
     scores: () => entry.pool.scores(),
-    restoreScores: (snapshot: unknown) => entry.pool.restoreScores(snapshot),
+    restoreScores: (snapshot: unknown) => unavailable() ? false : entry.pool.restoreScores(snapshot),
     cacheStats: () => entry.pool.cacheStats(),
     onEvent(listener: (event: RpcEvent) => void): () => void {
       if (unavailable()) return () => undefined;
