@@ -47,14 +47,45 @@ That install is the whole library. Core, Ethereum, HyperEVM, and Solana are comp
 | --- | --- |
 | `@bloxwap/smart-rpc` | Published package. Root export is the core. |
 | `@bloxwap/smart-rpc/ethereum` | EVM JSON-RPC. Probe `eth_blockNumber`. Quarantine on `eth_chainId`. Pins `"latest"`. |
-| `@bloxwap/smart-rpc/hyperevm` | Ethereum transport with chain `eip155:999` / `eip155:998` and `https://rpc.hyperliquid.xyz/evm` |
+| `@bloxwap/smart-rpc/hyperevm` | Ethereum transport with separate public RPC pools for `eip155:999` / `eip155:998`. |
 | `@bloxwap/smart-rpc/solana` | Probe `getSlot`. Quarantine on `getGenesisHash`. |
 | `packages/core`, `packages/ethereum`, `packages/hyperevm`, `packages/solana` | Private workspace packages. Not published. The release build compiles them into `@bloxwap/smart-rpc`. |
 | `examples/quick-start` | The snippet above |
 
-HyperEVM mainnet is chain id 999 (`eip155:999`), default URL `https://rpc.hyperliquid.xyz/evm`. Testnet is chain id 998 (`eip155:998`), default URL `https://rpc.hyperliquid-testnet.xyz/evm`. `hyperevm()` with no arguments serves both. The official mainnet URL keeps the reference budget of 1.5 requests per second, burst 3.
+HyperEVM mainnet is chain id 999 (`eip155:999`); testnet is chain id 998 (`eip155:998`). `hyperevm()` with no arguments serves both through separate endpoint pools. Both include the official RPC and documented public alternatives. The official mainnet URL keeps the reference budget of 1.5 requests per second, burst 3.
 
 Solana registers `solana:mainnet` and the genesis-hash CAIP-2 id `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d`. Devnet and testnet have the same pair of aliases.
+
+## Public RPC defaults
+
+Ethereum mainnet, HyperEVM mainnet/testnet, and Solana mainnet/devnet/testnet have source-backed registries of free HTTP endpoints that do not require an API key. The transports pass those endpoints into the shared pool, so defaults use the same scoring, identity checks, failover, racing, circuit breakers, caching, and request budgets as custom endpoints. Endpoint discovery does not run in the client.
+
+Each registry entry records its provider, source URLs, review date, and local request budget. These budgets are conservative client settings, not purchased capacity or provider guarantees. They cover calls, retries, identity checks, and probes in that pool; other clients and processes sharing your IP can also consume the provider's quota. Services that require a free account or API key are documented separately and can be configured explicitly.
+
+See [Public RPCs](docs/PUBLIC_RPCS.md) for coverage, provider sources, restrictions, and live verification instructions. Registries are exported from their transport subpaths:
+
+```ts
+import { ETHEREUM_MAINNET_REGISTRY } from "@bloxwap/smart-rpc/ethereum";
+import { HYPEREVM_MAINNET_REGISTRY, HYPEREVM_TESTNET_REGISTRY } from "@bloxwap/smart-rpc/hyperevm";
+import { MAINNET_REGISTRY, DEVNET_REGISTRY, TESTNET_REGISTRY } from "@bloxwap/smart-rpc/solana";
+```
+
+Passing `endpoints` replaces the selected network's defaults. To add your own provider while retaining the public pool and its budgets, use its exported registry:
+
+```ts
+import { ethereum, ETHEREUM_MAINNET_REGISTRY } from "@bloxwap/smart-rpc/ethereum";
+
+const transport = ethereum({
+  endpoints: [
+    { url: process.env.ETHEREUM_RPC_URL!, label: "my-provider", rps: 5, burst: 5 },
+    ...ETHEREUM_MAINNET_REGISTRY.map(({ url, rps, burst, unsupportedMethods }) => ({
+      url, rps, burst, unsupportedMethods,
+    })),
+  ],
+});
+```
+
+`ETHEREUM_MAINNET_ENDPOINTS` and the HyperEVM endpoint lists expose URLs for compatibility; their registry counterparts also carry budgets. Solana's `MAINNET_ENDPOINTS`, `DEVNET_ENDPOINTS`, and `TESTNET_ENDPOINTS` expose endpoint configurations with budgets. For a dual-network `hyperevm()` transport, `endpoints` replaces mainnet and `testnetEndpoints` replaces testnet. With `chainId: 998`, use `endpoints` for testnet.
 
 ## Defaults
 
@@ -65,7 +96,7 @@ These match `@bloxwap/smart-hyperevm` at `092b8f9`. Every chain uses them. Solan
 - Routing: power of two choices. Safe reads race the top 2 endpoints.
 - Breaker: eject after 3 failures. Cooldown starts at 5s and doubles up to 60s. A health probe cannot clear a streak that includes a failed call. `Retry-After` ejects immediately, capped at 60s.
 - Retries: 2 extra attempts, 10s per attempt. Another live endpoint is tried at once. Re-trying an endpoint that already failed this call waits a jittered backoff from 100ms, doubling, capped at 2s.
-- Probes: every 4s (`eth_blockNumber` on EVM, `getSlot` on Solana). The timer stops after 60s without a request. Probe success and failure update liveness, not the latency EWMA.
+- Probes: every 4s (`eth_blockNumber` on EVM, `getSlot` on Solana). The timer stops after 60s without a request. Automatic probes preserve the last available token on budgeted endpoints for caller traffic; explicit `probe()` calls may use it. Probe success and failure update liveness, not the latency EWMA.
 - Heads older than 30s stop affecting the score. A head more than 1000 units ahead of the others' median is ignored. Two heads that far apart are not a reference.
 - EVM transports pin `"latest"` to a block the chosen endpoints hold, and quarantine an endpoint whose `eth_chainId` is wrong. Solana quarantines a `getGenesisHash` mismatch. HyperEVM also skips HyperCore precompile `eth_call`s (`0x…0800`–`0x…08ff`) when pinning, because those calls ignore the block.
 

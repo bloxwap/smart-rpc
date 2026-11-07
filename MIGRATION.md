@@ -25,7 +25,8 @@ The workspace packages below are private. They are how the repo is organized. Th
 | viem `http()` / `webSocket()` child transports, `eth_chainId`, `eth_blockNumber` | private `@smart-rpc/ethereum` | `@bloxwap/smart-rpc/ethereum` |
 | Chain 999 / 998, `https://rpc.hyperliquid.xyz/evm`, official 1.5 rps burst 3, HyperCore precompile pin-skip | private `@smart-rpc/hyperevm`, which calls `ethereum()` | `@bloxwap/smart-rpc/hyperevm` |
 | `smart-solana` method safety, genesis hashes, default public endpoints, `getSlot` / `getGenesisHash` | private `@smart-rpc/solana` | `@bloxwap/smart-rpc/solana` |
-| Ranked public registry, warm-start persistence, the rolling `eth_getLogs` index | Not in v1. Leave them in smart-hyperevm until a follow-up moves the registry in as data the HyperEVM transport loads. | — |
+| Public endpoint discovery and registry data | Source-backed registries in the Ethereum, HyperEVM, and Solana packages; the shared pool ranks endpoints at runtime. | Each transport subpath |
+| Persisted registry rankings, warm-start persistence, the rolling `eth_getLogs` index | Not ported. The source registries carry provenance and local budgets, not historical scores. | — |
 
 Callers that do `createPublicClient({ transport: smartHyperevm() })` need an adapter. v1's public call is `rpc.request({ chainId, method, params })`. The ethereum transport still uses viem `http()` and `webSocket()` as the child of each endpoint. A later `asViemTransport(pool)` can wrap `createTransport` without moving policy back into the chain package.
 
@@ -52,7 +53,11 @@ The brief says to follow the HyperEVM reference when it disagrees with smart-sol
 
 `solana:mainnet`, `solana:devnet`, and `solana:testnet` are aliases. Each cluster also registers `solana:<genesis hash>`, which is the CAIP-2 chain reference from the Solana namespace. `createSmartRpc` matches the string the caller passes. It does not guess.
 
-The HyperEVM registry (`registry/nodes.json` and the ranker) is not loaded. `hyperevm()` defaults to the official URL, plus the testnet URL `https://rpc.hyperliquid-testnet.xyz/evm` for chain 998. The reference registry at `092b8f9` is mainnet-only. Testnet is called out here so folding the registry does not silently drop chain 998.
+Public endpoint registries are now included as transport data. HyperEVM mainnet and testnet each use their own list, including the official URL and documented public alternatives. Ethereum mainnet and each Solana cluster use the same approach. Registry entries carry provider/source metadata and conservative request budgets; core owns runtime scoring and fallback. The old `registry/nodes.json` historical rankings and ranker are not loaded. See [Public RPCs](docs/PUBLIC_RPCS.md) for sources, limitations, and verification commands.
+
+An explicit `endpoints` array still replaces the defaults. For `hyperevm()` serving both chains, `endpoints` selects mainnet endpoints and `testnetEndpoints` selects testnet endpoints. The official HyperEVM mainnet budget remains 1.5 rps, burst 3. Solana's public endpoint budgets now account for provider-specific limits instead of carrying over the old endpoint settings unchanged.
+
+Automatic health probes preserve the last available token on budgeted endpoints so slow-refill public services can still serve requests. Explicit `probe()` calls may spend it. Concurrent probes share one pending sweep, and timed-out attempts cancel their underlying request.
 
 The v1 read cache does not include the reference log index or background hot-key refresh. State reads, hashes, and `eth_chainId` are cached. `eth_getLogs`, filters, subscriptions, gas estimates, and nonces at `"latest"` are not. Port `_cache.ts` into core behind the same `CachePolicy` hook when log queries need the index.
 
@@ -62,8 +67,8 @@ Score persistence (`_warmstart.ts`, `localStoragePersistence`) is not ported. A 
 
 1. Point new callers at `npm install @bloxwap/smart-rpc` and the subpath for the chain they use (`@bloxwap/smart-rpc/hyperevm`, `@bloxwap/smart-rpc/solana`). Keep smart-hyperevm and smart-solana published until those callers move. Do not publish the private workspace packages.
 2. Add a viem `Transport` adapter on the ethereum subpath that delegates to the pool, so `createPublicClient` sites can switch without rewriting call sites. Map `smartHyperevm({ endpoints, onEvent })` onto `hyperevm({ endpoints, onEvent })` from `@bloxwap/smart-rpc/hyperevm`.
-3. Move `registry/nodes.json` into the private HyperEVM workspace package and use eligible HTTP URLs as the default endpoint list, keeping the official budget. It still ships only through `@bloxwap/smart-rpc/hyperevm`.
+3. Review and refresh the included source-backed endpoint registries with `pnpm check:rpcs` after building. Preserve provider budgets and separate chain identities; the public defaults ship through the transport subpaths.
 4. Port the log index and warm-start into the private core package behind the existing cache and scoreboard hooks.
-5. Replace smart-solana's transport internals with the Solana code in this repo. Keep its cluster endpoint list if it is ahead of the short default here. Do not bring its breaker or backoff numbers back.
+5. Replace smart-solana's transport internals with the Solana code in this repo. Reconcile new public endpoints into the source-backed cluster registries. Do not bring its breaker or backoff numbers back.
 
 Until step 2, a process that needs both a viem client and this router should use this router for new calls and leave the old transport in place for the viem client. Do not run both against the same provider budget unless each has its own `budget`.

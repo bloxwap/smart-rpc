@@ -23,6 +23,7 @@ export interface SolanaOptions extends Omit<PoolOptions, "endpoints" | "policy">
   cluster?: SolanaCluster | undefined;
   /** CAIP-2 ids. Default: `solana:mainnet` (or devnet/testnet) plus the genesis-hash form. */
   chainIds?: readonly string[] | undefined;
+  /** Complete endpoint override. Omit to use the cluster's source-backed public registry and budgets. */
   endpoints?: readonly (string | SolanaEndpointConfig)[] | undefined;
   /** Expected `getGenesisHash`. Default: the cluster's genesis hash. */
   genesisHash?: string | undefined;

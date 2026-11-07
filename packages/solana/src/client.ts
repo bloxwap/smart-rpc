@@ -19,22 +19,47 @@ export function jsonRpcCaller(url: string, fetchFn: FetchLike = fetch): Endpoint
       signal: options?.signal,
     });
     const text = await response.text();
-    let body: { result?: unknown; error?: { code?: number; message?: string } } | undefined;
+    let body: unknown;
     if (text !== "") {
       try {
-        body = JSON.parse(text) as { result?: unknown; error?: { code?: number; message?: string } };
+        body = JSON.parse(text);
       } catch {
         body = undefined;
       }
     }
-    if (!response.ok || body?.error) {
-      const error = new Error(body?.error?.message ?? `Solana RPC HTTP ${response.status}`);
-      if (typeof body?.error?.code === "number") {
-        Object.defineProperty(error, "code", { value: body.error.code });
+    const envelope = isRecord(body) ? body : undefined;
+    if (!response.ok || (envelope && Object.hasOwn(envelope, "error"))) {
+      const rpcError = isRecord(envelope?.error) ? envelope.error : undefined;
+      const message = typeof rpcError?.message === "string"
+        ? rpcError.message
+        : !response.ok
+          ? `Solana RPC HTTP ${response.status}`
+          : "Solana RPC returned an invalid JSON-RPC error.";
+      const error = responseError(message, response);
+      if (typeof rpcError?.code === "number") {
+        Object.defineProperty(error, "code", { value: rpcError.code });
       }
-      Object.defineProperty(error, "headers", { value: response.headers });
+      if (rpcError && Object.hasOwn(rpcError, "data")) {
+        Object.defineProperty(error, "data", { value: rpcError.data });
+      }
       throw error;
     }
-    return body?.result;
+    // A proxy's HTTP 200 page must fail over, not become a cached undefined result.
+    // Null, false, zero, and empty strings are valid JSON-RPC results.
+    if (!envelope || !Object.hasOwn(envelope, "result")) {
+      throw responseError("Solana RPC returned an invalid JSON-RPC response: missing result.", response);
+    }
+    return envelope.result;
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function responseError(message: string, response: Response): Error {
+  const error = new Error(message);
+  Object.defineProperty(error, "headers", { value: response.headers });
+  Object.defineProperty(error, "status", { value: response.status });
+  return error;
 }

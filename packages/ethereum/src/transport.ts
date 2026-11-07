@@ -23,17 +23,12 @@ import {
 import { isHex, keccak256 } from "viem";
 
 import { connectViem, type ViemConnectionOptions } from "./viem.js";
+import { ETHEREUM_MAINNET_REGISTRY } from "./registry.js";
+
+export { ETHEREUM_MAINNET_ENDPOINTS } from "./registry.js";
 
 /** CAIP-2 id for Ethereum mainnet. */
 export const ETHEREUM_MAINNET_CAIP = "eip155:1";
-
-/** Keyless public mainnet HTTP endpoints, used when `chainId` is 1 and `endpoints` is omitted. */
-export const ETHEREUM_MAINNET_ENDPOINTS: readonly string[] = [
-  "https://ethereum.publicnode.com",
-  "https://rpc.ankr.com/eth",
-  "https://eth.llamarpc.com",
-  "https://cloudflare-eth.com",
-];
 
 /** A URL, or a URL plus label, weight, and budget. `wss:` URLs use viem `webSocket()`. */
 export interface EthereumEndpointConfig {
@@ -55,7 +50,7 @@ export interface EthereumOptions
   chainId?: number | undefined;
   /** CAIP-2 ids this transport serves. Default: [`eip155:${chainId}`]. */
   chainIds?: readonly string[] | undefined;
-  /** Explicit endpoints. Default for chain 1: {@link ETHEREUM_MAINNET_ENDPOINTS}. */
+  /** Explicit endpoints replace the defaults. Chain 1 defaults to {@link ETHEREUM_MAINNET_REGISTRY} with its budgets. */
   endpoints?: readonly EthereumEndpoint[] | undefined;
   /**
    * Rewrite `"latest"` to one block every servable endpoint holds.
@@ -141,7 +136,14 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
 }
 
 function defaultEndpoints(chainId: number): readonly EthereumEndpoint[] {
-  if (chainId === 1) return ETHEREUM_MAINNET_ENDPOINTS;
+  if (chainId === 1) {
+    return ETHEREUM_MAINNET_REGISTRY.map(({ url, rps, burst, unsupportedMethods }) => ({
+      url,
+      rps,
+      burst,
+      unsupportedMethods,
+    }));
+  }
   throw new Error(
     `ethereum() has no default endpoints for chain ${chainId}. Pass endpoints, or use a chain package that knows them.`,
   );

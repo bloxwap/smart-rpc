@@ -8,3 +8,9 @@ export {
   hyperevm,
   type HyperEvmOptions,
 } from "./transport.js";
+export {
+  HYPEREVM_MAINNET_ENDPOINTS,
+  HYPEREVM_MAINNET_REGISTRY,
+  HYPEREVM_TESTNET_ENDPOINTS,
+  HYPEREVM_TESTNET_REGISTRY,
+} from "./registry.js";
