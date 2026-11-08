@@ -3,6 +3,9 @@ import { ethereum, type EthereumEndpoint, type EthereumOptions } from "@smart-rp
 
 import { ROBINHOOD_CHAIN_ID, ROBINHOOD_MAINNET_CAIP, ROBINHOOD_MAINNET_REGISTRY, ROBINHOOD_RPC_URL } from "./registry.js";
 
+/** About 100ms blocks (measured 2026-11-08: 1,000 blocks in 106s). Lag tolerance is about ten blocks, one second. */
+const ROBINHOOD_BLOCK_TIME_MS = 100;
+
 export interface RobinhoodOptions extends Omit<EthereumOptions, "chainId" | "chainIds"> {}
 
 /** Robinhood mainnet, with shared EVM routing, identity quarantine, retries and budgets. */
@@ -12,6 +15,7 @@ export function robinhood(options: RobinhoodOptions = {}): RpcPool {
     chainId: ROBINHOOD_CHAIN_ID,
     chainIds: [ROBINHOOD_MAINNET_CAIP],
     endpoints: (options.endpoints ?? ROBINHOOD_MAINNET_REGISTRY).map(configureEndpoint),
+    blockTimeMs: options.blockTimeMs ?? ROBINHOOD_BLOCK_TIME_MS,
   });
 }
 

@@ -59,7 +59,11 @@ your provider's documentation and checks. Finality tags and historical state are
 never rewritten to `latest`. `PLASMA_MAINNET_REGISTRY` exposes sources and review
 date; `PLASMA_MAINNET` exposes native currency and network metadata.
 
-The local head policy allows four blocks of lag, discards observations after
+Plasma produces a block every second (measured 2026-11-08: 1,000 blocks in
+1,000s). The factory passes `blockTimeMs: 1000`, so the default lag tolerance is
+one block (it was four); an endpoint further behind does not lead, race or hedge
+head reads while a fresh endpoint can. `PLASMA_HEAD_LAG` no longer sets `maxLag`.
+The local head policy discards observations after
 12 seconds (three normal probe intervals), and rejects a lead exceeding 120 blocks
 when peer evidence is available. These are configurable routing thresholds,
 not consensus finality promises. The shared four-second probe cadence and

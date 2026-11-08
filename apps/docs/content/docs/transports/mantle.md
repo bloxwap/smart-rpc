@@ -44,6 +44,8 @@ const transport = mantle({
 
 `requestBatch` preserves each item's outcome and shares one operation budget across its identity checks, attempts, and races. Head freshness remains configurable with `headLag`; finality is not inferred from an Ethereum epoch duration. Subscription callbacks use a dedicated `connectViem` session from the Ethereum subpath with `expectedChainId: 5000`, not ordinary pool requests. See the [Ethereum adapter](ethereum.md) for its lifecycle.
 
+Blocks arrive every 2s (measured 2026-11-08), so the factory passes `blockTimeMs: 2000` and the default `headLag.maxLag` is 1 block, about one second of staleness. An endpoint further behind does not lead, race or hedge `latest`, `pending` or other head reads while a fresh endpoint can serve them; it still serves block-number, block-hash, `safe`/`finalized` and transaction reads, and remains a failover. Pass `blockTimeMs` or `headLag: { maxLag }` to change it.
+
 Run deterministic fixtures with `pnpm --filter @smart-rpc/mantle test`. Read-only live checks are opt-in:
 
 ```sh

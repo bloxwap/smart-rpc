@@ -12,6 +12,9 @@ export const BSC_CHAIN_ID = 56;
 export const BSC_MAINNET_CAIP = "eip155:56";
 export const BSC_NATIVE_CURRENCY = { name: "BNB", symbol: "BNB", decimals: 18 } as const;
 
+/** 450ms blocks (measured 2026-11-08: 1,000 blocks in 450s). Lag tolerance is two blocks, 0.9 seconds. */
+const BSC_BLOCK_TIME_MS = 450;
+
 export interface BscOptions extends Omit<EthereumOptions, "chainId" | "chainIds"> {}
 
 /** BNB Smart Chain mainnet, using the canonical EVM adapter and shared pool policy. */
@@ -21,6 +24,7 @@ export function bsc(options: BscOptions = {}): RpcPool {
     chainId: BSC_CHAIN_ID,
     chainIds: [BSC_MAINNET_CAIP],
     endpoints: (options.endpoints ?? BSC_MAINNET_REGISTRY).map(configureEndpoint),
+    blockTimeMs: options.blockTimeMs ?? BSC_BLOCK_TIME_MS,
     nonIdempotentMethods: ["eth_newFinalizedHeaderFilter", ...(options.nonIdempotentMethods ?? [])],
   });
 }

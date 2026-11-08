@@ -39,6 +39,8 @@ await mainnet.request({
 
 The shared cache and coalescer serialize complete parameters. Requests that differ by `feeCurrency`, transaction fields or block tag remain distinct. Signed submissions are never raced, cached or coalesced. Tests exercise two different adapters and ensure the transport never replaces an adapter with the underlying token address.
 
+Blocks arrive every about 1s (measured 2026-11-08), so the factory passes `blockTimeMs: 1000` and the default `headLag.maxLag` is 1 block, about one second of staleness. An endpoint further behind does not lead, race or hedge `latest`, `pending` or other head reads while a fresh endpoint can serve them; it still serves block-number, block-hash, `safe`/`finalized` and transaction reads, and remains a failover. Pass `blockTimeMs` or `headLag: { maxLag }` to change it.
+
 ## Verification
 
 `pnpm --filter @smart-rpc/celo test` runs deterministic transport fixtures. `CELO_LIVE=1 pnpm --filter @smart-rpc/celo test` adds read-only mainnet/Sepolia identity and head checks. `CELO_CAPABILITIES=1` adds opt-in Forno batch partial-error, safe/finalized block and documented WebSocket checks. An explicitly supplied `CELO_ARCHIVE_URL` and `CELO_ARCHIVE_BLOCK` enable a read-only historical-state check. Results are point-in-time observations, not an SLA or numeric capacity test. No test submits a live transaction.

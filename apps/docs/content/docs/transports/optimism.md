@@ -56,6 +56,8 @@ const pool = optimism({
 
 For subscriptions use the shared Ethereum `connectViem` session API with an actual provider WebSocket URL. Ordinary request routing cannot deliver notifications. No URL is guessed for a provider.
 
+Blocks arrive every 2s (measured 2026-11-08), so the factory passes `blockTimeMs: 2000` and the default `headLag.maxLag` is 1 block, about one second of staleness. An endpoint further behind does not lead, race or hedge `latest`, `pending` or other head reads while a fresh endpoint can serve them; it still serves block-number, block-hash, `safe`/`finalized` and transaction reads, and remains a failover. Pass `blockTimeMs` or `headLag: { maxLag }` to change it.
+
 Run deterministic tests with `pnpm --filter @smart-rpc/optimism test`. They cover identity quarantine, disallowed endpoint roles, tag separation, preserved fee fields, signed-write isolation, cancellation, retry/batch budgets, stale heads, probe accounting, headers and archive rejection.
 
 The optional live smoke performs only chain identity, head and finality-tag reads:

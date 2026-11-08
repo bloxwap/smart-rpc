@@ -58,6 +58,8 @@ base({
 });
 ```
 
+Blocks arrive every about 200ms (measured 2026-11-08), so the factory passes `blockTimeMs: 200` and the default `headLag.maxLag` is 5 blocks, about one second of staleness. An endpoint further behind does not lead, race or hedge `latest`, `pending` or other head reads while a fresh endpoint can serve them; it still serves block-number, block-hash, `safe`/`finalized` and transaction reads, and remains a failover. Pass `blockTimeMs` or `headLag: { maxLag }` to change it.
+
 The Base tests cover chain quarantine, sequencer exclusion, settlement-tag
 isolation, fee-field preservation, submission semantics, cancellation, bounded
 retries, partial batch outcomes, and full-block probe freshness/accounting. Shared core and Ethereum tests

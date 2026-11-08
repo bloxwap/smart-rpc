@@ -122,8 +122,17 @@ describe.each(mainnets)("$name public defaults through the published subpath", (
       const publicUrls = new Set(network.registry.map((entry) => canonical(entry.url)));
       expect(reads.every((call) => publicUrls.has(call.url))).toBe(true);
       expect(events.some((event) => event.type === "failover" && event.method === network.readMethod)).toBe(true);
-      expect(transport.snapshot?.().find((row) => canonical(row.url) === unavailable)?.ejected).toBe(true);
-      expect(events.some((event) => event.type === "eject" && event.cooldownMs >= 29_000)).toBe(true);
+      const row = transport.snapshot?.().find((entry) => canonical(entry.url) === unavailable);
+      if (status === 429) {
+        // A rate limit cools the endpoint down for exactly its Retry-After; it is not ejected as unhealthy.
+        expect(row?.ejected).toBe(false);
+        expect(row?.throttledMs).toBeGreaterThan(29_000);
+        expect(events.some((event) => event.type === "throttle" && event.cooldownMs === 30_000)).toBe(true);
+        expect(events.some((event) => event.type === "eject")).toBe(false);
+      } else {
+        expect(row?.ejected).toBe(true);
+        expect(events.some((event) => event.type === "eject" && event.cooldownMs >= 29_000)).toBe(true);
+      }
     } finally {
       transport.close?.();
     }
