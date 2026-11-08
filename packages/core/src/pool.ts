@@ -80,6 +80,8 @@ interface Inflight {
   promise: Promise<unknown>;
   cancel: () => void;
   cancelled: () => boolean;
+  /** Detach from the caller: finish in the background, score the answer, never deliver it. */
+  release?: (() => void) | undefined;
 }
 
 interface ChainGate {
@@ -172,6 +174,16 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     refillMs: (ids: Iterable<string>): number => budgetStore.refillMs([...ids].map(budgetId)),
   };
   for (const endpoint of built) budgets.configure(endpoint.id, endpoint.budget, endpoint.providerGroup, endpoint.providerBudget);
+  /**
+   * True when `id` can take a speculative or background request and still keep one token for a caller.
+   * Race rivals, hedges, cache refreshes and cache head ticks only spend spare tokens, so they never make a
+   * foreground call wait for a refill or push a provider over its documented rate. Unbudgeted endpoints are
+   * always spare.
+   */
+  const spare = (id: string): boolean => {
+    const remaining = budgets.remaining(id);
+    return remaining === null || remaining >= 2;
+  };
   const operations = new WeakMap<AbortSignal, Operation>();
   const stateful = policy.statefulMethods;
   const handles = new Map<string, { endpoint: string; upstream: unknown }>();
@@ -305,10 +317,8 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
           undefined,
           true,
         ),
-        ready: (method: string): boolean => {
-          const picked = board.pick(method, NO_BAR, "best", random);
-          return picked !== undefined && !breaker.isOpen(picked.id) && budgets.has(picked.id);
-        },
+        ready: (method: string): boolean => built.some((endpoint) =>
+          !quarantined(endpoint.id) && supports(endpoint, method) && !breaker.isOpen(endpoint.id) && spare(endpoint.id)),
         emit,
       })
     : undefined;
@@ -433,6 +443,17 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     if (skipEjected && breaker.isOpen(endpoint.id)) return undefined;
     const target = byId.get(endpoint.id);
     if (!target || gates.get(endpoint.id)?.verified !== false || !budgets.has(endpoint.id)) return endpoint;
+    // A cold identity check costs a handshake and a round trip before the call even starts. When a verified,
+    // funded endpoint can serve now, use it and verify this one in the background. No caller can use an
+    // unverified endpoint's own tokens, so its last one may pay for the check; a token shared with provider
+    // peers must stay spare. Otherwise a burst-1 endpoint would never be verified while any peer is.
+    const unverified = new Set(exclude);
+    for (const [id, gate] of gates) if (!gate.verified) unverified.add(id);
+    const ready = board.pick(method, unverified, mode, random);
+    if (ready && !breaker.isOpen(ready.id) && budgets.has(ready.id) && gates.get(ready.id)?.verified === true) {
+      if (target.providerGroup === undefined || spare(endpoint.id)) void checkChain(target);
+      return ready;
+    }
     return untilAborted(checkChain(target, parent ? operations.get(parent) : undefined), parent).then((reason) => {
       if (!reason) return false;
       exclude.add(endpoint.id);
@@ -497,7 +518,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     operation?.check();
     if (!budgets.take(endpoint.id)) throw new BudgetExhaustedError([endpoint.id], budgets.refillMs([endpoint.id]));
     operation?.take();
-    const state = { ignore: false, timedOut: false };
+    const state = { ignore: false, timedOut: false, released: false };
     const controller = new AbortController();
     const unlink = linkAbort(controller, parent);
     const timer = setTimeout(() => {
@@ -537,7 +558,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
           if (!state.ignore) {
             board.success(endpoint.id, method, latencyMs, sampleLatency);
             noteHead(target, method, outcome.result, params);
-            emit({ type: "success", endpoint: endpoint.url, method, latencyMs, hedged });
+            if (!state.released) emit({ type: "success", endpoint: endpoint.url, method, latencyMs, hedged });
             closeCircuit(endpoint, sampleLatency);
           }
           return outcome.result;
@@ -575,6 +596,15 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
         clearTimeout(timer);
         controller.abort();
       },
+      release(): void {
+        if (state.ignore || state.released) return;
+        state.released = true;
+        // The caller no longer waits. Its cancellation or operation deadline must not abort this call now;
+        // the attempt timer still bounds it. It also stops counting as queued work: the in-flight penalty
+        // would otherwise push the next leads onto slower endpoints while discarded answers drain.
+        unlink();
+        end();
+      },
     };
   };
 
@@ -596,9 +626,13 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
 
   const pickRivals = (method: string, exclude: Set<string>, parent?: AbortSignal): RankedEndpoint[] => {
     const rivals = pickRacers(raceRivals, exclude, {
-      next: (skip: ReadonlySet<string>): RankedEndpoint | undefined => board.pick(method, skip, "best", random),
+      // The rival slot explores first: an endpoint with no latency sample is raced before a measured one,
+      // so a fast endpoint listed late is learned instead of hiding behind the prior forever.
+      next: (skip: ReadonlySet<string>): RankedEndpoint | undefined =>
+        board.pickUnsampled(method, skip) ?? board.pick(method, skip, "best", random),
       state: (endpoint: RankedEndpoint): "ready" | "unverified" | "unavailable" => {
-        if (breaker.isOpen(endpoint.id) || !budgets.has(endpoint.id)) return "unavailable";
+        // The first answer wins a race, so a racer must be fresh as well as funded.
+        if (breaker.isOpen(endpoint.id) || !spare(endpoint.id) || board.lagging(endpoint.id)) return "unavailable";
         return gates.get(endpoint.id)?.verified === false ? "unverified" : "ready";
       },
       verify: (endpoint: RankedEndpoint): void => {
@@ -629,7 +663,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     const started = [lead];
     const raced = [endpoint.url];
     for (const rival of rivals) {
-      if (!budgets.has(rival.id) || (operation?.remaining ?? 1) === 0) continue;
+      if (!spare(rival.id) || (operation?.remaining ?? 1) === 0) continue;
       started.push(start(rival, method, params, parent, false, true));
       raced.push(rival.url);
     }
@@ -643,7 +677,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     const wait = board.hedgeDelay(endpoint.id, method, hedge.minDelay, hedge.multiplier);
     return raceHedge(primary, wait, (active) => {
       const next = board.pick(method, exclude, "best", random);
-      if ((operation?.remaining ?? 1) === 0 || !next || breaker.isOpen(next.id) || !budgets.has(next.id)) {
+      if ((operation?.remaining ?? 1) === 0 || !next || breaker.isOpen(next.id) || !spare(next.id) || board.lagging(next.id)) {
         return undefined;
       }
       exclude.add(next.id);
@@ -655,7 +689,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       if (!target || gates.get(next.id)?.verified !== false) return launch();
       return untilAborted(checkChain(target, operation), parent).then(
         (reason) =>
-          reason || !active() || breaker.isOpen(next.id) || quarantined(next.id) || !supports(target, method) || !budgets.has(next.id)
+          reason || !active() || breaker.isOpen(next.id) || quarantined(next.id) || !supports(target, method) || !spare(next.id)
             ? undefined
             : launch(),
         () => undefined,
@@ -677,6 +711,19 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       progress(ms);
       return delay(ms, parent);
     };
+    if (background) {
+      // Background refreshes use spare capacity only. They never queue for a refill behind caller traffic.
+      const spent = built.filter((endpoint) => !barred.has(endpoint.id) && supports(endpoint, method) && !spare(endpoint.id));
+      if (spent.length > 0) {
+        const allowed = new Set(barred);
+        for (const endpoint of spent) allowed.add(endpoint.id);
+        if (built.every((endpoint) => allowed.has(endpoint.id) || !supports(endpoint, method))) {
+          const ids = spent.map((endpoint) => endpoint.id);
+          throw new BudgetExhaustedError(ids, budgets.refillMs(ids));
+        }
+        barred = allowed;
+      }
+    }
     const exclude = new Set<string>(barred);
     const errors: Error[] = [];
     const retries = idempotent || rebroadcast;
@@ -724,7 +771,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
         if (picked) {
           const spent = spentPeers(picked, method, exclude);
           const refillMs = Math.max(1, budgets.refillMs(spent));
-          if (ejectionWaitMs + refillMs <= MAX_RETRY_BACKOFF_MS) {
+          if (!background && ejectionWaitMs + refillMs <= MAX_RETRY_BACKOFF_MS) {
             ejectionWaitMs += refillMs;
             await pause(refillMs);
             continue;
@@ -873,12 +920,12 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     if (closed) return;
     const probe = probeCall();
     const picked = board.pick(probe.method, NO_BAR, "best", random);
-    if (!picked || breaker.isOpen(picked.id) || !budgets.has(picked.id)) return;
+    // A cache head tick is background work: it may run only when a token remains for a caller.
+    if (!picked || breaker.isOpen(picked.id) || !spare(picked.id)) return;
     const target = byId.get(picked.id);
     if (target?.supports(probe.method) !== true) return;
-    const remaining = budgets.remaining(picked.id);
-    const reason = await checkChain(target, undefined, remaining === null || remaining >= 2);
-    if (reason || closed || breaker.isOpen(picked.id) || !budgets.has(picked.id)) return;
+    const reason = await checkChain(target, undefined, true);
+    if (reason || closed || breaker.isOpen(picked.id) || !spare(picked.id)) return;
     await start(picked, probe.method, probe.params, undefined, false, false).promise.then(
       () => undefined,
       () => undefined,

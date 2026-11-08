@@ -45,9 +45,25 @@ describe("Robinhood mainnet", () => {
       expect(pool.endpoints.length).toBeLessThanOrEqual(5);
       expect(pool.snapshot()[0]?.tokens).toBeNull();
       expect(ROBINHOOD_MAINNET_REGISTRY[0].sourceUrls).toContain("https://docs.robinhood.com/chain/connecting/");
-      expect(ROBINHOOD_MAINNET_REGISTRY[0].capabilities).toMatchObject({ archive: false, pinning: false, batch: false });
+      expect(ROBINHOOD_MAINNET_REGISTRY[0].capabilities).toMatchObject({ archive: false, pinning: false, batch: true, maxBatchSize: 10 });
       expect(mock.calls).toEqual([]);
     } finally { pool.close(); }
+  });
+
+  test("registry records re-verified providers, capabilities and the published Pocket allowance", () => {
+    expect(ROBINHOOD_MAINNET_ENDPOINTS).not.toContain("https://4663.rpc.thirdweb.com");
+    expect(ROBINHOOD_MAINNET_ENDPOINTS).toContain("https://rpc-robinhood.globalstake.io");
+    expect(ROBINHOOD_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities.archive).map(({ provider }) => provider))
+      .toEqual(["POKT Network"]);
+    for (const endpoint of ROBINHOOD_MAINNET_REGISTRY) {
+      expect(endpoint.reviewedAt).toBe("2026-11-08");
+      expect(endpoint.capabilities).toMatchObject({ batch: true, pinning: false, debug: false, trace: false, subscriptions: false });
+      expect(endpoint.capabilities.blockTags).toEqual(["latest", "pending"]);
+      if (endpoint.provider === "POKT Network") expect(endpoint).toMatchObject({ rps: 33 });
+      else expect("rps" in endpoint).toBe(false);
+    }
+    expect(ROBINHOOD_MAINNET_REGISTRY.find(({ provider }) => provider === "dRPC")?.capabilities)
+      .toMatchObject({ maxBatchSize: 3, maxLogBlockRange: 100 });
   });
 
   test.each(Object.entries(ROBINHOOD_INFRASTRUCTURE).filter(([role]) => role !== "rpc"))(

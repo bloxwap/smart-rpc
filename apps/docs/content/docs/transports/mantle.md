@@ -21,7 +21,9 @@ The public provider rejects `eth_getBlockRange` and `eth_sendTransaction`. The f
 
 `eth_gasPrice` and `GasPriceOracle.gasPrice()` describe L2 execution gas. The oracle's `l1BaseFee()` is a separate L1 value; its address is exported as `MANTLE_GAS_PRICE_ORACLE`. RPC quantities, call data, and extra receipt fields pass through unchanged. The adapter does not calculate a combined transaction fee. [Mantle API](https://docs.mantle.xyz/network/for-developers/resources-and-tooling/mantle-api).
 
-Advanced public capabilities remain disabled until explicitly configured: archive state, debug/trace, safe/finalized tags, HTTP batching, and numeric state pinning. This is a conservative client policy, not a claim that a provider can never support them. Unsupported state requests fail without changing their selector to `latest`.
+Default pool members are `rpc.mantle.xyz`, PublicNode, dRPC, Pocket Network and thirdweb. On 2026-11-08, `rpc.mantle.xyz` and dRPC served historical state at block 1 and head-100k, so historical state reads route only to those two. PublicNode and Pocket reported that historical state was not available. Observed `eth_getLogs` ceilings are recorded as `maxLogBlockRange`: 100 blocks on dRPC's free plan and 1,000 on thirdweb. PublicNode rejects `eth_getLogs` calls that have no `address` filter, and those calls fail over.
+
+Other advanced public capabilities remain disabled until explicitly configured: debug/trace, safe/finalized tags, HTTP batching, and numeric state pinning. This is a conservative client policy, not a claim that a provider can never support them. Unsupported state requests fail without changing their selector to `latest`.
 
 ```ts
 const transport = mantle({

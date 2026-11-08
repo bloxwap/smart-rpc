@@ -30,7 +30,7 @@ export const OPBNB_MAINNET_REGISTRY: readonly OpBnbPublicRpcEndpoint[] = [
     url: "https://opbnb-mainnet-rpc.bnbchain.org",
     provider: "BNB Chain",
     sourceUrls: [networkDocs, chainList],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     capabilities: { ...conservativeCapabilities },
   },
   {
@@ -38,7 +38,7 @@ export const OPBNB_MAINNET_REGISTRY: readonly OpBnbPublicRpcEndpoint[] = [
     url: "https://opbnb-rpc.publicnode.com",
     provider: "PublicNode",
     sourceUrls: [networkDocs, chainList, "https://opbnb.publicnode.com/"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     websocketUrl: "wss://opbnb-rpc.publicnode.com",
     capabilities: { ...conservativeCapabilities },
   },
@@ -47,8 +47,12 @@ export const OPBNB_MAINNET_REGISTRY: readonly OpBnbPublicRpcEndpoint[] = [
     url: "https://opbnb.drpc.org",
     provider: "dRPC",
     sourceUrls: [networkDocs, chainList, "https://drpc.org/chainlist/opbnb"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
+    // eth_getLogs returned HTTP 500 "Temporary internal error" or HTTP 408 "free plan"
+    // timeouts for every range tried (1-50 blocks, with and without an address) on
+    // 2026-11-07/08; the other opBNB defaults answer the same filters.
     unsupportedMethods: [
+      "eth_getLogs",
       "eth_newFilter",
       "eth_newBlockFilter",
       "eth_newPendingTransactionFilter",
@@ -63,15 +67,16 @@ export const OPBNB_MAINNET_REGISTRY: readonly OpBnbPublicRpcEndpoint[] = [
     url: "https://204.rpc.thirdweb.com",
     provider: "thirdweb",
     sourceUrls: [networkDocs, chainList, "https://thirdweb.com/opbnb"],
-    reviewedAt: "2026-11-07",
-    capabilities: { ...conservativeCapabilities },
+    reviewedAt: "2026-11-08",
+    // Historical state verified 2026-11-08 (block 1 plus five spread blocks, separate runs).
+    capabilities: { ...conservativeCapabilities, archive: true },
   },
   {
     id: "opbnb-pocket",
     url: "https://opbnb.api.pocket.network",
     provider: "Pocket Network",
     sourceUrls: [networkDocs, chainList, "https://api.pocket.network/"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     capabilities: { ...conservativeCapabilities },
   },
 ];

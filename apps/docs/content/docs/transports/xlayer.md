@@ -22,7 +22,8 @@ Both public URLs share the documented 100 requests/second/IP allowance through `
 | --- | --- |
 | Health | `eth_blockNumber`; `txpool_content` is empty and `eth_protocolVersion` is zero by design |
 | Method support | Documented allowlist; debug tracing requires an explicit capability |
-| State | `latest`/`pending`; archive reads, numeric pinning and safe/finalized tags require provider verification and configuration |
+| State | `latest`/`pending`. Historical state routes to OKX, dRPC and Sentio, which served state at block 1 and head-100k on 2026-11-08. Numeric pinning and safe/finalized tags require provider configuration |
+| Log ranges | `maxLogBlockRange` is 100 on OKX, dRPC and thirdweb and 1,000 on Sentio, each taken from that provider's own error. Wider ranges are rejected before sending |
 | Wire batches | Disabled until the provider is verified; no invented numeric batch limit |
 | WebSocket | Explicit URLs are exported separately; HTTP defaults do not enable subscriptions |
 

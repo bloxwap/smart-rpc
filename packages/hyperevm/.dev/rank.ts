@@ -10,7 +10,7 @@ import {
   type MainnetRegistryFile,
   type RegistryHistoryFile,
 } from "../src/registry/data.ts";
-import type { ProbeObservation } from "../src/registry/policy.ts";
+import { LOGS_RANGE_BLOCKS, type ProbeObservation } from "../src/registry/policy.ts";
 import { assignLags, mapPool, probeEndpoint } from "./probe.ts";
 
 const REGISTRY_PATH = new URL("../registry/mainnet.json", import.meta.url);
@@ -98,6 +98,7 @@ async function liveObservations(options: Options): Promise<ProbeObservation[]> {
     probeEndpoint(endpoint.url, {
       timeoutMs: options.timeoutMs,
       beforeRequest: endpointPacer(endpoint.rps),
+      logsRangeBlocks: Math.min(LOGS_RANGE_BLOCKS, endpoint.capabilities.maxLogBlockRange ?? LOGS_RANGE_BLOCKS),
     }),
   );
   return assignLags(probed);

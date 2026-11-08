@@ -11,8 +11,8 @@ export interface HyperEvmPublicEndpoint extends PublicRpcEndpoint, RegistryRanki
 }
 
 /**
- * Public defaults enable only documented state access. Operators may opt in to
- * additional capabilities on explicitly configured archive or dedicated nodes.
+ * Public defaults enable only documented or live-verified state access. Operators may
+ * opt in to additional capabilities on explicitly configured archive or dedicated nodes.
  */
 const publicCapabilities: NonNullable<EthereumEndpointConfig["capabilities"]> = {
   archive: false,
@@ -37,7 +37,28 @@ export const HYPEREVM_RPC_URL = "https://rpc.hyperliquid.xyz/evm";
 /** Official HyperEVM testnet HTTP RPC. */
 export const HYPEREVM_TESTNET_RPC_URL = "https://rpc.hyperliquid-testnet.xyz/evm";
 
-const reviewedAt = "2026-11-07";
+const reviewedAt = "2026-11-08";
+
+/**
+ * Community nodes that rejected eth_getLogs above 1,000 blocks ("query exceeds max block
+ * range 1000") in live probes on 2026-11-08. Archive stays off: Hypurrscan and PublicNode
+ * (like the official RPC) answered eth_getBalance at block 1, block 1,000 and head-1M with
+ * the current balance, so they silently serve latest state for numeric selectors. Stakely
+ * mostly returned true historical values but once returned current state at block 1,000,
+ * so it is not trusted for historical reads either.
+ */
+const communityLogCapabilities: NonNullable<EthereumEndpointConfig["capabilities"]> = {
+  ...publicCapabilities,
+  maxLogBlockRange: 1_000,
+};
+
+/**
+ * dRPC's free plan accepted 101-block log ranges and rejected 102 with "ranges over 10000
+ * blocks are not supported on free plan" on mainnet and testnet (2026-11-08). dRPC mainnet
+ * returned distinct, repeatable historical balances (block 1,000, head-1M, head-100k)
+ * that matched Stakely's, so it alone enables archive; testnet refuses numeric state.
+ */
+const DRPC_FREE_LOG_BLOCK_RANGE = 100;
 
 /** dRPC disables stateful filter methods on public endpoints. */
 const drpcUnsupportedMethods: readonly string[] = [
@@ -63,6 +84,7 @@ const mainnetSources: readonly MainnetEndpointSource[] = [
     sourceUrls: [
       "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm",
       "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/json-rpc",
+      "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/rate-limits-and-user-limits",
     ],
     reviewedAt,
     capabilities: HYPEREVM_OFFICIAL_CAPABILITIES,
@@ -75,7 +97,7 @@ const mainnetSources: readonly MainnetEndpointSource[] = [
     provider: "Hypurrscan",
     sourceUrls: ["https://hyperliquid.gitbook.io/hyperliquid-docs/builder-tools/hyperevm-tools"],
     reviewedAt,
-    capabilities: publicCapabilities,
+    capabilities: communityLogCapabilities,
     rps: 1,
     burst: 2,
   },
@@ -88,7 +110,7 @@ const mainnetSources: readonly MainnetEndpointSource[] = [
       "https://drpc.org/docs/howitworks/ratelimiting",
     ],
     reviewedAt,
-    capabilities: publicCapabilities,
+    capabilities: { ...publicCapabilities, archive: true, maxLogBlockRange: DRPC_FREE_LOG_BLOCK_RANGE },
     rps: 1,
     burst: 2,
     unsupportedMethods: drpcUnsupportedMethods,
@@ -99,7 +121,7 @@ const mainnetSources: readonly MainnetEndpointSource[] = [
     provider: "Stakely",
     sourceUrls: ["https://stakely.io/web3-api-load-balancer/hyperliquid"],
     reviewedAt,
-    capabilities: publicCapabilities,
+    capabilities: communityLogCapabilities,
     rps: 1,
     burst: 2,
   },
@@ -109,7 +131,7 @@ const mainnetSources: readonly MainnetEndpointSource[] = [
     provider: "PublicNode",
     sourceUrls: ["https://publicnode.com/"],
     reviewedAt,
-    capabilities: publicCapabilities,
+    capabilities: communityLogCapabilities,
     rps: 1,
     burst: 2,
   },
@@ -147,6 +169,7 @@ const testnetSources: readonly TestnetEndpointSource[] = [
     sourceUrls: [
       "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm",
       "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/json-rpc",
+      "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/rate-limits-and-user-limits",
     ],
     reviewedAt,
     capabilities: HYPEREVM_OFFICIAL_CAPABILITIES,
@@ -162,7 +185,7 @@ const testnetSources: readonly TestnetEndpointSource[] = [
       "https://drpc.org/docs/howitworks/ratelimiting",
     ],
     reviewedAt,
-    capabilities: publicCapabilities,
+    capabilities: { ...publicCapabilities, maxLogBlockRange: DRPC_FREE_LOG_BLOCK_RANGE },
     rps: 1,
     burst: 2,
     unsupportedMethods: drpcUnsupportedMethods,

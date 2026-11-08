@@ -27,7 +27,7 @@ Consensus REST at `rpc-gbc.gnosischain.com` is a separate API. The factory rejec
 
 The network documentation gives 5-second slots, 16-slot epochs, and approximate 2.7-minute finalization. These are exported as `GNOSIS_CONSENSUS` metadata, not used to infer a block's finality. Peer head extrapolation uses 0.2 blocks/second, and the default freshness window is 30 seconds with two blocks of tolerated lag. Override `maxUnitsPerSecond` or `headLag` for your environment; probes retain the shared 4-second cadence and 60-second idle cutoff.
 
-Public defaults leave advanced capabilities disabled pending your provider verification: archive state, debug/trace, subscriptions, HTTP batching, numeric pinning, and safe/finalized tags. They carry no invented numeric rate or batch limits. Configure measured capabilities explicitly:
+The registry also includes Pocket Network, dRPC and PublicNode. Numeric historical state routes only to the starter RPC, Gateway.fm and dRPC, whose `archive` flag was verified live on 2026-11-08 (block 1 plus five spread historical blocks on separate runs); PublicNode prunes history and Pocket answered only some historical blocks. Public defaults leave the other advanced capabilities disabled pending your provider verification: debug/trace, subscriptions, HTTP batching, numeric pinning, and safe/finalized tags. They carry no invented numeric rate or batch limits. Configure measured capabilities explicitly:
 
 ```ts
 const transport = gnosis({

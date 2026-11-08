@@ -139,7 +139,19 @@ describe("Mantle mainnet", () => {
     } finally { pool.close(); }
   });
 
-  test.each(["safe", "finalized", "0x1"])("does not degrade unsupported state selector %s to latest", async (tag) => {
+  test("routes historical state only to probe-verified archive endpoints, without rewriting the selector", async () => {
+    const mock = mockRpc(({ method, params }) => method === "eth_chainId" ? "0x1388" : params?.[1]);
+    const pool = mantle({ fetchFn: mock.fetchFn, headLag: idle, race: false, budget: false });
+    const archive = new Set(MANTLE_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities?.archive).map(({ url }) => new URL(url).href));
+    try {
+      expect([...archive]).toEqual([new URL(MANTLE_RPC_URL).href, "https://mantle.drpc.org/"]);
+      for (let index = 0; index < 4; index++) expect(await pool.request({ method: "eth_getBalance", params: [address, "0x1"] })).toBe("0x1");
+      const reads = mock.calls.filter(({ method }) => method === "eth_getBalance");
+      expect(reads.every(({ url }) => archive.has(new URL(url).href))).toBe(true);
+    } finally { pool.close(); }
+  });
+
+  test.each(["safe", "finalized"])("does not degrade unsupported state selector %s to latest", async (tag) => {
     const mock = mockRpc(() => "0x1388");
     const pool = mantle({ fetchFn: mock.fetchFn, headLag: idle });
     try {

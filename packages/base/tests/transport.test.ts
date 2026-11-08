@@ -87,6 +87,35 @@ describe("Base transport", () => {
     }
   });
 
+  test("registry records re-verified capabilities, documented budgets and method exclusions", () => {
+    const byId = new Map(BASE_MAINNET_REGISTRY.map((endpoint) => [endpoint.id, endpoint]));
+    expect(byId.get("base-mainnet")?.unsupportedMethods).toEqual(["eth_getLogs"]);
+    expect(byId.get("base-drpc")?.capabilities).toMatchObject({ batch: true, maxBatchSize: 3, maxLogBlockRange: 100 });
+    expect(byId.get("base-pocket")?.rps).toBe(33);
+    expect(BASE_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities?.archive).map(({ id }) => id))
+      .toEqual(["base-mainnet", "base-drpc", "base-tenderly", "base-pocket"]);
+    for (const endpoint of BASE_MAINNET_REGISTRY) {
+      expect(endpoint.reviewedAt).toBe("2026-11-08");
+      expect(endpoint.capabilities).toMatchObject({ batch: true, debug: false, trace: false, subscriptions: false, pinning: false });
+      expect(endpoint.capabilities?.maxBatchSize).toBeLessThanOrEqual(10);
+      if (endpoint.provider !== "Pocket Network") expect(endpoint.rps).toBeUndefined();
+    }
+  });
+
+  test("routes registry log queries away from the official endpoint and dRPC's wide spans", async () => {
+    const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x2105" : method === "eth_getLogs" ? [] : "0x64");
+    const client = base({ fetchFn: mock.fetchFn, headLag: idle, race: false, cache: false, routing: "best" });
+    try {
+      await client.request({ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x3e8" }] });
+      const logs = mock.calls.filter(({ method }) => method === "eth_getLogs").map(({ url }) => new URL(url).host);
+      expect(logs).toHaveLength(1);
+      expect(logs[0]).not.toBe("mainnet.base.org");
+      expect(logs[0]).not.toBe("base.drpc.org");
+    } finally {
+      client.close();
+    }
+  });
+
   test.each([BASE_SEQUENCER_URL, `${BASE_SEQUENCER_URL}/?key=unused`, "https://MAINNET-SEQUENCER.BASE.ORG./rpc"])(
     "rejects the submission-only endpoint %s before probing or reading it", (url) => {
       const mock = mockRpc(() => "0x2105");
@@ -225,7 +254,7 @@ describe("Base transport", () => {
   test("does not degrade an explicitly unsupported archive read to latest", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x2105" : "0x10");
     const client = base({
-      endpoints: [{ url: BASE_RPC_URL, capabilities: BASE_MAINNET_REGISTRY[0]!.capabilities }],
+      endpoints: [{ url: BASE_RPC_URL, capabilities: BASE_MAINNET_REGISTRY.find(({ id }) => id === "base-publicnode")!.capabilities }],
       fetchFn: mock.fetchFn, headLag: idle,
     });
     try {

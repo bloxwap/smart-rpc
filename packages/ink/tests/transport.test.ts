@@ -51,7 +51,16 @@ describe("Ink mainnet", () => {
       expect(mock.calls).toEqual([]);
       expect(INK_MAINNET_REGISTRY[0].websocketUrls).toContain("wss://ws-gel.inkonchain.com");
       expect(INK_MAINNET_REGISTRY[1].websocketUrls).toEqual(["wss://rpc-qnd.inkonchain.com"]);
-      expect(client.snapshot().every(({ tokens }) => tokens === null)).toBe(true);
+      // Only Pocket publishes a keyless allowance (2,000 requests per IP per minute).
+      expect(client.snapshot().map(({ tokens }) => tokens)).toEqual(
+        INK_MAINNET_REGISTRY.map((endpoint) => ("rps" in endpoint ? Math.ceil(endpoint.rps * 2) : null)),
+      );
+      expect(INK_MAINNET_ENDPOINTS).not.toContain("https://ink.drpc.org");
+      for (const endpoint of INK_MAINNET_REGISTRY) {
+        expect(endpoint.reviewedAt).toBe("2026-11-08");
+        expect(endpoint.capabilities).toMatchObject({ archive: true, batch: true, maxBatchSize: 10, debug: false, trace: false, subscriptions: false, pinning: false });
+        expect(endpoint.capabilities.blockTags).toEqual(["latest", "pending"]);
+      }
     } finally { client.close(); }
   });
 
@@ -93,7 +102,7 @@ describe("Ink mainnet", () => {
   test("requires explicit advanced capabilities without retrying or degrading finality", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? identity : "0x10");
     const client = ink({
-      endpoints: [{ url: INK_RPC_URL, capabilities: INK_MAINNET_REGISTRY[0].capabilities }],
+      endpoints: [{ url: INK_RPC_URL, capabilities: { ...INK_MAINNET_REGISTRY[0].capabilities, archive: false } }],
       fetchFn: mock.fetchFn, headLag: noProbes,
     });
     try {

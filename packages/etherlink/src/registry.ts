@@ -19,9 +19,34 @@ export interface EtherlinkPublicRpcEndpoint extends EthereumEndpointConfig {
   readonly limits: typeof ETHERLINK_PUBLIC_LIMITS;
 }
 
+/** Disabled (-32075 "Method disabled") on every keyless endpoint in live probes. */
+const DISABLED_FILTER_METHODS = [
+  "eth_newFilter",
+  "eth_newBlockFilter",
+  "eth_newPendingTransactionFilter",
+  "eth_getFilterChanges",
+  "eth_getFilterLogs",
+  "eth_uninstallFilter",
+] as const;
+
+/** Filters plus eth_getProof, which returns -32004 "Method not supported" everywhere. */
+const UNSUPPORTED_METHODS: readonly string[] = [...DISABLED_FILTER_METHODS, "eth_getProof"];
+
+/**
+ * Etherlink nodes reject `safe` with terminal -32600, and answer `finalized`,
+ * `pending` and `earliest` for blocks and state (live probes 2026-11-08).
+ */
+const VERIFIED_BLOCK_TAGS = ["latest", "pending", "finalized", "earliest"] as const;
+
 /**
  * The 16 requests/second, burst 4 client budget stays below 1000/minute.
- * Unknown optional capabilities remain disabled until a provider is verified.
+ * `archive` is true only where state at block 1 was served in live probes.
+ * Other optional capabilities stay disabled until a provider is verified.
+ *
+ * dRPC (`etherlink.drpc.org`) was removed on 2026-11-08. Its reported head froze
+ * for about 25 seconds at a time, reaching 21 blocks behind, in three separate
+ * runs. Its free tier also rejects batches larger than 3 and log ranges over
+ * about 100 blocks.
  */
 export const ETHERLINK_MAINNET_REGISTRY: readonly EtherlinkPublicRpcEndpoint[] = [
   {
@@ -33,15 +58,16 @@ export const ETHERLINK_MAINNET_REGISTRY: readonly EtherlinkPublicRpcEndpoint[] =
       "https://docs.etherlink.com/evm/tools/node-providers/",
       "https://chainlist.org/chain/42793",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
+    unsupportedMethods: UNSUPPORTED_METHODS,
     rps: 16,
     burst: 4,
     providerGroup: "etherlink-public",
     providerBudget: { rps: 16, burst: 4 },
     limits: ETHERLINK_PUBLIC_LIMITS,
     capabilities: {
-      archive: false,
-      blockTags: ["latest"],
+      archive: true,
+      blockTags: VERIFIED_BLOCK_TAGS,
       pinning: false,
       batch: false,
       debug: false,
@@ -58,49 +84,16 @@ export const ETHERLINK_MAINNET_REGISTRY: readonly EtherlinkPublicRpcEndpoint[] =
       "https://chainlist.org/chain/42793",
       "https://www.ankr.com/docs/rpc-service/chains/chains-api/etherlink/",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
+    unsupportedMethods: UNSUPPORTED_METHODS,
     rps: 16,
     burst: 4,
     providerGroup: "etherlink-ankr-public",
     providerBudget: { rps: 16, burst: 4 },
     limits: ETHERLINK_PUBLIC_LIMITS,
     capabilities: {
-      archive: false,
-      blockTags: ["latest"],
-      pinning: false,
-      batch: false,
-      debug: false,
-      trace: false,
-      subscriptions: false,
-      maxLogBlockRange: ETHERLINK_PUBLIC_LIMITS.maxLogBlockRange,
-    },
-  },
-  {
-    id: "etherlink-drpc-public",
-    url: "https://etherlink.drpc.org",
-    provider: "dRPC",
-    sourceUrls: [
-      "https://chainlist.org/chain/42793",
-      "https://drpc.org/chainlist/etherlink-mainnet-rpc",
-      "https://drpc.org/docs/howitworks/ratelimiting",
-    ],
-    reviewedAt: "2026-11-07",
-    unsupportedMethods: [
-      "eth_newFilter",
-      "eth_newBlockFilter",
-      "eth_newPendingTransactionFilter",
-      "eth_getFilterChanges",
-      "eth_getFilterLogs",
-      "eth_uninstallFilter",
-    ],
-    rps: 16,
-    burst: 4,
-    providerGroup: "etherlink-drpc-public",
-    providerBudget: { rps: 16, burst: 4 },
-    limits: ETHERLINK_PUBLIC_LIMITS,
-    capabilities: {
-      archive: false,
-      blockTags: ["latest"],
+      archive: true,
+      blockTags: VERIFIED_BLOCK_TAGS,
       pinning: false,
       batch: false,
       debug: false,
@@ -117,21 +110,24 @@ export const ETHERLINK_MAINNET_REGISTRY: readonly EtherlinkPublicRpcEndpoint[] =
       "https://thirdweb.com/etherlink",
       "https://portal.thirdweb.com/infrastructure/rpc-edge/overview",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
+    unsupportedMethods: UNSUPPORTED_METHODS,
     rps: 16,
     burst: 4,
     providerGroup: "etherlink-thirdweb-public",
     providerBudget: { rps: 16, burst: 4 },
     limits: ETHERLINK_PUBLIC_LIMITS,
     capabilities: {
+      // Historical state calls hit its public-good rate limit, so archive is unverified.
       archive: false,
-      blockTags: ["latest"],
+      blockTags: VERIFIED_BLOCK_TAGS,
       pinning: false,
       batch: false,
       debug: false,
       trace: false,
       subscriptions: false,
-      maxLogBlockRange: ETHERLINK_PUBLIC_LIMITS.maxLogBlockRange,
+      // Its own -32005 reply: "Maximum allowed number of requested blocks is 112".
+      maxLogBlockRange: 100,
     },
   },
 ];

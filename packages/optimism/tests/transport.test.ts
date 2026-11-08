@@ -146,7 +146,16 @@ describe("OP Mainnet transport", () => {
       expect(OPTIMISM_MAINNET_ENDPOINTS[0]).toBe(OPTIMISM_RPC_URL);
       expect(client.endpoints.map(({ url }) => url)).toEqual(OPTIMISM_MAINNET_ENDPOINTS);
       expect(OPTIMISM_MAINNET_REGISTRY[0]?.rps).toBeUndefined();
-      expect(OPTIMISM_MAINNET_REGISTRY.every(({ capabilities }) => capabilities?.archive === false)).toBe(true);
+      expect(OPTIMISM_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities?.archive).map(({ id }) => id))
+        .toEqual(["optimism-mainnet", "optimism-drpc", "optimism-tenderly"]);
+      expect(OPTIMISM_MAINNET_REGISTRY[0]?.capabilities).toMatchObject({ batch: true, maxBatchSize: 10 });
+      expect(OPTIMISM_MAINNET_REGISTRY.find(({ id }) => id === "optimism-drpc")?.capabilities)
+        .toMatchObject({ batch: true, maxBatchSize: 3, maxLogBlockRange: 100 });
+      expect(OPTIMISM_MAINNET_REGISTRY.find(({ id }) => id === "optimism-pocket")?.rps).toBe(33);
+      for (const endpoint of OPTIMISM_MAINNET_REGISTRY) {
+        expect(endpoint.reviewedAt).toBe("2026-11-08");
+        expect(endpoint.capabilities).toMatchObject({ debug: false, trace: false, subscriptions: false, pinning: false });
+      }
       expect(mock.calls).toEqual([]);
     } finally {
       client.close();
@@ -290,8 +299,15 @@ describe("OP Mainnet transport", () => {
   });
 
   test.each([
-    { name: "official URL", endpoint: OPTIMISM_MAINNET_REGISTRY[0]! },
-    { name: "official URL with trailing slash", endpoint: { ...OPTIMISM_MAINNET_REGISTRY[0]!, url: `${OPTIMISM_RPC_URL}/` } },
+    { name: "PublicNode registry entry", endpoint: OPTIMISM_MAINNET_REGISTRY.find(({ id }) => id === "optimism-publicnode")! },
+    {
+      name: "official URL with trailing slash and archive disabled",
+      endpoint: {
+        ...OPTIMISM_MAINNET_REGISTRY[0]!,
+        url: `${OPTIMISM_RPC_URL}/`,
+        capabilities: { ...OPTIMISM_MAINNET_REGISTRY[0]!.capabilities, archive: false },
+      },
+    },
   ])("does not degrade an unsupported public archive read to latest ($name)", async ({ endpoint }) => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0xa" : "0x10");
     const client = optimism({ endpoints: [endpoint], fetchFn: mock.fetchFn, headLag: idle });
