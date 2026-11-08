@@ -48,7 +48,9 @@ describe("Plasma transport", () => {
       expect(client.endpoints.length).toBeLessThanOrEqual(5);
       expect(PLASMA_MAINNET.nativeCurrency).toEqual({ name: "Plasma", symbol: "XPL", decimals: 18 });
       expect(PLASMA_MAINNET.blockTime).toBe(1_000);
-      expect(PLASMA_MAINNET_REGISTRY[0].capabilities).toMatchObject({ archive: false, batch: false, subscriptions: false });
+      expect(PLASMA_MAINNET_REGISTRY[0].capabilities).toMatchObject({ archive: true, pinning: false, batch: false, subscriptions: false });
+      expect(PLASMA_MAINNET_REGISTRY.map(({ provider }) => provider)).toEqual(["Plasma", "Tenderly", "thirdweb"]);
+      expect(PLASMA_MAINNET_ENDPOINTS.some((url) => url.includes("tatum.io"))).toBe(false);
       expect(client.snapshot()[0]?.tokens).toBeNull();
       expect(mock.calls).toHaveLength(0);
     } finally { client.close(); }
@@ -87,7 +89,8 @@ describe("Plasma transport", () => {
 
   test("routes historical/finalized state only to configured capable providers without degrading the tag", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? identity : "0x0");
-    const client = plasma({ ...offline, endpoints: [PLASMA_MAINNET_REGISTRY[0], {
+    const thirdweb = PLASMA_MAINNET_REGISTRY.find(({ provider }) => provider === "thirdweb")!;
+    const client = plasma({ ...offline, endpoints: [thirdweb, {
       url: "https://archive.example/rpc",
       capabilities: { archive: true, blockTags: ["latest", "pending", "safe", "finalized"], pinning: true },
     }], routing: "best", fetchFn: mock.fetchFn });

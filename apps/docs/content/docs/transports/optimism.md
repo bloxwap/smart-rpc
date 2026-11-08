@@ -19,7 +19,7 @@ rpc.close();
 
 `optimism()` registers mainnet only: chain ID 10 and native ETH with 18 decimals. It composes the canonical Ethereum transport and shared core; it does not implement another retry, race, cache, or scoring policy.
 
-The [official connection guide](https://docs.optimism.io/op-mainnet/network-information/connecting-to-op) documents `https://mainnet.optimism.io` as a rate-limited public RPC without general WebSocket support. No numeric quota or batch ceiling is assumed. `OPTIMISM_MAINNET_REGISTRY` exports the provider, source, review date, and capabilities. Set a local `rps`/`burst` policy or supply dedicated endpoints for sustained traffic.
+The [official connection guide](https://docs.optimism.io/op-mainnet/network-information/connecting-to-op) documents `https://mainnet.optimism.io` as a rate-limited public RPC without general WebSocket support. No numeric request quota is assumed for it. `OPTIMISM_MAINNET_REGISTRY` exports the provider, source, review date, and capabilities. Set a local `rps`/`burst` policy or supply dedicated endpoints for sustained traffic.
 
 | Endpoint or capability | Behavior |
 | --- | --- |
@@ -27,8 +27,13 @@ The [official connection guide](https://docs.optimism.io/op-mainnet/network-info
 | `mainnet-sequencer.optimism.io` | Write-only; rejected as a pool endpoint because identity and read probes do not apply. |
 | `op-mainnet-fb-ws-pub.optimism.io/ws` | Dedicated Subblocks stream; rejected as a general RPC endpoint. |
 | Public WebSocket | Scheme-swapped public RPC URLs are rejected; use a documented provider URL. |
-| Archive, debug/trace, HTTP batching, numeric pinning | Disabled on the public default because support/limits are unverified here; enable on a tested provider. |
-| Historical and pre-Bedrock state | Require a provider with the appropriate history; `archive: true` alone is not a promise of pre-Bedrock coverage. Errors remain errors, never a fallback to `latest`. |
+| Default pool | `mainnet.optimism.io`, PublicNode, dRPC, Pocket Network and Tenderly. Capabilities re-verified live on 2026-11-08. |
+| Historical state | Routed to `mainnet.optimism.io` and dRPC (state back to genesis) and Tenderly (post-Bedrock). PublicNode returns 403 and Pocket's backends answered inconsistently, so both are excluded. |
+| HTTP batching | Allowed when you enable `batch`: at most 10 items on `mainnet.optimism.io` (larger batches return 413 `-32014`), 3 on dRPC (documented) and 10 elsewhere (largest verified). |
+| Logs | dRPC receives `eth_getLogs` spans of at most 100 blocks; PublicNode rejects logs without an `address`, and those calls fail over. |
+| Budgets | Only Pocket publishes a keyless allowance (2,000 requests per IP per minute, set as `rps: 33`). |
+| Debug/trace, numeric pinning | Disabled on the public defaults; enable on a tested provider. |
+| Pre-Bedrock state | `archive: true` is not a promise of pre-Bedrock coverage (Tenderly lacks it). Errors remain errors, never a fallback to `latest`. |
 
 The [OP finality reference](https://docs.optimism.io/op-stack/transactions/transaction-finality) distinguishes `latest` (unsafe sequencer head), `safe` (data included on Ethereum), and `finalized` (Ethereum-finalized data). The transport preserves the requested tag and separates cache/coalescing keys by parameters. A Subblocks preconfirmation never becomes a full-block probe head. Provider acceptance of finality tags can be checked with the opt-in test; timing is not used to manufacture a finalized result.
 

@@ -248,7 +248,10 @@ describe("public registry composition", () => {
         expect(snapshots).toHaveLength(eligible.length);
         for (const entry of eligible) {
           const snapshot = snapshots.find((row) => row.url === entry.url);
-          expect(snapshot?.tokens).toBe(entry.burst);
+          const rps = "rps" in entry ? entry.rps : undefined;
+          const burst = "burst" in entry ? entry.burst : undefined;
+          // Unbudgeted endpoints have no bucket; an rps without burst defaults to two seconds of refill.
+          expect(snapshot?.tokens).toBe(rps === undefined ? null : (burst ?? Math.max(1, Math.ceil(rps * 2))));
           if ("weight" in entry) expect(snapshot?.weight).toBe(entry.weight);
         }
       }

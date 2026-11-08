@@ -22,7 +22,6 @@ const clusters = [
       "https://solana.api.pocket.network",
       "https://api.mainnet.solana.com",
       "https://public.rpc.solanavibestation.com",
-      "https://solana-mainnet.gateway.tatum.io",
     ],
   },
   {
@@ -41,7 +40,6 @@ const clusters = [
     urls: [
       "https://api.testnet.solana.com",
       "https://solana-testnet-rpc.publicnode.com",
-      "https://solana-testnet.web3cdn.rest",
     ],
   },
 ] as const;
@@ -114,9 +112,30 @@ describe("Solana public registry", () => {
     }
   });
 
+  test("PublicNode never receives token-gated indexed methods", () => {
+    const gated = [
+      "getProgramAccounts", "getTokenAccountsByOwner", "getTokenAccountsByDelegate", "getTokenAccountBalance",
+      "getTokenSupply", "getTokenLargestAccounts", "getSupply", "getLargestAccounts",
+    ];
+    for (const registry of [MAINNET_REGISTRY, TESTNET_REGISTRY]) {
+      const publicNode = registry.find((endpoint) => endpoint.provider === "PublicNode");
+      expect(publicNode?.unsupportedMethods).toEqual(gated);
+    }
+    expect(MAINNET_REGISTRY.find((endpoint) => endpoint.id === "pocket")?.unsupportedMethods)
+      .toEqual(["getTokenAccountsByOwner", "getProgramAccounts"]);
+  });
+
+  test("keyless Tatum stays a devnet-only fallback budgeted under its 5 requests/minute ceiling", () => {
+    expect(MAINNET_REGISTRY.some((endpoint) => endpoint.provider === "Tatum")).toBe(false);
+    const tatum = DEVNET_REGISTRY.find((endpoint) => endpoint.provider === "Tatum")!;
+    // A full bucket plus one minute of refill must stay within the 5 requests/minute ceiling.
+    expect((tatum.burst ?? 1) + tatum.rps * 60).toBeLessThanOrEqual(5);
+    expect(tatum.unsupportedMethods).toEqual(expect.arrayContaining(["getBalance", "getProgramAccounts", "getTokenAccountsByOwner"]));
+  });
+
   test("known method restrictions skip Pocket during configured failover", async () => {
     const calls: { url: string; method: string }[] = [];
-    const first = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "publicnode")!;
+    const first = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "solanavibestation")!;
     const pocket = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "pocket")!;
     const fallback = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "solana")!;
     const pool = solana({

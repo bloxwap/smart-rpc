@@ -7,7 +7,7 @@ export {
   type EthereumOptions,
 } from "./transport.js";
 export { asViemTransport } from "./adapter.js";
-export { ETHEREUM_MAINNET_REGISTRY } from "./registry.js";
+export { ETHEREUM_MAINNET_REGISTRY, type EthereumPublicRpcEndpoint } from "./registry.js";
 export {
   connectViem,
   type ViemConnection,

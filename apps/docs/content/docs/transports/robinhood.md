@@ -25,7 +25,18 @@ Robinhood mainnet uses chain ID **4663**, native **ETH** with 18 decimals, and t
 
 `ROBINHOOD_INFRASTRUCTURE` records those URLs with explicit roles. Supplying a known sequencer or feed URL in `endpoints` throws before making a network request. Feed updates never enter full-block head scoring. [Infrastructure roles](https://docs.robinhood.com/chain/connecting/).
 
-The public endpoint starts with conservative client capabilities: no automatic numeric pinning, archive state, debug/trace, JSON batching, or subscriptions. Only `latest` and `pending` state tags are enabled. These restrictions express what this package enables, rather than claiming the server cannot support anything else. A request for historical, `safe`, or `finalized` state fails when no endpoint advertises support; its block selector is never changed to `latest`.
+The default pool is the official RPC, PublicNode, Pocket Network, GlobalStake and dRPC. GlobalStake (a provider named in the official connection guide, with its URL listed on [Chainlist](https://chainlist.org/chain/4663)) replaced thirdweb on 2026-11-08. thirdweb trailed the head by about 7 blocks, returned occasional HTTP 429s at 4–5 requests per second, and ran about 150 ms at the median. GlobalStake answered in about 77 ms, usually within one or two blocks of the head, with no errors at 5 requests per second.
+
+Capabilities were re-verified live on 2026-11-08:
+
+- **Historical state:** routed only to Pocket, the one provider that served it consistently. The official RPC and GlobalStake are full nodes, PublicNode returns 403 for anything older than roughly 60–100 blocks, and dRPC alternated between answers and "Unknown state".
+- **HTTP batching:** allowed when you enable `batch`: at most 3 items on dRPC (its documented limit) and 10 elsewhere. 20-item batches succeeded, but 10 matches the other registries.
+- **Logs:** dRPC receives `eth_getLogs` spans of at most 100 blocks. PublicNode rejects logs without an `address`, and older ranges, and those calls fail over.
+- **Budgets:** only Pocket's gateway publishes a keyless allowance (2,000 requests per IP per minute, set as `rps: 33`).
+- **Not enabled:** automatic numeric pinning, debug/trace and subscriptions.
+- **Block tags:** only `latest` and `pending` are enabled. During review, Pocket's `safe` head trailed its `finalized` head.
+
+These restrictions express what this package enables, rather than claiming a server cannot support anything else. A request for historical, `safe`, or `finalized` state fails when no endpoint advertises support; its block selector is never changed to `latest`.
 
 Configure an independently verified provider explicitly:
 

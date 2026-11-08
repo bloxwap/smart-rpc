@@ -21,7 +21,9 @@ The private `@smart-rpc/opbnb` workspace package composes the shared Ethereum ad
 
 The [official network page](https://docs.bnbchain.org/bnb-opbnb/get-started/network-info/) advertises WSS generally. [PublicNode's own page and embedded endpoint configuration](https://opbnb.publicnode.com/) provide the explicit WSS URL and current HTTP hostname. The older `https://opbnb.publicnode.com` URL in network docs is the provider's landing page; it is not synthesized into a socket URL. NodeReal requires user-owned credentials and remains opt-in.
 
-Default capabilities permit latest/pending reads and ordinary execution RPC. Historical state, safe/finalized tags, debug/trace, HTTP batching, numeric state pinning and subscriptions require explicit provider configuration after verification. HTTP defaults never open a WebSocket. `OPBNB_MAINNET_WEBSOCKET_ENDPOINTS` records provider URLs; use the Ethereum adapter's dedicated WebSocket session API for notification subscriptions and reconnect/resubscribe behavior. op-node administrative/rollup APIs and sequencer feeds are not substitutes for execution RPC endpoints.
+The registry also includes dRPC, thirdweb and Pocket Network over HTTP. dRPC's public `eth_getLogs` returned HTTP 500/408 for every range tried on 2026-11-07/08, so log queries skip it. Numeric historical state routes only to thirdweb, whose `archive` flag was verified live on 2026-11-08 (block 1 plus five spread historical blocks on separate runs).
+
+Default capabilities permit latest/pending reads and ordinary execution RPC. Other historical state, safe/finalized tags, debug/trace, HTTP batching, numeric state pinning and subscriptions require explicit provider configuration after verification. HTTP defaults never open a WebSocket. `OPBNB_MAINNET_WEBSOCKET_ENDPOINTS` records provider URLs; use the Ethereum adapter's dedicated WebSocket session API for notification subscriptions and reconnect/resubscribe behavior. op-node administrative/rollup APIs and sequencer feeds are not substitutes for execution RPC endpoints.
 
 ```ts
 const dedicated = opbnb({

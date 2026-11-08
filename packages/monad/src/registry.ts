@@ -20,7 +20,7 @@ export interface MonadRpcEndpoint extends EthereumEndpointConfig {
 const networkSource = "https://docs.monad.xyz/developer-essentials/network-information";
 const limitsSource = "https://docs.monad.xyz/reference/json-rpc/overview";
 const chainlistSource = "https://chainlist.org/chain/143";
-const reviewedAt = "2026-11-07";
+const reviewedAt = "2026-11-08";
 
 /**
  * HTTP defaults. WebSocket addresses are recorded verbatim, never inferred.
@@ -28,6 +28,9 @@ const reviewedAt = "2026-11-07";
  * share a 2 rps / burst 3 bucket, bounding even singleton batches to 5 per second.
  * Network docs label rpc/rpc1 as MF; the method-limit page names their operators
  * QuickNode/Alchemy. Keep one conservative group for the Foundation aliases.
+ * Live probes on 2026-11-08 found rpc1 rejecting eth_getLogs above 101 blocks with
+ * the same "block range too large" error as rpc and monadinfra, so it uses the
+ * stricter observed 100-block range instead of the 1,000 blocks the limits page lists.
  */
 export const MONAD_MAINNET_REGISTRY: readonly MonadRpcEndpoint[] = [
   {
@@ -44,7 +47,7 @@ export const MONAD_MAINNET_REGISTRY: readonly MonadRpcEndpoint[] = [
     sourceUrls: [networkSource, chainlistSource, limitsSource], reviewedAt,
     rps: 2, burst: 3, providerGroup: "monad-foundation", providerBudget: { rps: 2, burst: 3 },
     documentedLimits: { requests: 20, windowMs: 1_000, batchSize: 100, batchesPerSecond: 5 },
-    capabilities: { archive: true, pinning: true, batch: true, maxBatchSize: 100, maxLogBlockRange: 1_000, subscriptions: false },
+    capabilities: { archive: true, pinning: true, batch: true, maxBatchSize: 100, maxLogBlockRange: 100, subscriptions: false },
   },
   {
     id: "monad-goldsky", label: "monad-goldsky", url: "https://rpc2.monad.xyz",

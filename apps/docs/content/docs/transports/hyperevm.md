@@ -14,13 +14,13 @@ const rpc = createSmartRpc({ transports: [hyperevm()] });
 await rpc.request({ chainId: "eip155:999", method: "eth_blockNumber" });
 ```
 
-The [official network documentation](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm) lists the mainnet URL `https://rpc.hyperliquid.xyz/evm` and testnet URL `https://rpc.hyperliquid-testnet.xyz/evm`. Both retain a conservative local budget of 1.5 requests/second, burst 3. This is the project's reference client setting, not a provider quota or service guarantee. Public alternatives and their sources remain exported in `HYPEREVM_MAINNET_REGISTRY` and `HYPEREVM_TESTNET_REGISTRY`.
+The [official network documentation](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm) lists the mainnet URL `https://rpc.hyperliquid.xyz/evm` and testnet URL `https://rpc.hyperliquid-testnet.xyz/evm`. Both retain a conservative local budget of 1.5 requests/second, burst 3. This stays below the official RPC's [documented 100 requests per minute](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/rate-limits-and-user-limits) and is not a service guarantee. Public alternatives and their sources remain exported in `HYPEREVM_MAINNET_REGISTRY` and `HYPEREVM_TESTNET_REGISTRY`.
 
 ## Requested state and capabilities
 
 The official RPC supports latest state reads; historical block and transaction metadata do not imply archive state access. Its capability record disables numeric pinning of latest reads and historical state routing. A request for unsupported state fails or selects a configured capable endpoint; it is never rewritten to latest. The [JSON-RPC reference](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/json-rpc) documents these restrictions.
 
-Public defaults conservatively disable unverified archive, batch, debug/trace, subscription and additional finality-tag capabilities. These flags control what this client enables; they do not assert that every public provider lacks those features. Supply verified capabilities with a dedicated endpoint to opt in:
+Only dRPC mainnet enables historical state routing. In live probes on 2026-11-08 it returned distinct, repeatable balances at old blocks. Hypurrscan and PublicNode answered every numeric block with the current balance, the same as the official RPC. Stakely did so once. They therefore keep archive off, so a historical read is never answered silently from latest state. Numeric pinning of latest reads stays off everywhere. Observed log ceilings are 1,000 blocks on the three community nodes and 100 on dRPC's free plan, on both mainnet and testnet. The ranking probe caps its log page at each endpoint's declared range, so a documented limit is not counted as downtime. Public defaults otherwise disable unverified batch, debug/trace, subscription and additional finality-tag capabilities. These flags control what this client enables; they do not assert that every public provider lacks those features. Supply verified capabilities with a dedicated endpoint to opt in:
 
 ```ts
 const transport = hyperevm({

@@ -34,9 +34,10 @@ function configureEndpoint(endpoint: EthereumEndpoint): EthereumEndpoint {
     ...known,
     ...config,
     capabilities: { ...known?.capabilities, ...config.capabilities },
-    // A dedicated provider may enable logs; the documented public dataseeds cannot.
+    // Keep each known default's own restrictions (the documented dataseeds disable
+    // eth_getLogs) without extending them to registry peers that serve logs.
     unsupportedMethods: [...new Set([
-      ...(known ? ["eth_getLogs"] : []),
+      ...(known?.unsupportedMethods ?? []),
       ...undeclaredExtensions,
       ...(config.unsupportedMethods ?? []),
     ])],

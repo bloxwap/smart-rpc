@@ -18,7 +18,7 @@ The [Helicon upgrade](https://build.avax.network/docs/primary-network/helicon-up
 
 `eth_baseFee` and `eth_suggestPriceOptions` are explicit safe read extensions. The public endpoint cannot serve `eth_getChainConfig`; a dedicated node may. Read live fees instead of baking in a historical gas-price floor: header/baseFee values are upper bounds, while receipt values describe execution. [Fee documentation](https://build.avax.network/docs/rpcs/other/guides/txn-fees)
 
-The registry records provider, sources, review date, method restrictions, and capabilities. No undocumented numeric rate or batch limit is invented. Archive, debug/trace, batching, numeric pinning, and finality-tag guarantees are disabled in the default profile until verified for the selected provider. A rejected historical/finality read is never rewritten to `latest`. Configure explicit dedicated endpoints and request budgets for production traffic:
+The registry records provider, sources, review date, method restrictions, and capabilities. No undocumented numeric rate or batch limit is invented. Numeric historical state routes only to Tenderly, whose `archive` flag was verified live on 2026-11-08 (block 1 plus five spread historical blocks on separate runs); the official node keeps 8,192 ancestors, and dRPC and PublicNode timed out on older state. Debug/trace, batching, numeric pinning, and finality-tag guarantees are disabled in the default profile until verified for the selected provider. A rejected historical/finality read is never rewritten to `latest`. Configure explicit dedicated endpoints and request budgets for production traffic:
 
 ```ts
 const dedicated = avalanche({

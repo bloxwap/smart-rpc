@@ -185,12 +185,20 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
 
 function defaultEndpoints(chainId: number): readonly EthereumEndpoint[] {
   if (chainId === 1) {
-    return ETHEREUM_MAINNET_REGISTRY.map(({ url, rps, burst, unsupportedMethods }) => ({
-      url,
-      rps,
-      burst,
-      unsupportedMethods,
-    }));
+    // Capabilities and provider budgets are routing facts: dropping them would send archive reads to a
+    // latest-only node, oversize batches or log ranges, or let URLs of one provider overspend its quota.
+    return ETHEREUM_MAINNET_REGISTRY.map((entry) => {
+      const shared = entry as { providerGroup?: string | undefined; providerBudget?: BudgetConfig | undefined };
+      return {
+        url: entry.url,
+        rps: entry.rps,
+        burst: entry.burst,
+        unsupportedMethods: entry.unsupportedMethods,
+        capabilities: entry.capabilities,
+        providerGroup: shared.providerGroup,
+        providerBudget: shared.providerBudget,
+      };
+    });
   }
   throw new Error(
     `ethereum() has no default endpoints for chain ${chainId}. Pass endpoints, or use a chain package that knows them.`,
