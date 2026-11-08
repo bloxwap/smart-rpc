@@ -43,6 +43,8 @@ const transport = xlayer({
 
 Configure only features verified against that provider. Passing an official public URL retains its public defaults; explicit per-endpoint capability overrides win. Responses and transaction fields are passed through without interpreting the network's execution stack or gas economics. There is no implicit testnet registration.
 
+Blocks arrive every about 1s (measured 2026-11-08), so the factory passes `blockTimeMs: 1000` and the default `headLag.maxLag` is 1 block, about one second of staleness. An endpoint further behind does not lead, race or hedge `latest`, `pending` or other head reads while a fresh endpoint can serve them; it still serves block-number, block-hash, `safe`/`finalized` and transaction reads, and remains a failover. Pass `blockTimeMs` or `headLag: { maxLag }` to change it.
+
 Run deterministic tests with `pnpm --filter @smart-rpc/xlayer test`. Public checks are opt-in:
 
 ```sh

@@ -13,7 +13,13 @@
 
 import { Activity } from "./activity.js";
 import { Breaker, retryAfterMs, resolveBreaker } from "./breaker.js";
-import { type BudgetConfig, Budgets, resolveDefaultBudget, resolveEndpointBudget } from "./budget.js";
+import {
+  type BudgetConfig,
+  Budgets,
+  type RateLimitOutcome,
+  resolveDefaultBudget,
+  resolveEndpointBudget,
+} from "./budget.js";
 import { type CacheStats, ReadCache, resolveCache } from "./cache.js";
 import { Coalescer, coalesceKey, isCoalescableMethod } from "./coalesce.js";
 import {
@@ -40,9 +46,16 @@ import {
   UnknownChainError,
 } from "./errors.js";
 import type { EndpointSnapshot, RpcEvent } from "./events.js";
-import { isAlreadyKnownError, isBlockNotHeldError, shouldFailover } from "./evm-methods.js";
+import {
+  isAlreadyKnownError,
+  isBlockNotHeldError,
+  isProviderRestriction,
+  isRateLimitError,
+  shouldFailover,
+} from "./evm-methods.js";
+import { blockCadence } from "./cadence.js";
 import { Operation } from "./operation.js";
-import { LatestPin, resolvePin } from "./pin.js";
+import { isHeadSensitiveRead, LatestPin, resolvePin } from "./pin.js";
 import { pickRacers, raceCalls, resolveRace } from "./race.js";
 import { backoffMs } from "./retry.js";
 import { defaultScoreConfig } from "./score.js";
@@ -91,6 +104,11 @@ interface ChainGate {
 interface ResolvedHeadLag {
   enabled: boolean;
   maxLag: number;
+  /**
+   * Lag tolerance for choosing a pinned block. Pin holders are judged on raw heads sampled at different times, so a
+   * block-time-derived `maxLag` below the default would bar endpoints only because they were probed earlier.
+   */
+  pinMaxLag: number;
   probeInterval: number | false;
   probeIdleTimeout: number | false;
   staleMs: number;
@@ -105,6 +123,45 @@ interface ResolvedHedge {
 
 const NO_BAR: ReadonlySet<string> = new Set();
 const noProgress = (): void => undefined;
+
+/** How long an endpoint that refused a request shape is not sent that shape first again. */
+const RESTRICTION_MEMORY_MS = 60_000;
+/** Remembered refusals per pool. The oldest is dropped first. */
+const RESTRICTION_ENTRIES = 256;
+/** A hex quantity, as opposed to an address or hash. */
+const QUANTITY = /^0x[0-9a-f]{1,16}$/i;
+
+/**
+ * A coarse description of a request: the method, each object parameter's key names, block tags, and whether a
+ * string is a quantity. An address-less log filter and one with an address differ, as do `"latest"` and a block
+ * number, so a gateway rule about one shape never bars another. A numeric block range adds its order of magnitude.
+ */
+function requestShape(method: string, params: unknown): string {
+  if (!Array.isArray(params)) return method;
+  const parts = params.map((param: unknown): string => {
+    if (typeof param === "string") {
+      if (/^(?:latest|pending|safe|finalized|earliest)$/.test(param)) return param;
+      return QUANTITY.test(param) ? "n" : "s";
+    }
+    if (typeof param !== "object" || param === null || Array.isArray(param)) return typeof param;
+    const record = param as Record<string, unknown>;
+    const keys = Object.keys(record).filter((key) => record[key] !== undefined && record[key] !== null).sort().join(",");
+    return `{${keys}}${spanClass(record.fromBlock, record.toBlock)}`;
+  });
+  return `${method}(${parts.join(",")})`;
+}
+
+/**
+ * The order of magnitude of a numeric block range, so a refusal of a 5,000-block log query never bars the same
+ * endpoint from leading a 50-block one. Empty when either bound is a tag or missing.
+ */
+function spanClass(fromBlock: unknown, toBlock: unknown): string {
+  if (typeof fromBlock !== "string" || typeof toBlock !== "string" || !QUANTITY.test(fromBlock) || !QUANTITY.test(toBlock)) {
+    return "";
+  }
+  const span = Math.max(0, Number.parseInt(toBlock, 16) - Number.parseInt(fromBlock, 16)) + 1;
+  return `~${Math.ceil(Math.log2(span + 1))}`;
+}
 
 /** Build a pool. Registration with {@link createSmartRpc} is separate and explicit. */
 export function createPool(options: PoolOptions): RpcPool {
@@ -129,7 +186,9 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
   const policy = options.policy;
   const now = options.now ?? ((): number => Date.now());
   const random = options.random ?? Math.random;
-  const headLag = resolveHeadLag(options.headLag);
+  const headLag = resolveHeadLag(options.headLag, policy.blockTimeMs);
+  const maxUnitsPerSecond = policy.maxUnitsPerSecond ??
+    (policy.blockTimeMs === undefined ? undefined : blockCadence(policy.blockTimeMs).maxUnitsPerSecond);
   const hedge = resolveHedge(options.hedge);
   const raceRivals = resolveRace(options.race);
   const routing = options.routing ?? "p2c";
@@ -153,6 +212,9 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     take: (id: string): boolean => budgetStore.take(budgetId(id)),
     remaining: (id: string): number | null => budgetStore.remaining(budgetId(id)),
     refillMs: (ids: Iterable<string>): number => budgetStore.refillMs([...ids].map(budgetId)),
+    heldMs: (id: string): number => budgetStore.heldMs(budgetId(id)),
+    rateLimited: (id: string, retryAfter: number): RateLimitOutcome => budgetStore.rateLimited(budgetId(id), retryAfter),
+    served: (id: string): void => budgetStore.served(budgetId(id)),
   };
   for (const endpoint of built) budgets.configure(endpoint.id, endpoint.budget, endpoint.providerGroup, endpoint.providerBudget);
   /**
@@ -177,7 +239,36 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
   const scoreConfig = { ...defaultScoreConfig, ...options.score };
   const failoverOf = policy.shouldFailover ?? shouldFailover;
   const benignMiss = policy.isBenignMiss ?? isBlockNotHeldError;
+  const rateLimited = policy.isRateLimited ?? isRateLimitError;
+  const restricted = policy.isRestriction ?? isProviderRestriction;
+  const headSensitive = policy.isHeadSensitive ?? isHeadSensitiveRead;
   const alreadyKnown = policy.isAlreadyKnown ?? isAlreadyKnownError;
+  /**
+   * Request shapes an endpoint's policy refused recently, by endpoint and shape, with when the memory ends. Such an
+   * endpoint does not lead that shape again while another can, so one gateway rule costs one round trip a minute.
+   */
+  const restrictions = new Map<string, number>();
+  /** Endpoints that refused this request's shape in the last {@link RESTRICTION_MEMORY_MS}. */
+  const restrictedFor = (method: string, params: unknown): ReadonlySet<string> => {
+    if (restrictions.size === 0) return NO_BAR;
+    const shape = requestShape(method, params);
+    const at = now();
+    const ids = new Set<string>();
+    for (const endpoint of built) {
+      const key = `${endpoint.id}\u0000${shape}`;
+      const until = restrictions.get(key);
+      if (until === undefined) continue;
+      if (until > at) ids.add(endpoint.id);
+      else restrictions.delete(key);
+    }
+    return ids;
+  };
+  const noteRestriction = (id: string, method: string, params: unknown): void => {
+    const key = `${id}\u0000${requestShape(method, params)}`;
+    restrictions.delete(key);
+    restrictions.set(key, now() + RESTRICTION_MEMORY_MS);
+    if (restrictions.size > RESTRICTION_ENTRIES) restrictions.delete(restrictions.keys().next().value as string);
+  };
   const listeners = new Set<(event: RpcEvent) => void>();
   const emit = (event: RpcEvent): void => {
     try {
@@ -220,7 +311,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       maxLag: headLag.maxLag,
       staleMs: headLag.staleMs,
       maxAhead: headLag.maxAhead,
-      maxUnitsPerSecond: policy.maxUnitsPerSecond,
+      maxUnitsPerSecond,
       config: scoreConfig,
       now,
       ejected: (id: string): boolean => breaker.isOpen(id),
@@ -243,7 +334,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
         pinConfig,
         {
           heads: (maxAgeMs: number) => board.heads(maxAgeMs),
-          maxLag: headLag.maxLag,
+          maxLag: headLag.pinMaxLag,
           servable: (id: string, method: string): boolean => servable(id, method) && byId.get(id)?.pinning === true,
         },
         policy.probeMethod,
@@ -303,6 +394,16 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
   const closeCircuit = (endpoint: RankedEndpoint, call: boolean): void => {
     if (!call && breaker.isOpen(endpoint.id)) return;
     if (breaker.success(endpoint.id, !call)) emit({ type: "restore", endpoint: endpoint.url });
+  };
+
+  /**
+   * A rate-limited answer cools the endpoint down and cuts its request rate instead of striking its breaker or
+   * its score. It is skipped like a spent budget meanwhile, and probes leave it alone.
+   */
+  const throttle = (endpoint: BuiltEndpoint, error: Error): void => {
+    const asked = Math.max(retryAfterMs(error, now()), endpoint.retryAfter());
+    const outcome = budgets.rateLimited(endpoint.id, asked);
+    emit({ type: "throttle", endpoint: endpoint.url, cooldownMs: outcome.cooldownMs, rps: outcome.rps, error });
   };
 
   const openCircuit = (endpoint: RankedEndpoint, error: Error, call: boolean): void => {
@@ -370,8 +471,9 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       (error: unknown): Error => {
         const wrapped = toError(error);
         const latencyMs = Math.max(0, now() - started);
-        const terminal = !failoverOf(wrapped);
-        board.failure(endpoint.id, policy.identityMethod, latencyMs, false, timeout);
+        const limited = rateLimited(wrapped);
+        const terminal = !limited && !failoverOf(wrapped);
+        if (!limited) board.failure(endpoint.id, policy.identityMethod, latencyMs, false, timeout);
         emit({
           type: "error",
           endpoint: endpoint.url,
@@ -380,7 +482,8 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
           error: wrapped,
           terminal,
         });
-        if (!terminal) openCircuit(endpoint, wrapped, false);
+        if (limited) throttle(endpoint, wrapped);
+        else if (!terminal) openCircuit(endpoint, wrapped, false);
         return wrapped;
       },
     ).finally(() => controller.abort());
@@ -510,6 +613,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       .then((outcome) => {
         const latencyMs = Math.max(0, now() - started);
         if (outcome.kind === "result") {
+          budgets.served(endpoint.id);
           if (!state.ignore) {
             board.success(endpoint.id, method, latencyMs, sampleLatency);
             noteHead(target, method, outcome.result, params);
@@ -527,6 +631,18 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
           emit({ type: "error", endpoint: endpoint.url, method, latencyMs, error: wrapped, terminal: false });
         } else if (!state.ignore && !callerAbort && target.supports(method) && benignMiss(wrapped)) {
           emit({ type: "error", endpoint: endpoint.url, method, latencyMs, error: wrapped, terminal: false });
+        } else if (!state.ignore && !callerAbort && rateLimited(wrapped)) {
+          // Over its rate, not unhealthy: no score or breaker strike, a cooldown and a lower rate instead.
+          emit({ type: "error", endpoint: endpoint.url, method, latencyMs, error: wrapped, terminal: false });
+          throttle(target, wrapped);
+        } else if (
+          !state.ignore && !callerAbort && target.supports(method) && method !== policy.probeMethod && restricted(wrapped)
+        ) {
+          // This endpoint's policy refused this request shape. It answered, so it is healthy; the call fails over.
+          // A refused head probe is no shape rule ("Request blocked" for every request): it counts as a failure below.
+          noteRestriction(endpoint.id, method, params);
+          emit({ type: "error", endpoint: endpoint.url, method, latencyMs, error: wrapped, terminal: false });
+          closeCircuit(endpoint, sampleLatency);
         } else if (!state.ignore && !callerAbort && target.supports(method)) {
           const terminal = !failoverOf(wrapped);
           if (terminal) board.success(endpoint.id, method, latencyMs, sampleLatency);
@@ -561,6 +677,26 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
         end();
       },
     };
+  };
+
+  /**
+   * Endpoints that should not lead this call, or none when no other endpoint could lead it now. An endpoint lagging
+   * past `maxLag` does not lead a head read (a pinned read already bars endpoints that lack its block), and one that
+   * refused this request shape in the last minute does not lead it again. The alternative must be verified, closed,
+   * funded, and itself not avoided.
+   */
+  const avoidAsLead = (method: string, params: unknown, exclude: ReadonlySet<string>): ReadonlySet<string> => {
+    let head: boolean | undefined;
+    const refused = restrictedFor(method, params);
+    const avoid = new Set<string>();
+    let alternative = false;
+    for (const endpoint of built) {
+      if (exclude.has(endpoint.id)) continue;
+      const lagging = headLag.enabled && board.lagging(endpoint.id) && (head ??= headSensitive(method, params));
+      if (lagging || refused.has(endpoint.id)) avoid.add(endpoint.id);
+      else if (!alternative && servable(endpoint.id, method) && budgets.has(endpoint.id)) alternative = true;
+    }
+    return alternative ? avoid : NO_BAR;
   };
 
   const barredFrom = (holders: ReadonlySet<string> | undefined): ReadonlySet<string> =>
@@ -680,6 +816,13 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       }
     }
     const exclude = new Set<string>(barred);
+    // Endpoints that should not lead this call while a fresh, verified, funded endpoint can: those lagging past
+    // maxLag, for a read that answers from the head, and those whose policy refused this request shape recently.
+    // They stay available as fallbacks once the first attempt has failed.
+    const avoided = avoidAsLead(method, params, exclude);
+    for (const id of avoided) exclude.add(id);
+    /** `exclude.size` while no endpoint has been tried yet in this round. */
+    let untried = exclude.size;
     const errors: Error[] = [];
     const retries = idempotent || rebroadcast;
     const racing = idempotent && raceRivals > 0 && !background;
@@ -732,15 +875,18 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
             continue;
           }
           exhausted = new BudgetExhaustedError(spent, refillMs);
-          if (exclude.size === barred.size || newRound) break;
+          if (exclude.size === untried || newRound) break;
         }
-        if (attempt === 0 && !allowEjected && !newRound && errors.length === 0 && exclude.size === barred.size) {
+        if (attempt === 0 && !allowEjected && !newRound && errors.length === 0 && exclude.size === untried) {
           allowEjected = true;
           continue;
         }
-        if (exclude.size > barred.size && !newRound) {
+        if (exclude.size > untried && !newRound) {
           exclude.clear();
           for (const id of barred) exclude.add(id);
+          // An endpoint that refused this request shape would refuse it again.
+          for (const id of restrictedFor(method, params)) exclude.add(id);
+          untried = exclude.size;
           const candidate = board.pick(method, exclude, "best", random);
           if (!candidate || ejectionWaitMs + breaker.remaining(candidate.id) > MAX_RETRY_BACKOFF_MS) break;
           await pause(backoffMs(round, retryBackoff, random));
@@ -793,6 +939,11 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
           (!failoverOf(wrapped) && !isUnsupportedMethod(wrapped)) || options.shouldThrow?.(wrapped) === true;
         if (stop) throw wrapped;
         previous = endpoint;
+        // Avoided endpoints only lose the lead. The failover may use them.
+        if (attempt === 0 && avoided.size > 0) {
+          const refused = restrictedFor(method, params);
+          for (const id of avoided) if (!refused.has(id) && exclude.delete(id)) untried -= 1;
+        }
       }
     }
     if (errors.length === 1) {
@@ -1029,6 +1180,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
         quarantined: quarantined(entry.id),
         ejected: breaker.isOpen(entry.id),
         tokens: budgets.remaining(entry.id),
+        throttledMs: budgets.heldMs(entry.id),
       })),
     scores: (): ScoreSnapshot => warm.scores(),
     restoreScores: (snapshot: unknown): boolean => warm.restore(snapshot),
@@ -1053,11 +1205,12 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
   return pool;
 }
 
-function resolveHeadLag(value: boolean | HeadLagOptions | undefined): ResolvedHeadLag {
+function resolveHeadLag(value: boolean | HeadLagOptions | undefined, blockTimeMs: number | undefined): ResolvedHeadLag {
   if (value === false) {
     return {
       enabled: false,
       maxLag: DEFAULT_MAX_LAG,
+      pinMaxLag: DEFAULT_MAX_LAG,
       probeInterval: false,
       probeIdleTimeout: DEFAULT_PROBE_IDLE_MS,
       staleMs: DEFAULT_STALE_MS,
@@ -1065,9 +1218,11 @@ function resolveHeadLag(value: boolean | HeadLagOptions | undefined): ResolvedHe
     };
   }
   const options = value === true || value === undefined ? {} : value;
+  const derived = blockTimeMs === undefined ? undefined : blockCadence(blockTimeMs).maxLag;
   return {
     enabled: true,
-    maxLag: options.maxLag ?? DEFAULT_MAX_LAG,
+    maxLag: options.maxLag ?? derived ?? DEFAULT_MAX_LAG,
+    pinMaxLag: options.maxLag ?? Math.max(derived ?? DEFAULT_MAX_LAG, DEFAULT_MAX_LAG),
     probeInterval: options.probeInterval === undefined ? DEFAULT_PROBE_MS : options.probeInterval,
     probeIdleTimeout: options.probeIdleTimeout === undefined ? DEFAULT_PROBE_IDLE_MS : options.probeIdleTimeout,
     staleMs: options.staleMs ?? DEFAULT_STALE_MS,

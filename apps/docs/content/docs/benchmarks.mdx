@@ -1,6 +1,6 @@
 ---
 title: Benchmarks
-description: Run reproducible single-threaded and multi-threaded core performance tests.
+description: Run reproducible core performance tests and the live public RPC and router benchmark.
 ---
 
 The core benchmark measures independent worker-thread workloads for cache hits, rolling log-index queries, and cache-plan generation. Worker construction, initial state, and warmup are excluded from the measured interval.
@@ -27,3 +27,55 @@ Options:
 Run scenarios separately and avoid concurrent builds or tests while collecting numbers. Each worker owns independent state, so results measure parallel CPU scaling rather than shared-cache contention. Local throughput is not a provider latency or uptime guarantee.
 
 For end-to-end public endpoint checks, run `pnpm check:rpcs --protocol base` or omit `--protocol` to check every registry. These checks make live read-only identity and head requests and are intentionally separate from deterministic CI.
+
+## Live RPC and router benchmark
+
+`pnpm benchmark:rpcs` runs `scripts/benchmark-rpcs.mjs`. It measures every mainnet registry endpoint directly, then sends a read workload through the transport's own router and compares the two. It imports the release build from `packages/smart-rpc/dist`, so build first. It is read-only, sends small paced volumes, and is not part of CI.
+
+```sh
+pnpm build
+pnpm benchmark:rpcs --protocol base,solana --rounds 4 --router 80 > bench.json
+pnpm benchmark:rpcs --help
+```
+
+| Option | Meaning |
+| --- | --- |
+| `--protocol <list>` | Comma-separated transport subpaths. Default: every mainnet registry. |
+| `--rounds <n>` | Synchronized head rounds per chain in phase A, 1–30. Default: 8. |
+| `--router <n>` | Router requests per chain in phase B, 0–200. Default: 40. `0` skips phase B. |
+| `--timeout <ms>` | Deadline per direct request. Default: 8000. |
+| `--chains <n>` | Chains benchmarked at the same time, 1–8. Default: 4. |
+
+JSON goes to stdout and progress to stderr. Pass these options directly, not after `--`.
+
+### Phase A: direct endpoint probes
+
+Each endpoint is checked for chain identity first (`eth_chainId`, or `getGenesisHash` on Solana), and mismatches are left out of head comparisons. Then, in each round, every endpoint gets two requests at the same time as its peers:
+
+- the head method (`eth_blockNumber`, or `getSlot` at `processed` commitment), which gives head latency, success rate and the head itself;
+- a same-method state read with distinct parameters (`eth_getBalance` at `latest`, or `getBalance`), which no edge cache can answer.
+
+Lag is time-aligned. An endpoint lags only behind heads that other endpoints had already reported by the time its own answer arrived (with 50ms of slack). A slow responder is therefore not marked behind for missing a block that did not exist when it answered. The pool uses the same idea for its own lag; see [Defaults](./reference#defaults).
+
+After the rounds, each endpoint gets capability probes: a two-item JSON-RPC batch, an `eth_getLogs` over the last 50 blocks, and an `eth_getBalance` at block 1 as an archive hint (`getLatestBlockhash` on Solana). These probes report what one request returned. Registry capabilities rest on repeated probes, recorded in each registry's source comments, not on this single call.
+
+Requests are paced per provider (by `providerGroup`, else provider name) across every chain in the run. The pace is the registry's `rps`, the provider budget, or 2 requests/s for endpoints without a budget, and never more than 4 requests/s, because many providers apply one quota per IP across chains.
+
+### Phase B: the router
+
+Phase B builds each chain's default transport and sends `--router` requests from four concurrent workers, each pausing 100ms between requests. The workload cycles through four reads with distinct parameters, so the router's cache cannot answer them:
+
+- EVM: `eth_getBalance` and `eth_getTransactionCount` at `latest` for distinct addresses, `eth_getBlockByNumber` for a different recent block each time, and `eth_blockNumber`.
+- Solana: `getBalance` and `getAccountInfo` for distinct accounts, `getLatestBlockhash`, and `getSlot`.
+
+Answers under 3ms count as served locally (coalesced or cached) and are kept out of the latency figures. The result records router p50/p95, success rate, elapsed time, which endpoint served each request, pool events, failures by method and error, and a final endpoint snapshot.
+
+### Reading the results
+
+Each chain reports two baselines. `bestDirectP50` is the fastest healthy endpoint's head-method latency. `bestDirectReadP50` is the fastest healthy endpoint's same-method state read. `routerVsBestP50` and `routerVsBestReadP50` divide the router p50 by each.
+
+Compare the router with `bestDirectReadP50`. dRPC answers `eth_blockNumber` from an edge cache in about 35–45ms, while its state reads on the same chains take 100ms or more. A router serving real reads cannot match a cached head answer, so `routerVsBestP50` overstates the gap wherever dRPC is in the pool. Only the same-method comparison measures routing.
+
+On chains whose registries carry request budgets, router latency is bounded by those budgets. They are documented provider limits or conservative local settings below them. Four workers with a 100ms pause, plus races, can ask for more requests per second than the pool's total budget. Examples: Solana mainnet's four endpoints total 10 rps, HyperEVM mainnet's five total 5.5 rps, X Layer allows 2 rps per endpoint, and Monad's Foundation aliases share 2 rps. Once the buckets are empty the pool waits for tokens or spills to slower endpoints. On those chains, a router p50 above the best direct read reflects the documented provider limits, not a routing defect.
+
+Results describe one machine's network path at one time. Other processes on the same IP share provider quotas, and rate limits caused by them show up in the run. Treat a single run as a sample, and compare runs taken close together.

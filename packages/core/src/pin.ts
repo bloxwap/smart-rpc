@@ -106,6 +106,49 @@ export function pinParams(method: string, params: unknown, block: number, skipPr
   return next;
 }
 
+/** Methods that read the head with no block parameter at all. */
+const HEAD_METHODS: ReadonlySet<string> = new Set([
+  "eth_blockNumber",
+  "eth_gasPrice",
+  "eth_maxPriorityFeePerGas",
+  "eth_blobBaseFee",
+  "eth_syncing",
+]);
+
+/** Methods whose omitted block parameter means the head, though pinning leaves them alone. */
+const OPTIONAL_HEAD_TAG: ReadonlySet<string> = new Set(["eth_estimateGas", "eth_createAccessList"]);
+
+function isHeadTag(tag: unknown): boolean {
+  if (tag === "latest" || tag === "pending") return true;
+  if (typeof tag !== "object" || tag === null || Array.isArray(tag) || "blockHash" in tag) return false;
+  return "blockNumber" in tag && (tag.blockNumber === "latest" || tag.blockNumber === "pending");
+}
+
+/**
+ * True when an EVM read answers from the chain head: a `"latest"` or `"pending"` tag, given or implied, a log
+ * filter that ends at the head, or a head method such as `eth_gasPrice`. Block-hash, fixed-number, `"safe"`,
+ * `"finalized"` and transaction-hash reads are not: a lagging endpoint answers them as well as a fresh one.
+ */
+export function isHeadSensitiveRead(method: string, params: unknown): boolean {
+  if (HEAD_METHODS.has(method)) return true;
+  const list: readonly unknown[] = Array.isArray(params) ? params : [];
+  if (method === "eth_getLogs") {
+    const filter: unknown = list[0];
+    if (typeof filter !== "object" || filter === null || Array.isArray(filter)) return false;
+    if ("blockHash" in filter && filter.blockHash !== undefined && filter.blockHash !== null) return false;
+    const fields = filter as { fromBlock?: unknown; toBlock?: unknown };
+    return isHeadTag(fields.fromBlock ?? "latest") || isHeadTag(fields.toBlock ?? "latest");
+  }
+  const slot = BLOCK_SLOTS.get(method);
+  const index = slot?.index ?? (OPTIONAL_HEAD_TAG.has(method) ? 1 : undefined);
+  if (index !== undefined) {
+    const tag: unknown = list[index];
+    if (tag === undefined) return slot?.implied === true || OPTIONAL_HEAD_TAG.has(method);
+    return isHeadTag(tag);
+  }
+  return list.some(isHeadTag);
+}
+
 /** HyperCore read precompiles live at `0x0000…0800` through `0x0000…08ff` and ignore the block tag. */
 const PRECOMPILE_ADDRESS = /^0x0{37}8[0-9a-f]{2}$/i;
 

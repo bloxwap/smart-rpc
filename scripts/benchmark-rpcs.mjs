@@ -41,6 +41,7 @@ function parseOptions(args) {
   const ranges = { rounds: [1, 30], router: [0, 200], timeout: [100, 60000], chains: [1, 8] };
   for (let index = 0; index < args.length; index += 1) {
     const flag = args[index];
+    if (flag === "--") continue;
     if (flag === "--help" || flag === "-h") return { help: true };
     const value = args[++index];
     if (!value) throw new Error(`${flag} requires a value.`);
@@ -279,12 +280,12 @@ async function benchRouter(chain, options) {
   let transport;
   try { transport = chain.factory(); } catch (error) { return { error: `factory: ${error.message}` }; }
   const served = {};
-  const events = { failover: 0, hedge: 0, race: 0, eject: 0, quarantine: 0, restore: 0, error: 0, coalesce: 0, cache: 0 };
+  const events = { failover: 0, hedge: 0, race: 0, throttle: 0, eject: 0, quarantine: 0, restore: 0, error: 0, coalesce: 0, cache: 0 };
   const ejected = [];
   const unsubscribe = transport.onEvent?.((event) => {
     if (event.type === "success") served[event.endpoint] = (served[event.endpoint] ?? 0) + 1;
     if (event.type in events) events[event.type] += 1;
-    if (event.type === "eject" || event.type === "quarantine") ejected.push(`${event.type}:${event.endpoint}:${event.reason ?? event.cause ?? ""}`.slice(0, 160));
+    if (event.type === "eject" || event.type === "quarantine" || event.type === "throttle") ejected.push(`${event.type}:${event.endpoint}:${event.reason ?? event.cause ?? ""}`.slice(0, 160));
   });
   let head = 0;
   if (!chain.solana) {

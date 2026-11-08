@@ -32,7 +32,7 @@ Sends, errors, filters, subscriptions, latest nonces, gas estimates, and pending
 
 ## Routing and retries
 
-Defaults include two extra attempts, a ten-second attempt timeout, power-of-two endpoint selection, safe-read racing, and a three-failure circuit breaker. Cooldown starts at five seconds and doubles to sixty seconds. Backoff starts between 100 and 200 milliseconds, doubles, and is capped at two seconds.
+Defaults include two extra attempts, a ten-second attempt timeout, power-of-two endpoint selection, safe-read racing, and a three-failure circuit breaker. Cooldown starts at five seconds and doubles to sixty seconds. Backoff starts between 100 and 200 milliseconds, doubles, and is capped at two seconds. Rate limits do not count toward the breaker: a rate-limited endpoint cools down for its `Retry-After` (or from one second, doubling) and its request rate is halved, then recovers. Head-lag tolerance is about one second of blocks on chains that declare `blockTimeMs`. See [Defaults](./reference#defaults).
 
 ```ts
 const transport = hyperevm({

@@ -52,6 +52,8 @@ Calls to HyperCore read precompiles in `0x…0800`–`0x…08ff` retain their su
 
 HyperEVM uses Cancun without blobs. The client preserves RPC results rather than inventing blob support or replacing a zero priority-fee quote. Error code `10055` alone is not a retry verdict: nonce, funds and underpriced replacement messages are deterministic, while a duplicate transaction hash is handled as already known. Shared core error classification supplies these rules.
 
+Blocks arrive every about 1s for small blocks on mainnet and testnet (measured 2026-11-08: 1,000 mainnet blocks in 983s), so the factory passes `blockTimeMs: 1000` and the default `headLag.maxLag` is 1 block, about one second of staleness. An endpoint further behind does not lead, race or hedge `latest`, `pending` or other head reads while a fresh endpoint can serve them; it still serves block-number, block-hash, `safe`/`finalized` and transaction reads, and remains a failover. Pass `blockTimeMs` or `headLag: { maxLag }` to change it.
+
 ## Verification
 
 `pnpm --filter @smart-rpc/hyperevm test` runs offline identity, pool-isolation, budget, precompile, capability, log-range and extension/error fixtures. Shared Ethereum/core tests cover cancellation, batching partial results, stale heads and probe failure accounting. Public smoke checks are explicit:

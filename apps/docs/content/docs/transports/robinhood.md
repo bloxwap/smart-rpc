@@ -62,6 +62,8 @@ The ArbSys precompile is an ordinary `eth_call` target. Its L2 block number is d
 
 BlockVectra's [provider catalog](https://api.blockvectra.com/v1/chains), reviewed on 2026-11-06, lists `https://api.blockvectra.com/v1/robinhood_mainnet/public`. Its public profile advertises 3 requests/s per IP, burst 20, 900-block history, and stricter log limits: one address, 100 blocks, 1,000 results, 1 MiB, no `blockHash`, and a single-call log batch. Raw transaction submission has a separate 1 request/s, burst-3 allowance. The general public batch ceiling is 10. This endpoint is **not a default**: those additional method-specific quotas and log restrictions need explicit enforcement before enabling it as a general fallback. Chain-level catalog limits are not interchangeable with public-profile limits.
 
+Blocks arrive every about 100ms (measured 2026-11-08: 0.106-0.110s over 100 and 1,000 blocks), so the factory passes `blockTimeMs: 100` and the default `headLag.maxLag` is 10 blocks, about one second of staleness. An endpoint further behind does not lead, race or hedge `latest`, `pending` or other head reads while a fresh endpoint can serve them; it still serves block-number, block-hash, `safe`/`finalized` and transaction reads, and remains a failover. The official RPC, which usually trails by about 5-7 blocks (0.5-0.7s), stays inside that tolerance. Pass `blockTimeMs` or `headLag: { maxLag }` to change it.
+
 ## Verification
 
 ```sh

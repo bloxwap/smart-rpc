@@ -9,7 +9,14 @@
 import { createPool, type PoolOptions, type RpcPool } from "@smart-rpc/core";
 
 import { jsonRpcCaller, type FetchLike } from "./client.js";
-import { isSafeSolanaMethod, isSolanaRebroadcast, parseSlot, solanaCachePolicy } from "./methods.js";
+import {
+  isHeadSensitiveSolanaMethod,
+  isSafeSolanaMethod,
+  isSolanaRateLimit,
+  isSolanaRebroadcast,
+  parseSlot,
+  solanaCachePolicy,
+} from "./methods.js";
 import {
   defaultChainIds,
   defaultEndpoints,
@@ -32,7 +39,15 @@ export interface SolanaOptions extends Omit<PoolOptions, "endpoints" | "policy">
   fetchFn?: FetchLike | undefined;
   /** Extra methods that must not be raced or retried. */
   nonSafeMethods?: readonly string[] | undefined;
+  /**
+   * Typical milliseconds per slot. Sets the default `headLag.maxLag` to about one second of slots and the slot-rate
+   * ceiling. Default: 220 (measured 2026-11-08: 215-245ms per slot on mainnet, devnet and testnet), so `maxLag` 5.
+   */
+  slotTimeMs?: number | undefined;
 }
+
+/** Slot time on every cluster, from `getRecentPerformanceSamples` on 2026-11-08 (215-216ms mainnet and testnet). */
+const SOLANA_SLOT_TIME_MS = 220;
 
 /** Solana transport for `createSmartRpc({ transports })`. */
 export function solana(options: SolanaOptions = {}): RpcPool {
@@ -46,6 +61,7 @@ export function solana(options: SolanaOptions = {}): RpcPool {
     commitment,
     fetchFn,
     nonSafeMethods,
+    slotTimeMs,
     ...poolOptions
   } = options;
   void _cluster;
@@ -77,8 +93,11 @@ export function solana(options: SolanaOptions = {}): RpcPool {
         typeof result === "string" && result.length > 0 ? result : null,
       isSafeMethod: (method: string): boolean => isSafeSolanaMethod(method, nonSafeMethods ?? []),
       isRebroadcastMethod: isSolanaRebroadcast,
+      isHeadSensitive: isHeadSensitiveSolanaMethod,
+      isRateLimited: isSolanaRateLimit,
       cachePolicy: solanaCachePolicy(),
       pin: false,
+      blockTimeMs: slotTimeMs ?? SOLANA_SLOT_TIME_MS,
     },
   });
 }

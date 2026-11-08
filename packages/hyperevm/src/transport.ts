@@ -43,6 +43,12 @@ export const HYPEREVM_SAFE_METHODS: readonly string[] = [
   "eth_getSystemTxsByBlockNumber",
 ];
 
+/**
+ * Small blocks every second (measured 2026-11-08: 1,000 mainnet blocks in 983s). Large blocks are slower but do
+ * not set the head rate. Lag tolerance is one block.
+ */
+const HYPEREVM_BLOCK_TIME_MS = 1_000;
+
 /** HyperEVM mainnet chain id. */
 export const HYPEREVM_CHAIN_ID = 999;
 
@@ -89,6 +95,7 @@ export function hyperevm(options: HyperEvmOptions = {}): HyperEvmTransport {
       skipPrecompiles: options.skipPrecompiles ?? true,
       cachePolicy: evmCachePolicy({ immutable: true, isTimedCall: isPrecompileCall }),
       safeMethods: [...HYPEREVM_SAFE_METHODS, ...(options.safeMethods ?? [])],
+      blockTimeMs: options.blockTimeMs ?? HYPEREVM_BLOCK_TIME_MS,
     }),
   );
   const first = pools[0];

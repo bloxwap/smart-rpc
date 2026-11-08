@@ -7,6 +7,12 @@ export const ARBITRUM_CHAIN_ID = 42161;
 export const ARBITRUM_MAINNET_CAIP = "eip155:42161";
 export const ARBITRUM_NATIVE_CURRENCY = Object.freeze({ name: "Ether", symbol: "ETH", decimals: 18 });
 
+/**
+ * Nominal 250ms blocks (measured 2026-11-08: 1,000 blocks in 298s, timestamps in whole seconds). Lag tolerance is
+ * about four blocks, one second.
+ */
+const ARBITRUM_BLOCK_TIME_MS = 250;
+
 export interface ArbitrumOptions extends Omit<EthereumOptions, "chainId" | "chainIds"> {}
 
 /** Arbitrum One uses the shared EVM adapter and core routing policy. */
@@ -18,6 +24,7 @@ export function arbitrum(options: ArbitrumOptions = {}): RpcPool {
     chainId: ARBITRUM_CHAIN_ID,
     chainIds: [ARBITRUM_MAINNET_CAIP],
     endpoints,
+    blockTimeMs: options.blockTimeMs ?? ARBITRUM_BLOCK_TIME_MS,
     nonIdempotentMethods: [
       ...(options.nonIdempotentMethods ?? []),
       // Conditions are time/state sensitive; do not automatically replay them.

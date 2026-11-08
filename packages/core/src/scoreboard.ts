@@ -240,7 +240,7 @@ export class Scoreboard {
     return scaled > minDelay ? scaled : minDelay;
   }
 
-  snapshot(method: string): Omit<EndpointSnapshot, "quarantined" | "tokens" | "ejected">[] {
+  snapshot(method: string): Omit<EndpointSnapshot, "quarantined" | "tokens" | "ejected" | "throttledMs">[] {
     const view = this.#heads(this.#options.now());
     return this.#endpoints.map((endpoint) => ({
       id: endpoint.id,

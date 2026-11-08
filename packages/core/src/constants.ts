@@ -16,8 +16,14 @@ export const MAX_RETRY_BACKOFF_MS = 2_000;
 /** How long a freshness sample stays usable for lag penalties. */
 export const DEFAULT_STALE_MS = 30_000;
 
-/** Blocks or slots behind the best fresh head that are still treated as caught up. */
+/** Blocks or slots behind the best fresh head that are still treated as caught up, when no block time is known. */
 export const DEFAULT_MAX_LAG = 2;
+
+/**
+ * Staleness a pool with a known block time still treats as caught up. `maxLag` becomes about this many
+ * milliseconds of blocks, at least one.
+ */
+export const DEFAULT_LAG_TOLERANCE_MS = 1_000;
 
 /** Background health-probe cadence. This refreshes heads. It is not the latency ranker. */
 export const DEFAULT_PROBE_MS = 4_000;

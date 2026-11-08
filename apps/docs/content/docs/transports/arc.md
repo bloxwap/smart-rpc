@@ -39,4 +39,6 @@ Arc targets Osaka with execution differences, so the transport forwards gas esti
 
 System native-USDC Transfer logs come from `ARC_NATIVE_TRANSFER_EMITTER` at 18-decimal precision; ERC-20 logs use the contract address and 6-decimal precision. Both logs can describe one transfer. RPC results preserve both emitters, amounts and ordering so applications can avoid double counting. [System events](https://docs.arc.io/arc/references/usdc-system-events)
 
+Blocks arrive every about 500ms (measured 2026-11-08: 0.51s), so the factory passes `blockTimeMs: 500` and the default `headLag.maxLag` is 2 blocks, about one second of staleness. An endpoint further behind does not lead, race or hedge `latest`, `pending` or other head reads while a fresh endpoint can serve them; it still serves block-number, block-hash, `safe`/`finalized` and transaction reads, and remains a failover. Pass `blockTimeMs` or `headLag: { maxLag }` to change it.
+
 Run `pnpm --filter @smart-rpc/arc test` for deterministic fixtures. `SMART_RPC_LIVE_ARC=1 pnpm --filter @smart-rpc/arc test` adds public identity/head checks. Optional capability probes require `SMART_RPC_ARC_CAPABILITIES=1` and `ARC_RPC_URL`; WS checks additionally require `ARC_WS_URL`. These read-only probes establish observed behavior at one time, not availability guarantees or provider limits. No transaction is submitted.

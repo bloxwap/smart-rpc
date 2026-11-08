@@ -7,6 +7,9 @@ export const OPTIMISM_CHAIN_ID = 10;
 export const OPTIMISM_MAINNET_CAIP = "eip155:10";
 export const OPTIMISM_NATIVE_CURRENCY = { name: "Ether", symbol: "ETH", decimals: 18 } as const;
 
+/** 2s blocks (measured 2026-11-08: 1,000 blocks in 2,000s). Lag tolerance is one block. */
+const OPTIMISM_BLOCK_TIME_MS = 2_000;
+
 export interface OptimismOptions extends Omit<EthereumOptions, "chainId" | "chainIds"> {}
 
 /** OP Mainnet adapter. Core owns retries, health, budgets, caching and routing. */
@@ -18,6 +21,7 @@ export function optimism(options: OptimismOptions = {}): RpcPool {
     chainId: OPTIMISM_CHAIN_ID,
     chainIds: [OPTIMISM_MAINNET_CAIP],
     endpoints,
+    blockTimeMs: options.blockTimeMs ?? OPTIMISM_BLOCK_TIME_MS,
   });
 }
 
