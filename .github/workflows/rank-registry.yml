@@ -1,0 +1,59 @@
+name: Rank HyperEVM registry
+
+# Live maintenance is separate from CI and only opens a pull request. The
+# default GitHub token does not trigger CI on that PR; RANK_REGISTRY_TOKEN may
+# be configured when automatic PR checks are desired.
+on:
+  schedule:
+    - cron: "17 16 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: rank-hyperevm-registry
+  cancel-in-progress: false
+
+jobs:
+  rank:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Probe and rank rolling history
+        run: pnpm rank:hyperevm
+
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.RANK_REGISTRY_TOKEN || github.token }}
+          commit-message: "chore: refresh HyperEVM RPC rankings"
+          title: "chore: refresh HyperEVM RPC rankings"
+          body: |
+            Weekly bounded probe of the source-backed HyperEVM mainnet registry.
+
+            The ranker appends one read-only observation per endpoint to the rolling 28-day history. Full weight requires three successful probes spread over 14 days; new endpoints have individual and collective weight caps. Wrong-chain-only runs, missing source observations, and rankings that empty the default pool are refused before any files are written.
+
+            Capabilities, provenance, request budgets, testnet defaults, and chain-generic runtime scoring are not rewritten. This pull request was opened by `.github/workflows/rank-registry.yml`; the workflow never pushes directly to `main`.
+          branch: registry/hyperevm-rankings
+          add-paths: |
+            packages/hyperevm/registry/mainnet.json
+            packages/hyperevm/registry/history.json
+          delete-branch: true

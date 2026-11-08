@@ -4,6 +4,7 @@ import type { RpcEvent } from "@smart-rpc/core";
 import {
   mantle, MANTLE_CHAIN_ID, MANTLE_MAINNET_CAIP, MANTLE_NATIVE_CURRENCY,
   MANTLE_RPC_URL, MANTLE_MAINNET_WS_URL, MANTLE_MAINNET_REGISTRY, MANTLE_GAS_PRICE_ORACLE,
+  MANTLE_MAINNET_ENDPOINTS,
 } from "../src/index.js";
 
 interface Request { id: number; method: string; params?: unknown[] }
@@ -46,7 +47,9 @@ describe("Mantle mainnet", () => {
       expect(pool.chainIds).toEqual([MANTLE_MAINNET_CAIP]);
       expect(MANTLE_CHAIN_ID).toBe(5000);
       expect(MANTLE_NATIVE_CURRENCY).toEqual({ name: "Mantle", symbol: "MNT", decimals: 18 });
-      expect(pool.endpoints.map(({ url }) => url)).toEqual([MANTLE_RPC_URL]);
+      expect(pool.endpoints.map(({ url }) => url)).toEqual(MANTLE_MAINNET_ENDPOINTS);
+      expect(MANTLE_MAINNET_REGISTRY.map(({ url }) => url)).toEqual(MANTLE_MAINNET_ENDPOINTS);
+      expect(MANTLE_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
       expect(MANTLE_MAINNET_WS_URL).toBe("wss://wss.mantle.xyz");
       expect(MANTLE_MAINNET_REGISTRY[0]?.rps).toBeUndefined();
       expect(MANTLE_MAINNET_REGISTRY[0]?.capabilities?.maxBatchSize).toBeUndefined();
@@ -209,7 +212,7 @@ describe("Mantle mainnet", () => {
 
   test("successful probes cannot heal the failed-call streak", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x1388" : method === "eth_blockNumber" ? "0x64" : new Response("Unavailable", { status: 503 }));
-    const pool = mantle({ fetchFn: mock.fetchFn, headLag: idle, retryCount: 0, race: false });
+    const pool = mantle({ endpoints: [MANTLE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle, retryCount: 0, race: false });
     try {
       for (let index = 0; index < 3; index += 1) {
         await expect(pool.request({ method: "eth_getBalance", params: [address, "latest"] })).rejects.toThrow();

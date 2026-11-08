@@ -2,9 +2,9 @@ import { describe, expect, test } from "vitest";
 import type { RpcEvent } from "@smart-rpc/core";
 import {
   celo, CELO_CHAIN_ID, CELO_MAINNET_CAIP, CELO_NATIVE_CURRENCY,
-  CELO_MAINNET_REGISTRY, CELO_RPC_URL, CELO_WEBSOCKET_URL,
-  CELO_SEPOLIA_CHAIN_ID, CELO_SEPOLIA_CAIP, CELO_SEPOLIA_RPC_URL,
-  type CeloOptions,
+  CELO_MAINNET_ENDPOINTS, CELO_MAINNET_REGISTRY, CELO_RPC_URL, CELO_WEBSOCKET_URL,
+  CELO_SEPOLIA_CHAIN_ID, CELO_SEPOLIA_CAIP, CELO_SEPOLIA_ENDPOINTS,
+  CELO_SEPOLIA_REGISTRY, CELO_SEPOLIA_RPC_URL, type CeloOptions,
 } from "../src/index.js";
 
 interface Body { id: number; method: string; params?: unknown[] }
@@ -36,6 +36,7 @@ function fixture(answer: (call: Call) => unknown | Promise<unknown>) {
   };
 }
 const idle = { probeInterval: false } as const;
+const fornoEndpoint = CELO_MAINNET_REGISTRY.find(({ url }) => url === CELO_RPC_URL)!;
 const address = "0x1111111111111111111111111111111111111111";
 // Source-backed examples intentionally distinguish adapter and token addresses.
 const usdcAdapter = "0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B";
@@ -43,15 +44,17 @@ const usdcToken = "0xcebA9300f2b948710d2653dD7B07f33A8B32118C";
 const usdtAdapter = "0x0E2A3e05bc9A16F5292A6170456A710cb89C6f72";
 
 describe("Celo transport", () => {
-  test("uses mainnet CELO metadata and a lazy documented Forno default", () => {
+  test("uses mainnet CELO metadata and lazy public defaults", () => {
     const mock = fixture(() => "0xa4ec");
     const client = celo({ fetchFn: mock.fetchFn, headLag: idle });
     try {
       expect(CELO_CHAIN_ID).toBe(42220);
       expect(CELO_NATIVE_CURRENCY).toEqual({ name: "Celo", symbol: "CELO", decimals: 18 });
       expect(client.chainIds).toEqual([CELO_MAINNET_CAIP]);
-      expect(client.endpoints.map(({ url }) => url)).toEqual([CELO_RPC_URL]);
-      expect(CELO_MAINNET_REGISTRY[0]?.rps).toBeUndefined();
+      expect(client.endpoints.map(({ url }) => url)).toEqual(CELO_MAINNET_ENDPOINTS);
+      expect(CELO_MAINNET_ENDPOINTS).toEqual(CELO_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(CELO_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
+      expect(CELO_MAINNET_REGISTRY.every(({ rps }) => rps === undefined)).toBe(true);
       expect(CELO_WEBSOCKET_URL).toBe("wss://forno.celo.org/ws");
       expect(mock.calls).toEqual([]);
     } finally { client.close(); }
@@ -63,6 +66,9 @@ describe("Celo transport", () => {
     try {
       expect(client.chainIds).toEqual([CELO_SEPOLIA_CAIP]);
       expect(client.endpoints[0]?.url).toBe(CELO_SEPOLIA_RPC_URL);
+      expect(client.endpoints.map(({ url }) => url)).toEqual(CELO_SEPOLIA_ENDPOINTS);
+      expect(CELO_SEPOLIA_ENDPOINTS).toEqual(CELO_SEPOLIA_REGISTRY.map(({ url }) => url));
+      expect(CELO_SEPOLIA_REGISTRY.length).toBeLessThanOrEqual(5);
       expect(await client.request({ method: "eth_blockNumber" })).toBe("0x64");
       expect(() => celo({ chainId: 44787 } as unknown as CeloOptions)).toThrow(/Alfajores is retired/);
     } finally { client.close(); }
@@ -82,7 +88,7 @@ describe("Celo transport", () => {
 
   test("preserves adapter feeCurrency, calldata, value and extra fields in estimates", async () => {
     const mock = fixture(({ method }) => method === "eth_chainId" ? "0xa4ec" : "0x186a0");
-    const client = celo({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = celo({ endpoints: [fornoEndpoint], fetchFn: mock.fetchFn, headLag: idle });
     const transaction = { to: usdcToken, from: address, value: "0x0", data: "0xa9059cbb", feeCurrency: usdcAdapter, maxFeePerGas: "0x12" };
     try {
       expect(await client.request({ method: "eth_estimateGas", params: [transaction] })).toBe("0x186a0");
@@ -97,7 +103,7 @@ describe("Celo transport", () => {
       await new Promise((resolve) => setTimeout(resolve, 5));
       return (params[0] as { feeCurrency: string }).feeCurrency === usdcAdapter ? "0x01" : "0x02";
     });
-    const client = celo({ fetchFn: mock.fetchFn, headLag: idle, race: false });
+    const client = celo({ endpoints: [fornoEndpoint], fetchFn: mock.fetchFn, headLag: idle, race: false });
     const usd = { method: "eth_call", params: [{ to: address, feeCurrency: usdcAdapter }, "latest"] };
     const tether = { method: "eth_call", params: [{ to: address, feeCurrency: usdtAdapter }, "latest"] };
     try {
@@ -114,7 +120,7 @@ describe("Celo transport", () => {
     const receipt = { transactionHash: `0x${"ab".repeat(32)}`, feeCurrency: usdtAdapter, gasUsed: "0x186a0",
       effectiveGasPrice: "0x123456", l1Fee: "0x1234", l1GasUsed: "0x567", type: "0x7b" };
     const mock = fixture(({ method }) => method === "eth_chainId" ? "0xa4ec" : receipt);
-    const client = celo({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = celo({ endpoints: [fornoEndpoint], fetchFn: mock.fetchFn, headLag: idle });
     try { expect(await client.request({ method: "eth_getTransactionReceipt", params: [receipt.transactionHash] })).toEqual(receipt); }
     finally { client.close(); }
   });
@@ -135,7 +141,7 @@ describe("Celo transport", () => {
 
   test("rejects unsupported Forno signing, archive and finality requests without downgrading state", async () => {
     const mock = fixture(() => "0xa4ec");
-    const client = celo({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = celo({ endpoints: [fornoEndpoint], fetchFn: mock.fetchFn, headLag: idle });
     try {
       for (const request of [
         { method: "eth_sendTransaction", params: [{ to: address, feeCurrency: usdcAdapter }] },
@@ -159,7 +165,7 @@ describe("Celo transport", () => {
 
   test("never pins current-state Forno calls to a historical block", async () => {
     const mock = fixture(({ method }) => method === "eth_chainId" ? "0xa4ec" : method === "eth_blockNumber" ? "0x64" : "0x42");
-    const client = celo({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = celo({ endpoints: [fornoEndpoint], fetchFn: mock.fetchFn, headLag: idle });
     try {
       await client.probe();
       await client.request({ method: "eth_call", params: [{ to: address, feeCurrency: usdcAdapter }, "latest"] });
@@ -169,7 +175,7 @@ describe("Celo transport", () => {
 
   test("cancels before dispatch without consuming identity budget", async () => {
     const mock = fixture(() => "0xa4ec");
-    const client = celo({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = celo({ endpoints: [fornoEndpoint], fetchFn: mock.fetchFn, headLag: idle });
     const controller = new AbortController(); controller.abort();
     try {
       await expect(client.request({ method: "eth_blockNumber", signal: controller.signal })).rejects.toThrow();
@@ -179,7 +185,7 @@ describe("Celo transport", () => {
 
   test("bounds retries and total operation calls including chain verification", async () => {
     const mock = fixture(({ method }) => method === "eth_chainId" ? "0xa4ec" : new Response("Unavailable", { status: 503 }));
-    const client = celo({ fetchFn: mock.fetchFn, headLag: idle, retryCount: 9, race: false,
+    const client = celo({ endpoints: [fornoEndpoint], fetchFn: mock.fetchFn, headLag: idle, retryCount: 9, race: false,
       operationBudget: { maxRequests: 3 }, retryDelay: 1, random: () => 0 });
     try {
       await expect(client.request({ method: "eth_getBalance", params: [address, "latest"] })).rejects.toThrow();
@@ -218,7 +224,7 @@ describe("Celo transport", () => {
 
   test("successful probes cannot heal failed caller requests", async () => {
     const mock = fixture(({ method }) => method === "eth_chainId" ? "0xa4ec" : method === "eth_blockNumber" ? "0x64" : new Response("Unavailable", { status: 503 }));
-    const client = celo({ fetchFn: mock.fetchFn, headLag: idle, retryCount: 0, race: false, cache: false });
+    const client = celo({ endpoints: [fornoEndpoint], fetchFn: mock.fetchFn, headLag: idle, retryCount: 0, race: false, cache: false });
     try {
       for (let index = 0; index < 3; index += 1) {
         await expect(client.request({ method: "eth_getBalance", params: [address, "latest"] })).rejects.toThrow();

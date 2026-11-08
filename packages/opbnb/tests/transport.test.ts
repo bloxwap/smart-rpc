@@ -2,12 +2,13 @@ import { describe, expect, test } from "vitest";
 import type { RpcEvent } from "@smart-rpc/core";
 import {
   opbnb, OPBNB_CHAIN_ID, OPBNB_MAINNET_CAIP, OPBNB_NATIVE_CURRENCY,
-  OPBNB_PARENT_CHAIN_ID, OPBNB_MAINNET_REGISTRY, OPBNB_MAINNET_WEBSOCKET_ENDPOINTS,
+  OPBNB_PARENT_CHAIN_ID, OPBNB_MAINNET_ENDPOINTS, OPBNB_MAINNET_REGISTRY, OPBNB_MAINNET_WEBSOCKET_ENDPOINTS,
 } from "../src/index.js";
 
 interface Call { url: string; method: string; params: unknown[]; headers: Headers }
 interface Body { id: number; method: string; params?: unknown[] }
 const address = "0x1111111111111111111111111111111111111111";
+const officialRpc = "https://opbnb-mainnet-rpc.bnbchain.org";
 const idle = { probeInterval: false } as const;
 
 function mockRpc(answer: (call: Call) => unknown | Promise<unknown>) {
@@ -41,7 +42,9 @@ describe("opBNB execution transport", () => {
       expect(OPBNB_CHAIN_ID).toBe(204);
       expect(OPBNB_PARENT_CHAIN_ID).toBe(56);
       expect(OPBNB_NATIVE_CURRENCY).toEqual({ name: "BNB", symbol: "BNB", decimals: 18 });
-      expect(pool.endpoints.map(({ url }) => url)).toEqual(OPBNB_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(OPBNB_MAINNET_REGISTRY.map(({ url }) => url)).toEqual(OPBNB_MAINNET_ENDPOINTS);
+      expect(OPBNB_MAINNET_ENDPOINTS.length).toBeLessThanOrEqual(5);
+      expect(pool.endpoints.map(({ url }) => url)).toEqual(OPBNB_MAINNET_ENDPOINTS);
       expect(mock.calls).toEqual([]);
       await expect(pool.request({ chainId: "eip155:56", method: "eth_blockNumber" })).rejects.toThrow();
       expect(mock.calls).toEqual([]);
@@ -104,7 +107,9 @@ describe("opBNB execution transport", () => {
 
   test("does not degrade unsupported finality/historical state to latest", async () => {
     const mock = mockRpc(() => "0xcc");
-    const pool = opbnb({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = opbnb({
+      endpoints: [OPBNB_MAINNET_REGISTRY.find(({ url }) => url === officialRpc)!], fetchFn: mock.fetchFn, headLag: idle,
+    });
     try {
       for (const tag of ["safe", "finalized", "0x1"]) {
         await expect(pool.request({ method: "eth_getBalance", params: [address, tag] })).rejects.toThrow();
@@ -141,7 +146,7 @@ describe("opBNB execution transport", () => {
 
   test("honors pre-dispatch cancellation without sending identity traffic", async () => {
     const mock = mockRpc(() => "0xcc");
-    const pool = opbnb({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = opbnb({ endpoints: [officialRpc], fetchFn: mock.fetchFn, headLag: idle });
     const controller = new AbortController();
     controller.abort();
     try {

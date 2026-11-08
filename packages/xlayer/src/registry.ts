@@ -36,31 +36,102 @@ export interface XLayerPublicEndpoint extends EthereumEndpointConfig {
 
 /** Conservative client settings; unverified advanced features require explicit opt-in. */
 export const XLAYER_MAINNET_REGISTRY: readonly XLayerPublicEndpoint[] = [
-  XLAYER_RPC_URL,
-  XLAYER_ALTERNATE_RPC_URL,
-].map((url) => ({
-  url,
-  provider: "OKX",
-  sourceUrls: [
-    "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/build-on-xlayer/network-information",
-    "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/rpc-endpoints/rpc-endpoints",
-  ],
-  reviewedAt: "2026-11-06",
-  // Local defaults leave room for probes and other users of the same public IP.
-  rps: 2,
-  burst: 3,
-  providerGroup: XLAYER_PUBLIC_PROVIDER_GROUP,
-  providerBudget: XLAYER_PUBLIC_RPC_BUDGET,
-  supportedMethods: XLAYER_PUBLIC_METHODS,
-  capabilities: {
-    archive: false,
-    blockTags: ["latest", "pending"] as const,
-    debug: false,
-    trace: false,
-    subscriptions: false,
-    pinning: false,
-    batch: false,
+  ...[
+    XLAYER_RPC_URL,
+    XLAYER_ALTERNATE_RPC_URL,
+  ].map((url) => ({
+    url,
+    provider: "OKX",
+    sourceUrls: [
+      "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/build-on-xlayer/network-information",
+      "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/rpc-endpoints/rpc-endpoints",
+    ],
+    reviewedAt: "2026-11-07",
+    // Local defaults leave room for probes and other users of the same public IP.
+    rps: 2,
+    burst: 3,
+    providerGroup: XLAYER_PUBLIC_PROVIDER_GROUP,
+    providerBudget: XLAYER_PUBLIC_RPC_BUDGET,
+    supportedMethods: XLAYER_PUBLIC_METHODS,
+    capabilities: {
+      archive: false,
+      blockTags: ["latest", "pending"] as const,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+      batch: false,
+    },
+  })),
+  {
+    url: "https://xlayer.drpc.org",
+    provider: "dRPC",
+    sourceUrls: [
+      "https://chainlist.org/chain/196",
+      "https://drpc.org/chainlist/xlayer-mainnet-rpc",
+      "https://drpc.org/docs/howitworks/ratelimiting",
+    ],
+    reviewedAt: "2026-11-07",
+    unsupportedMethods: [
+      "eth_newFilter",
+      "eth_newBlockFilter",
+      "eth_newPendingTransactionFilter",
+      "eth_getFilterChanges",
+      "eth_getFilterLogs",
+      "eth_uninstallFilter",
+    ],
+    rps: 2,
+    burst: 3,
+    capabilities: {
+      archive: false,
+      blockTags: ["latest", "pending"] as const,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+      batch: false,
+    },
   },
-}));
+  {
+    url: "https://xlayer-mainnet.rpc.sentio.xyz",
+    provider: "Sentio",
+    sourceUrls: [
+      "https://chainlist.org/chain/196",
+      "https://docs.sentio.xyz/docs/supported-network",
+    ],
+    reviewedAt: "2026-11-07",
+    rps: 2,
+    burst: 3,
+    capabilities: {
+      archive: false,
+      blockTags: ["latest", "pending"] as const,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+      batch: false,
+    },
+  },
+  {
+    url: "https://196.rpc.thirdweb.com",
+    provider: "thirdweb",
+    sourceUrls: [
+      "https://chainlist.org/chain/196",
+      "https://portal.thirdweb.com/infrastructure/rpc-edge/overview",
+    ],
+    reviewedAt: "2026-11-07",
+    rps: 2,
+    burst: 3,
+    capabilities: {
+      archive: false,
+      blockTags: ["latest", "pending"] as const,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+      batch: false,
+    },
+  },
+];
 
 export const XLAYER_MAINNET_ENDPOINTS: readonly string[] = XLAYER_MAINNET_REGISTRY.map(({ url }) => url);

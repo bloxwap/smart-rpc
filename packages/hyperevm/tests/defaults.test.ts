@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { RpcEvent } from "@smart-rpc/core";
+import { createPoolScope, type RpcEvent } from "@smart-rpc/core";
 
 import {
   HYPEREVM_MAINNET_CAIP,
@@ -49,6 +49,9 @@ describe("hyperevm public defaults", () => {
     try {
       expect(client.chainIds).toEqual([HYPEREVM_MAINNET_CAIP, HYPEREVM_TESTNET_CAIP]);
       expect(HYPEREVM_MAINNET_ENDPOINTS.length).toBeGreaterThan(1);
+      const rankedMainnet = HYPEREVM_MAINNET_REGISTRY.filter((endpoint) => endpoint.eligible);
+      expect(rankedMainnet.map((endpoint) => endpoint.rank)).toEqual(rankedMainnet.map((_, index) => index + 1));
+      expect(HYPEREVM_MAINNET_ENDPOINTS).toEqual(rankedMainnet.map((endpoint) => endpoint.url));
       expect(HYPEREVM_TESTNET_ENDPOINTS.length).toBeGreaterThan(1);
       expect(HYPEREVM_TESTNET_ENDPOINTS).toContain(HYPEREVM_TESTNET_RPC_URL);
       const rows = client.snapshot?.() ?? [];
@@ -58,7 +61,13 @@ describe("hyperevm public defaults", () => {
       ]);
       for (const endpoint of [...HYPEREVM_MAINNET_REGISTRY, ...HYPEREVM_TESTNET_REGISTRY]) {
         expect(endpoint.sourceUrls.length).toBeGreaterThan(0);
-        expect(rows.find((row) => row.url === endpoint.url)?.tokens).toBe(endpoint.burst);
+        const row = rows.find((item) => item.url === endpoint.url);
+        if (!endpoint.eligible) {
+          expect(row).toBeUndefined();
+          continue;
+        }
+        expect(row?.tokens).toBe(endpoint.burst);
+        expect(row?.weight).toBe(endpoint.weight);
       }
       expect(mock.calls).toEqual([]);
     } finally {
@@ -67,13 +76,13 @@ describe("hyperevm public defaults", () => {
   });
 
   test.each([
-    { chainId: 999 as const, official: HYPEREVM_RPC_URL, identity: "0x3e7" },
-    { chainId: 998 as const, official: HYPEREVM_TESTNET_RPC_URL, identity: "0x3e6" },
-  ])("fails over a default RPC's rate limit on chain $chainId and verifies its replacement", async ({ chainId, official, identity }) => {
+    { chainId: 999 as const, primary: HYPEREVM_MAINNET_ENDPOINTS[0]!, identity: "0x3e7" },
+    { chainId: 998 as const, primary: HYPEREVM_TESTNET_ENDPOINTS[0]!, identity: "0x3e6" },
+  ])("fails over a default RPC's rate limit on chain $chainId and verifies its replacement", async ({ chainId, primary, identity }) => {
     const events: RpcEvent[] = [];
     const mock = mockRpc(({ url, method }) => {
       if (method === "eth_chainId") return identity;
-      if (url === official) return new Response("rate limited", {
+      if (new URL(url).href === new URL(primary).href) return new Response("rate limited", {
         status: 429,
         headers: { "retry-after": "5" },
       });
@@ -91,19 +100,20 @@ describe("hyperevm public defaults", () => {
       await expect(client.request({ method: "eth_blockNumber" })).resolves.toBe("0x10");
       const reads = mock.calls.filter((call) => call.method === "eth_blockNumber");
       expect(reads).toHaveLength(2);
-      expect(reads[0]?.url).toBe(official);
-      expect(reads[1]?.url).not.toBe(official);
+      expect(reads[0]?.url).toBe(new URL(primary).href);
+      expect(reads[1]?.url).not.toBe(new URL(primary).href);
       expect(mock.calls.some((call) => call.url === reads[1]?.url && call.method === "eth_chainId")).toBe(true);
-      expect(client.snapshot?.().find((row) => row.url === official)?.ejected).toBe(true);
-      expect(events).toContainEqual(expect.objectContaining({ type: "failover", from: official }));
+      expect(client.snapshot?.().find((row) => new URL(row.url).href === new URL(primary).href)?.ejected).toBe(true);
+      expect(events).toContainEqual(expect.objectContaining({ type: "failover", from: primary }));
     } finally {
       client.close?.();
     }
   });
 
   test("quarantines a wrong-network default before sending it a user read", async () => {
+    const primary = HYPEREVM_MAINNET_ENDPOINTS[0]!;
     const mock = mockRpc(({ url, method }) => {
-      if (method === "eth_chainId") return url === HYPEREVM_RPC_URL ? "0x3e6" : "0x3e7";
+      if (method === "eth_chainId") return new URL(url).href === new URL(primary).href ? "0x3e6" : "0x3e7";
       return "0x10";
     });
     const client = hyperevm({
@@ -115,10 +125,10 @@ describe("hyperevm public defaults", () => {
     });
     try {
       await expect(client.request({ method: "eth_blockNumber" })).resolves.toBe("0x10");
-      expect(mock.calls.filter((call) => call.url === HYPEREVM_RPC_URL).map((call) => call.method)).toEqual([
+      expect(mock.calls.filter((call) => new URL(call.url).href === new URL(primary).href).map((call) => call.method)).toEqual([
         "eth_chainId",
       ]);
-      expect(client.snapshot?.().find((row) => row.url === HYPEREVM_RPC_URL)?.quarantined).toBe(true);
+      expect(client.snapshot?.().find((row) => new URL(row.url).href === new URL(primary).href)?.quarantined).toBe(true);
     } finally {
       client.close?.();
     }
@@ -160,8 +170,8 @@ describe("hyperevm public defaults", () => {
   });
 
   test("keeps default requests inside their own network pool", async () => {
-    const mainnet = new Set(HYPEREVM_MAINNET_ENDPOINTS);
-    const testnet = new Set(HYPEREVM_TESTNET_ENDPOINTS);
+    const mainnet = new Set(HYPEREVM_MAINNET_ENDPOINTS.map((url) => new URL(url).href));
+    const testnet = new Set(HYPEREVM_TESTNET_ENDPOINTS.map((url) => new URL(url).href));
     const mock = mockRpc(({ url, method }) => method === "eth_chainId"
       ? mainnet.has(url) ? "0x3e7" : "0x3e6"
       : "0x10");
@@ -191,13 +201,14 @@ describe("hyperevm configuration", () => {
       ? url === mainnetUrl ? "0x3e7" : "0x3e6"
       : "0x10");
     const client = hyperevm({
-      endpoints: [mainnetUrl],
-      testnetEndpoints: [testnetUrl],
+      endpoints: [{ url: mainnetUrl, weight: 0.4 }],
+      testnetEndpoints: [{ url: testnetUrl, weight: 0.6 }],
       fetchFn: mock.fetchFn,
       headLag: { probeInterval: false },
     });
     try {
       expect(client.snapshot?.().map((row) => row.url)).toEqual([mainnetUrl, testnetUrl]);
+      expect(client.snapshot?.().map((row) => row.weight)).toEqual([0.4, 0.6]);
       await client.request({ chainId: HYPEREVM_MAINNET_CAIP, method: "eth_blockNumber" });
       await client.request({ chainId: HYPEREVM_TESTNET_CAIP, method: "eth_blockNumber" });
       expect(new Set(mock.calls.map((call) => call.url))).toEqual(new Set([mainnetUrl, testnetUrl]));
@@ -279,6 +290,113 @@ describe("hyperevm configuration", () => {
       ]);
     } finally {
       client.close?.();
+    }
+  });
+
+  test("uses timed precompile entries and immutable confirmed results through chain policy", async () => {
+    let now = 0;
+    let head = 100;
+    const hash = `0x${"ab".repeat(32)}`;
+    const precompile = { to: "0x0000000000000000000000000000000000000809", data: "0x" };
+    const mock = mockRpc(({ method }) => {
+      if (method === "eth_chainId") return "0x3e7";
+      if (method === "eth_blockNumber") return `0x${head.toString(16)}`;
+      if (method === "eth_getTransactionByHash") return { hash, blockNumber: null };
+      return "0x1";
+    });
+    const client = hyperevm({
+      chainId: 999,
+      endpoints: ["https://custom.example/rpc"],
+      fetchFn: mock.fetchFn,
+      verifyIdentity: false,
+      race: false,
+      cache: { refreshInterval: false },
+      headLag: { probeInterval: false },
+      now: () => now,
+    });
+    try {
+      await client.probe();
+      await client.request({ method: "eth_call", params: [precompile, "latest"] });
+      await client.request({ method: "eth_call", params: [precompile, "0x1"] });
+      expect(mock.calls.filter((call) => call.method === "eth_call")).toHaveLength(1);
+
+      await client.request({ method: "eth_getBalance", params: [hash, "0x10"] });
+      await client.request({ method: "eth_getBalance", params: [hash, "0x10"] });
+      now = 100_000;
+      head = 200;
+      await client.probe();
+      await client.request({ method: "eth_getBalance", params: [hash, "0x10"] });
+      expect(mock.calls.filter((call) => call.method === "eth_getBalance")).toHaveLength(1);
+
+      await client.request({ method: "eth_getTransactionByHash", params: [hash] });
+      await client.request({ method: "eth_getTransactionByHash", params: [hash] });
+      expect(mock.calls.filter((call) => call.method === "eth_getTransactionByHash")).toHaveLength(2);
+    } finally {
+      client.close();
+    }
+  });
+
+  test("keeps latest-only public log providers on unchanged latest queries", async () => {
+    const mock = mockRpc(({ method, params }) => {
+      if (method === "eth_blockNumber") return "0x64";
+      if (method === "eth_getLogs") {
+        const filter = params[0] as { toBlock?: string };
+        if (filter.toBlock !== "latest") throw new Error("latest-only provider received a generated numeric range");
+        return [{ blockNumber: "0x64", logIndex: "0x0" }];
+      }
+      return "0x3e7";
+    });
+    const client = hyperevm({
+      chainId: 999,
+      endpoints: [HYPEREVM_RPC_URL],
+      fetchFn: mock.fetchFn,
+      verifyIdentity: false,
+      race: false,
+      retryCount: 0,
+      budget: false,
+      cache: { refreshInterval: false },
+      headLag: { probeInterval: false },
+      isActive: () => false,
+      now: () => 0,
+    });
+    try {
+      await client.probe();
+      const params = [{ address: `0x${"ab".repeat(20)}`, fromBlock: "0x5a", toBlock: "latest" }];
+      await client.request({ method: "eth_getLogs", params });
+      await client.request({ method: "eth_getLogs", params });
+      expect(mock.calls.filter((call) => call.method === "eth_getLogs")).toHaveLength(2);
+      expect(client.cacheStats().entries).toBe(0);
+    } finally {
+      client.close();
+    }
+  });
+});
+
+
+describe("hyperevm scoped sharing", () => {
+  test("one key remains isolated between mainnet and testnet", async () => {
+    const mainnetUrl = "https://shared-mainnet.example/rpc";
+    const testnetUrl = "https://shared-testnet.example/rpc";
+    const mock = mockRpc(({ url, method }) => method === "eth_chainId"
+      ? url === mainnetUrl ? "0x3e7" : "0x3e6"
+      : "0x10");
+    const scope = createPoolScope();
+    const client = hyperevm({
+      endpoints: [mainnetUrl],
+      testnetEndpoints: [testnetUrl],
+      fetchFn: mock.fetchFn,
+      headLag: false,
+      race: false,
+      sharing: { scope, key: "dual-network" },
+    });
+    try {
+      expect(client.chainIds).toEqual([HYPEREVM_MAINNET_CAIP, HYPEREVM_TESTNET_CAIP]);
+      await expect(client.request({ chainId: HYPEREVM_MAINNET_CAIP, method: "eth_blockNumber" })).resolves.toBe("0x10");
+      await expect(client.request({ chainId: HYPEREVM_TESTNET_CAIP, method: "eth_blockNumber" })).resolves.toBe("0x10");
+      expect(new Set(mock.calls.map((call) => call.url))).toEqual(new Set([mainnetUrl, testnetUrl]));
+    } finally {
+      client.close?.();
+      scope.close();
     }
   });
 });

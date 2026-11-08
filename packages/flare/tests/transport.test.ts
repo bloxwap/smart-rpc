@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   flare, FLARE_CHAIN_ID, FLARE_MAINNET_CAIP, FLARE_NATIVE_CURRENCY, FLARE_MAINNET_REGISTRY,
-  FLARE_RPC_URL, FLARE_WS_URL, FLARE_QUICKNODE_RPC_URL, FLARE_QUICKNODE_WS_URL,
+  FLARE_MAINNET_ENDPOINTS, FLARE_RPC_URL, FLARE_WS_URL, FLARE_QUICKNODE_RPC_URL, FLARE_QUICKNODE_WS_URL,
 } from "../src/index.js";
 
 interface Call { url: string; method: string; params: unknown[]; headers: Headers }
@@ -28,14 +28,17 @@ const offline = { headLag: { probeInterval: false as const }, race: false, cache
 const address = "0x0000000000000000000000000000000000001000";
 
 describe("Flare execution transport", () => {
-  test("constructs both exact documented HTTP defaults lazily with FLR metadata", () => {
+  test("constructs all exported HTTP defaults lazily with FLR metadata", () => {
     const mock = fixture(() => { throw new Error("unexpected network"); });
     const pool = flare({ ...offline, fetchFn: mock.fetchFn });
     try {
       expect(pool.chainIds).toEqual([FLARE_MAINNET_CAIP]);
       expect(FLARE_CHAIN_ID).toBe(14);
       expect(FLARE_NATIVE_CURRENCY).toEqual({ name: "Flare", symbol: "FLR", decimals: 18 });
-      expect(pool.endpoints.map(({ url }) => url)).toEqual([FLARE_RPC_URL, FLARE_QUICKNODE_RPC_URL]);
+      expect(pool.endpoints.map(({ url }) => url)).toEqual(FLARE_MAINNET_ENDPOINTS);
+      expect(FLARE_MAINNET_ENDPOINTS).toEqual(FLARE_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(FLARE_MAINNET_ENDPOINTS).toEqual(expect.arrayContaining([FLARE_RPC_URL, FLARE_QUICKNODE_RPC_URL]));
+      expect(FLARE_MAINNET_ENDPOINTS.length).toBeLessThanOrEqual(5);
       expect(FLARE_WS_URL).toBe("wss://flare-api.flare.network/ext/C/ws");
       expect(FLARE_QUICKNODE_WS_URL).toBe("wss://stylish-light-theorem.flare-mainnet.quiknode.pro/ext/bc/C/ws");
       expect(mock.calls).toHaveLength(0);
@@ -86,7 +89,7 @@ describe("Flare execution transport", () => {
 
   test("routes explicit finality and historical state only to opted-in capabilities without tag rewriting", async () => {
     const mock = fixture(({ method }) => method === "eth_chainId" ? "0xe" : "0x0");
-    const pool = flare({ ...offline, routing: "best", endpoints: [FLARE_MAINNET_REGISTRY[0]!, {
+    const pool = flare({ ...offline, routing: "best", endpoints: [FLARE_RPC_URL, {
       url: "https://archive.example/rpc", capabilities: { archive: true, blockTags: ["latest", "safe", "finalized"] },
     }], fetchFn: mock.fetchFn });
     try {

@@ -1,0 +1,74 @@
+---
+title: Quick start
+description: Install Smart RPC, register chains, and send your first request.
+---
+
+## Install
+
+```sh
+npm install @bloxwap/smart-rpc
+```
+
+Node.js 22.12 or later is required. `viem` is included for EVM HTTP and WebSocket child transports; Solana uses `fetch` directly.
+
+## Create a router
+
+```ts
+import { createSmartRpc } from "@bloxwap/smart-rpc";
+import { ethereum } from "@bloxwap/smart-rpc/ethereum";
+import { hyperevm } from "@bloxwap/smart-rpc/hyperevm";
+import { solana } from "@bloxwap/smart-rpc/solana";
+
+const rpc = createSmartRpc({
+  transports: [ethereum(), hyperevm(), solana()],
+});
+
+const block = await rpc.request({
+  chainId: "eip155:999",
+  method: "eth_blockNumber",
+  params: [],
+});
+
+console.log(block);
+```
+
+A request reaches only the transport that registered its CAIP-2 chain ID. Common IDs include `eip155:1` for Ethereum, `eip155:999` for HyperEVM, and `solana:mainnet` for Solana.
+
+## Use one chain
+
+```ts
+import { createSmartRpc } from "@bloxwap/smart-rpc";
+import { base } from "@bloxwap/smart-rpc/base";
+
+const rpc = createSmartRpc({ transports: [base()] });
+const head = await rpc.request({
+  chainId: "eip155:8453",
+  method: "eth_blockNumber",
+  params: [],
+});
+```
+
+Every built-in factory uses documented public endpoints by default. Passing `endpoints` replaces the selected network's defaults:
+
+```ts
+const custom = base({
+  endpoints: [
+    {
+      url: process.env.BASE_RPC_URL!,
+      label: "my-provider",
+      rps: 10,
+      burst: 20,
+    },
+  ],
+});
+```
+
+## Use viem
+
+`asViemTransport(options)` from the Ethereum subpath adapts the shared pool to a viem client. Equivalent clients can share routing state while each lease closes independently. See the [library reference](./reference#scoped-sharing-and-viem) for scope keys and lifecycle rules.
+
+## Next steps
+
+- Review [configuration](./configuration) for caching, retries, sharing, and persistence.
+- Check the [transport inventory](./transports) for every supported subpath.
+- Read [public RPC defaults](./public-rpcs) before relying on keyless providers in production.

@@ -1,8 +1,12 @@
 node_modules
 dist
+.dev-dist
 .turbo
 *.tsbuildinfo
 coverage
+.next
+.source
+out
 .DS_Store
 *.log
 .pnpm-store

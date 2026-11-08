@@ -13,6 +13,11 @@ export const AVALANCHE_RPC_METHODS: readonly string[] = [...new Set([
   "eth_pendingTransactions", "eth_getHeaderByHash", "eth_getHeaderByNumber",
 ])];
 
+const DRPC_UNSUPPORTED_METHODS: readonly string[] = [
+  "eth_newFilter", "eth_newBlockFilter", "eth_newPendingTransactionFilter",
+  "eth_getFilterChanges", "eth_getFilterLogs", "eth_uninstallFilter",
+];
+
 export interface AvalanchePublicRpcEndpoint extends EthereumEndpointConfig {
   readonly id: string;
   readonly provider: string;
@@ -23,19 +28,61 @@ export interface AvalanchePublicRpcEndpoint extends EthereumEndpointConfig {
 }
 
 /** Unknown numeric quotas are omitted; advanced capabilities require explicit verification. */
-export const AVALANCHE_MAINNET_REGISTRY: readonly AvalanchePublicRpcEndpoint[] = [{
-  id: "avalanche-public-c-chain",
-  url: AVALANCHE_RPC_URL,
-  websocketUrl: AVALANCHE_WS_URL,
-  provider: "Avalanche",
-  sourceUrls: ["https://build.avax.network/docs/rpcs/c-chain"],
-  reviewedAt: "2026-11-06",
-  supportedMethods: AVALANCHE_RPC_METHODS,
-  unsupportedMethods: ["eth_getChainConfig", "eth_resend", "eth_sendTransaction", "eth_sign", "eth_signTransaction", "eth_accounts", "eth_coinbase", "eth_etherbase"],
-  capabilities: {
-    archive: false, blockTags: ["latest", "pending"], pinning: false,
-    batch: false, debug: false, trace: false, subscriptions: false,
+export const AVALANCHE_MAINNET_REGISTRY: readonly AvalanchePublicRpcEndpoint[] = [
+  {
+    id: "avalanche-public-c-chain",
+    url: AVALANCHE_RPC_URL,
+    websocketUrl: AVALANCHE_WS_URL,
+    provider: "Avalanche",
+    sourceUrls: ["https://build.avax.network/docs/rpcs/c-chain", "https://chainlist.org/chain/43114"],
+    reviewedAt: "2026-11-07",
+    supportedMethods: AVALANCHE_RPC_METHODS,
+    unsupportedMethods: ["eth_getChainConfig", "eth_resend", "eth_sendTransaction", "eth_sign", "eth_signTransaction", "eth_accounts", "eth_coinbase", "eth_etherbase"],
+    capabilities: {
+      archive: false, blockTags: ["latest", "pending"], pinning: false,
+      batch: false, debug: false, trace: false, subscriptions: false,
+    },
   },
-}];
+  {
+    id: "avalanche-publicnode",
+    url: "https://avalanche-c-chain-rpc.publicnode.com",
+    websocketUrl: "wss://avalanche-c-chain-rpc.publicnode.com",
+    provider: "Allnodes / PublicNode",
+    sourceUrls: ["https://avalanche.publicnode.com/", "https://chainlist.org/chain/43114"],
+    reviewedAt: "2026-11-07",
+    supportedMethods: AVALANCHE_RPC_METHODS,
+    capabilities: {
+      archive: false, blockTags: ["latest", "pending"], pinning: false,
+      batch: false, debug: false, trace: false, subscriptions: false,
+    },
+  },
+  {
+    id: "avalanche-drpc",
+    url: "https://avalanche.drpc.org",
+    websocketUrl: "wss://avalanche.drpc.org",
+    provider: "dRPC",
+    sourceUrls: ["https://drpc.org/chainlist/avalanche-mainnet-rpc", "https://chainlist.org/chain/43114"],
+    reviewedAt: "2026-11-07",
+    supportedMethods: AVALANCHE_RPC_METHODS.filter((method) => !DRPC_UNSUPPORTED_METHODS.includes(method)),
+    unsupportedMethods: DRPC_UNSUPPORTED_METHODS,
+    capabilities: {
+      archive: false, blockTags: ["latest", "pending"], pinning: false,
+      batch: false, debug: false, trace: false, subscriptions: false,
+    },
+  },
+  {
+    id: "avalanche-tenderly",
+    url: "https://avalanche.gateway.tenderly.co",
+    websocketUrl: "wss://avalanche.gateway.tenderly.co",
+    provider: "Tenderly",
+    sourceUrls: ["https://docs.tenderly.co/node-rpc/rpc-reference", "https://chainlist.org/chain/43114"],
+    reviewedAt: "2026-11-07",
+    supportedMethods: AVALANCHE_RPC_METHODS,
+    capabilities: {
+      archive: false, blockTags: ["latest", "pending"], pinning: false,
+      batch: false, debug: false, trace: false, subscriptions: false,
+    },
+  },
+];
 
 export const AVALANCHE_MAINNET_ENDPOINTS = AVALANCHE_MAINNET_REGISTRY.map(({ url }) => url);

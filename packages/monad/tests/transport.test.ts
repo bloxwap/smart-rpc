@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   monad, MONAD_CHAIN_ID, MONAD_MAINNET_CAIP, MONAD_MAINNET_ENDPOINTS,
-  MONAD_MAINNET_REGISTRY, MONAD_NATIVE_CURRENCY, MONAD_HEAD_LAG,
+  MONAD_MAINNET_REGISTRY, MONAD_NATIVE_CURRENCY, MONAD_HEAD_LAG, MONAD_RPC_URL,
 } from "../src/index.js";
 
 interface Call { url: string; method: string; params: unknown[]; headers: Headers }
@@ -43,8 +43,10 @@ describe("Monad registry and identity", () => {
       expect(MONAD_CHAIN_ID).toBe(143);
       expect(rpc.chainIds).toEqual([MONAD_MAINNET_CAIP]);
       expect(MONAD_NATIVE_CURRENCY).toEqual({ name: "Monad", symbol: "MON", decimals: 18 });
-      expect(rpc.endpoints.map(({ url }) => url)).toEqual(MONAD_MAINNET_ENDPOINTS);
-      expect(MONAD_MAINNET_REGISTRY).toHaveLength(5);
+      expect(rpc.endpoints.map(({ url }) => url)).toEqual(MONAD_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(MONAD_MAINNET_REGISTRY.map(({ url }) => url)).toEqual(MONAD_MAINNET_ENDPOINTS);
+      expect(MONAD_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
+      expect(MONAD_MAINNET_ENDPOINTS.length).toBeLessThanOrEqual(5);
       for (const endpoint of MONAD_MAINNET_REGISTRY) {
         expect(endpoint.sourceUrls.length).toBeGreaterThan(0);
         expect(endpoint.capabilities?.maxBatchSize).toBe(endpoint.documentedLimits.batchSize);
@@ -84,7 +86,7 @@ describe("Monad registry and identity", () => {
 describe("Monad provider capabilities", () => {
   test("routes historical state and debug requests away from public Ankr", async () => {
     const ankr = MONAD_MAINNET_REGISTRY.find(({ provider }) => provider === "Ankr")!;
-    const archive = MONAD_MAINNET_REGISTRY[0]!;
+    const archive = MONAD_MAINNET_REGISTRY.find(({ url }) => url === MONAD_RPC_URL)!;
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x8f" : "0x1234");
     const rpc = monad({ ...quiet, endpoints: [ankr, archive], fetchFn: mock.fetchFn, routing: "best" });
     try {
@@ -145,7 +147,7 @@ describe("Monad provider capabilities", () => {
     const mock = mockRpc(() => "0x10");
     const controller = new AbortController();
     controller.abort();
-    const rpc = monad({ ...quiet, fetchFn: mock.fetchFn });
+    const rpc = monad({ ...quiet, endpoints: [MONAD_RPC_URL], fetchFn: mock.fetchFn });
     try {
       await expect(rpc.request({ method: "eth_blockNumber", signal: controller.signal })).rejects.toMatchObject({ name: "AbortError" });
       expect(mock.calls).toEqual([]);

@@ -95,6 +95,7 @@ describe("OP Mainnet transport", () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0xa"
       : method === "eth_blockNumber" ? "0x64" : new Response("Unavailable", { status: 503 }));
     const client = optimism({
+      endpoints: [OPTIMISM_RPC_URL],
       fetchFn: mock.fetchFn, headLag: idle, race: false, retryCount: 0,
       onEvent: (event) => events.push(event),
     });
@@ -113,6 +114,7 @@ describe("OP Mainnet transport", () => {
   test("one operation budget bounds settled batch items without discarding successes", async () => {
     const mock = mockRpc(() => "0x42");
     const client = optimism({
+      endpoints: [OPTIMISM_RPC_URL],
       fetchFn: mock.fetchFn, headLag: idle, race: false, cache: false, verifyIdentity: false,
       operationBudget: { maxRequests: 1 },
     });
@@ -129,16 +131,22 @@ describe("OP Mainnet transport", () => {
     }
   });
 
-  test("registers OP Mainnet lazily with documented ETH metadata and one full RPC", () => {
+  test("registers OP Mainnet lazily with documented ETH metadata and default RPCs", () => {
     const mock = mockRpc(() => "0x1");
-    const client = optimism({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = optimism({
+      fetchFn: mock.fetchFn, headLag: idle,
+    });
     try {
       expect(client.chainIds).toEqual([OPTIMISM_MAINNET_CAIP]);
       expect(OPTIMISM_CHAIN_ID).toBe(10);
       expect(OPTIMISM_NATIVE_CURRENCY).toEqual({ name: "Ether", symbol: "ETH", decimals: 18 });
-      expect(OPTIMISM_MAINNET_ENDPOINTS).toEqual([OPTIMISM_RPC_URL]);
-      expect(client.endpoints.map(({ url }) => url)).toEqual([OPTIMISM_RPC_URL]);
+      expect(OPTIMISM_MAINNET_ENDPOINTS).toEqual(OPTIMISM_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(OPTIMISM_MAINNET_ENDPOINTS.length).toBeGreaterThanOrEqual(1);
+      expect(OPTIMISM_MAINNET_ENDPOINTS.length).toBeLessThanOrEqual(5);
+      expect(OPTIMISM_MAINNET_ENDPOINTS[0]).toBe(OPTIMISM_RPC_URL);
+      expect(client.endpoints.map(({ url }) => url)).toEqual(OPTIMISM_MAINNET_ENDPOINTS);
       expect(OPTIMISM_MAINNET_REGISTRY[0]?.rps).toBeUndefined();
+      expect(OPTIMISM_MAINNET_REGISTRY.every(({ capabilities }) => capabilities?.archive === false)).toBe(true);
       expect(mock.calls).toEqual([]);
     } finally {
       client.close();
@@ -176,7 +184,7 @@ describe("OP Mainnet transport", () => {
   test("keeps latest, safe and finalized independent in request and cache keys", async () => {
     const values: Record<string, string> = { latest: "0x3", safe: "0x2", finalized: "0x1" };
     const mock = mockRpc(({ method, params }) => method === "eth_chainId" ? "0xa" : values[String(params[1])]);
-    const client = optimism({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = optimism({ endpoints: [OPTIMISM_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       for (const tag of ["latest", "safe", "finalized"] as const) {
         expect(await client.request({ method: "eth_getBalance", params: [address, tag] })).toBe(values[tag]);
@@ -193,7 +201,7 @@ describe("OP Mainnet transport", () => {
 
   test("preserves receipt execution gas and independent L1 calldata/blob fee fields", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0xa" : receipt);
-    const client = optimism({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = optimism({ endpoints: [OPTIMISM_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       expect(await client.request({ method: "eth_getTransactionReceipt", params: [receipt.transactionHash] })).toEqual(receipt);
     } finally {
@@ -222,7 +230,7 @@ describe("OP Mainnet transport", () => {
 
   test("honors cancellation before dispatch", async () => {
     const mock = mockRpc(() => "0xa");
-    const client = optimism({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = optimism({ endpoints: [OPTIMISM_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     const controller = new AbortController();
     controller.abort();
     try {
@@ -236,6 +244,7 @@ describe("OP Mainnet transport", () => {
   test("bounds transient retries by the configured attempt count", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0xa" : new Response("Unavailable", { status: 503 }));
     const client = optimism({
+      endpoints: [OPTIMISM_RPC_URL],
       fetchFn: mock.fetchFn, headLag: idle, retryCount: 1, retryDelay: 1, race: false,
     });
     try {
@@ -280,10 +289,12 @@ describe("OP Mainnet transport", () => {
     }
   });
 
-  test.each([undefined, [OPTIMISM_RPC_URL], [`${OPTIMISM_RPC_URL}/`]])(
-    "does not degrade an unsupported public archive read to latest (%j)", async (endpoints) => {
+  test.each([
+    { name: "official URL", endpoint: OPTIMISM_MAINNET_REGISTRY[0]! },
+    { name: "official URL with trailing slash", endpoint: { ...OPTIMISM_MAINNET_REGISTRY[0]!, url: `${OPTIMISM_RPC_URL}/` } },
+  ])("does not degrade an unsupported public archive read to latest ($name)", async ({ endpoint }) => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0xa" : "0x10");
-    const client = optimism({ endpoints, fetchFn: mock.fetchFn, headLag: idle });
+    const client = optimism({ endpoints: [endpoint], fetchFn: mock.fetchFn, headLag: idle });
     try {
       await expect(client.request({ method: "eth_getBalance", params: [address, "0x1"] })).rejects.toThrow();
       expect(mock.calls.filter(({ method }) => method === "eth_getBalance")).toEqual([]);

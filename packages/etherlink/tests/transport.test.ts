@@ -41,15 +41,17 @@ function mockRpc(answer: (call: Call) => unknown | Promise<unknown> = ({ method 
 describe("Etherlink EVM transport", () => {
   test("is lazy and uses documented identity, XTZ decimals, provider limits and full RPC", () => {
     const mock = mockRpc();
-    const pool = etherlink({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = etherlink({ endpoints: [ETHERLINK_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       expect(ETHERLINK_CHAIN_ID).toBe(42793);
       expect(ETHERLINK_NATIVE_CURRENCY).toEqual({ name: "Tez", symbol: "XTZ", decimals: 18 });
       expect(pool.chainIds).toEqual([ETHERLINK_MAINNET_CAIP]);
-      expect(pool.endpoints.map(({ url }) => url)).toEqual(ETHERLINK_MAINNET_ENDPOINTS);
-      expect(ETHERLINK_MAINNET_ENDPOINTS).toEqual([ETHERLINK_RPC_URL]);
+      expect(pool.endpoints.map(({ url }) => url)).toEqual([ETHERLINK_RPC_URL]);
+      expect(ETHERLINK_MAINNET_ENDPOINTS).toEqual(ETHERLINK_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(ETHERLINK_MAINNET_ENDPOINTS).toContain(ETHERLINK_RPC_URL);
+      expect(ETHERLINK_MAINNET_ENDPOINTS.length).toBeLessThanOrEqual(5);
       expect(ETHERLINK_PUBLIC_LIMITS).toEqual({ requestsPerMinute: 1000, maxLogBlockRange: 500, maxLogResults: 5000 });
-      const entry = ETHERLINK_MAINNET_REGISTRY[0]!;
+      const entry = ETHERLINK_MAINNET_REGISTRY.find(({ url }) => url === ETHERLINK_RPC_URL)!;
       expect(entry.rps! * 60 + entry.burst!).toBeLessThan(1000);
       expect(entry.providerBudget).toEqual({ rps: entry.rps, burst: entry.burst });
       expect(entry.capabilities?.maxBatchSize).toBeUndefined();
@@ -126,7 +128,7 @@ describe("Etherlink EVM transport", () => {
 
   test("does not numerically pin public latest-only defaults after health probing", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? chain : "0x64");
-    const pool = etherlink({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = etherlink({ endpoints: [ETHERLINK_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       await pool.probe();
       await pool.request({ method: "eth_getBalance", params: [account, "latest"] });
@@ -135,8 +137,12 @@ describe("Etherlink EVM transport", () => {
   });
 
   test("rejects a 501-block public log request before upstream and splits explicitly into bounded ranges", async () => {
-    const mock = mockRpc(({ method, params }) => method === "eth_chainId" ? chain : method === "eth_getLogs" ? [{ range: params[0] }] : "0x64");
-    const pool = etherlink({ fetchFn: mock.fetchFn, headLag: idle, race: false });
+    const mock = mockRpc(({ method, params }) => method === "eth_chainId"
+      ? chain
+      : method === "eth_getLogs"
+        ? [{ blockNumber: (params[0] as { fromBlock: string }).fromBlock, logIndex: "0x0" }]
+        : "0x64");
+    const pool = etherlink({ endpoints: [ETHERLINK_RPC_URL], fetchFn: mock.fetchFn, headLag: idle, race: false });
     const filter = { address: account, fromBlock: "0x1", toBlock: "0x1f5", topics: ["0x1234"] };
     try {
       await expect(pool.request({ method: "eth_getLogs", params: [filter] })).rejects.toThrow();
@@ -151,8 +157,8 @@ describe("Etherlink EVM transport", () => {
   test("preserves provider too-many-logs errors without returning a partial split result", async () => {
     const mock = mockRpc(({ id, method, params }) => method === "eth_chainId" ? chain : method === "eth_getLogs" && (params[0] as { fromBlock: string }).fromBlock === "0x1f5"
       ? Response.json({ jsonrpc: "2.0", id, error: { code: -32005, message: "more than 5000 logs" } })
-      : [{ data: "0x12" }]);
-    const pool = etherlink({ fetchFn: mock.fetchFn, headLag: idle, race: false, retryCount: 0 });
+      : [{ blockNumber: (params[0] as { fromBlock: string }).fromBlock, logIndex: "0x0", data: "0x12" }]);
+    const pool = etherlink({ endpoints: [ETHERLINK_RPC_URL], fetchFn: mock.fetchFn, headLag: idle, race: false, retryCount: 0 });
     try {
       await expect(requestLogs(pool, { fromBlock: "0x1", toBlock: "0x1f5" }, { maxBlockRange: 500 })).rejects.toThrow(/no partial result/);
       expect(mock.calls.filter(({ method }) => method === "eth_getLogs")).toHaveLength(2);
@@ -176,7 +182,7 @@ describe("Etherlink EVM transport", () => {
     const data = "0x8326329c000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000244b5431576a385355476d6e455046717961684841636a634e5177653659476845584a623500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000762616c616e6365000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002030b000000000000000000000000000000000000000000000000000000000000";
     const result = `0x${"20".padStart(64, "0")}${"02".padStart(64, "0")}${"002a".padEnd(64, "0")}`;
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? chain : result);
-    const pool = etherlink({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = etherlink({ endpoints: [ETHERLINK_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       expect(await pool.request({ method: "eth_call", params: [{ to: ETHERLINK_PRECOMPILES.nativeAtomicGateway, data }, "latest"] })).toBe(result);
       expect(mock.calls.at(-1)?.params).toEqual([{ to: ETHERLINK_PRECOMPILES.nativeAtomicGateway, data }, "latest"]);
@@ -210,7 +216,7 @@ describe("Etherlink EVM transport", () => {
 
   test("cancellation before dispatch sends no request and does not poison health", async () => {
     const mock = mockRpc();
-    const pool = etherlink({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = etherlink({ endpoints: [ETHERLINK_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     const controller = new AbortController();
     controller.abort();
     try {
@@ -232,7 +238,7 @@ describe("Etherlink EVM transport", () => {
 
   test("charges the documented public allowance for identity, probes and caller traffic", async () => {
     const mock = mockRpc();
-    const pool = etherlink({ fetchFn: mock.fetchFn, headLag: idle, now: () => 1000, cache: false });
+    const pool = etherlink({ endpoints: [ETHERLINK_RPC_URL], fetchFn: mock.fetchFn, headLag: idle, now: () => 1000, cache: false });
     try {
       await pool.probe();
       expect(pool.snapshot()[0]?.tokens).toBe(2);

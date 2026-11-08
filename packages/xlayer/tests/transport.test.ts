@@ -12,7 +12,10 @@ import {
   XLAYER_PUBLIC_PROVIDER_GROUP,
   XLAYER_PUBLIC_RPC_BUDGET,
   XLAYER_RPC_URL,
+  XLAYER_ALTERNATE_RPC_URL,
 } from "../src/index.js";
+
+const XLAYER_OFFICIAL_ENDPOINTS = [XLAYER_RPC_URL, XLAYER_ALTERNATE_RPC_URL];
 
 interface Call {
   id: number;
@@ -53,8 +56,12 @@ describe("X Layer defaults", () => {
       expect(client.chainIds).toEqual([XLAYER_MAINNET_CAIP]);
       expect(XLAYER_NATIVE_CURRENCY).toEqual({ name: "OKB", symbol: "OKB", decimals: 18 });
       expect(client.endpoints.map(({ url }) => url)).toEqual(XLAYER_MAINNET_ENDPOINTS);
+      expect(XLAYER_MAINNET_REGISTRY.map(({ url }) => url)).toEqual(XLAYER_MAINNET_ENDPOINTS);
+      expect(XLAYER_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
       expect(mock.calls).toEqual([]);
-      expect(XLAYER_MAINNET_REGISTRY.every((entry) => entry.providerGroup === XLAYER_PUBLIC_PROVIDER_GROUP)).toBe(true);
+      const official = XLAYER_MAINNET_REGISTRY.filter(({ url }) => XLAYER_OFFICIAL_ENDPOINTS.includes(url));
+      expect(official).toHaveLength(XLAYER_OFFICIAL_ENDPOINTS.length);
+      expect(official.every((entry) => entry.providerGroup === XLAYER_PUBLIC_PROVIDER_GROUP && entry.providerBudget === XLAYER_PUBLIC_RPC_BUDGET)).toBe(true);
       expect(XLAYER_PUBLIC_RPC_BUDGET).toEqual({ rps: 100, burst: 100 });
       expect(XLAYER_MAINNET_WEBSOCKET_ENDPOINTS).toEqual(["wss://xlayerws.okx.com", "wss://ws.xlayer.tech"]);
     } finally { client.close(); }
@@ -62,7 +69,7 @@ describe("X Layer defaults", () => {
 
   test("quarantines another chain before any caller request reaches it", async () => {
     const mock = mockRpc(({ method, url }) => method === "eth_chainId" ? url === XLAYER_RPC_URL ? "0x1" : "0xc4" : "0x64");
-    const client = xlayer({ fetchFn: mock.fetchFn, headLag: noTimer, routing: "best", race: false });
+    const client = xlayer({ endpoints: XLAYER_OFFICIAL_ENDPOINTS, fetchFn: mock.fetchFn, headLag: noTimer, routing: "best", race: false });
     try {
       await expect(client.request({ method: "eth_blockNumber" })).resolves.toBe("0x64");
       expect(mock.calls.filter(({ url }) => url === XLAYER_RPC_URL).map(({ method }) => method)).toEqual(["eth_chainId"]);
@@ -73,7 +80,7 @@ describe("X Layer defaults", () => {
   test("uses block height for liveness and preserves empty txpool and zero protocol results", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0xc4"
       : method === "txpool_content" ? {} : method === "eth_protocolVersion" ? "0x0" : "0x64");
-    const client = xlayer({ fetchFn: mock.fetchFn, headLag: noTimer, budget: false, race: false });
+    const client = xlayer({ endpoints: XLAYER_OFFICIAL_ENDPOINTS, fetchFn: mock.fetchFn, headLag: noTimer, budget: false, race: false });
     try {
       await client.probe();
       expect(new Set(mock.calls.map(({ method }) => method))).toEqual(new Set(["eth_chainId", "eth_blockNumber"]));
@@ -93,7 +100,7 @@ describe("X Layer defaults", () => {
     { method: "xlayer_undocumentedMethod", params: [] },
   ])("rejects unconfigured public capability $method without a network call", async ({ method, params }) => {
     const mock = mockRpc();
-    const client = xlayer({ fetchFn: mock.fetchFn, headLag: noTimer });
+    const client = xlayer({ endpoints: XLAYER_OFFICIAL_ENDPOINTS, fetchFn: mock.fetchFn, headLag: noTimer });
     try {
       await expect(client.request({ method, params })).rejects.toThrow();
       expect(mock.calls).toEqual([]);
@@ -103,7 +110,7 @@ describe("X Layer defaults", () => {
 
   test("keeps latest state requests unpinned on unverified public archive endpoints", async () => {
     const mock = mockRpc();
-    const client = xlayer({ fetchFn: mock.fetchFn, headLag: noTimer, budget: false, race: false });
+    const client = xlayer({ endpoints: XLAYER_OFFICIAL_ENDPOINTS, fetchFn: mock.fetchFn, headLag: noTimer, budget: false, race: false });
     try {
       await client.probe();
       await client.request({ method: "eth_getBalance", params: ["0x0000000000000000000000000000000000000001", "latest"] });
@@ -114,7 +121,7 @@ describe("X Layer defaults", () => {
   test("shares the 100-token public ceiling across both URLs, including explicit public configs", async () => {
     const mock = mockRpc();
     const client = xlayer({
-      endpoints: XLAYER_MAINNET_ENDPOINTS.map((url, index) => ({
+      endpoints: XLAYER_OFFICIAL_ENDPOINTS.map((url, index) => ({
         url,
         rps: 1_000,
         burst: 1_000,
@@ -132,7 +139,7 @@ describe("X Layer defaults", () => {
       for (let index = 0; index < 100; index++) {
         await client.request({ method: index % 2 === 0 ? "eth_blockNumber" : "eth_gasPrice" });
       }
-      expect(new Set(mock.calls.map(({ url }) => url))).toEqual(new Set(XLAYER_MAINNET_ENDPOINTS));
+      expect(new Set(mock.calls.map(({ url }) => url))).toEqual(new Set(XLAYER_OFFICIAL_ENDPOINTS));
       await expect(client.request({ method: "eth_gasPrice" })).rejects.toThrow();
       expect(mock.calls).toHaveLength(100);
     } finally { client.close(); }

@@ -244,9 +244,12 @@ describe("public registry composition", () => {
     try {
       for (const { transport, registry } of transports) {
         const snapshots = transport.snapshot?.() ?? [];
-        expect(snapshots).toHaveLength(registry.length);
-        for (const entry of registry) {
-          expect(snapshots.find((row) => row.url === entry.url)?.tokens).toBe(entry.burst);
+        const eligible = registry.filter((entry) => !("eligible" in entry) || entry.eligible);
+        expect(snapshots).toHaveLength(eligible.length);
+        for (const entry of eligible) {
+          const snapshot = snapshots.find((row) => row.url === entry.url);
+          expect(snapshot?.tokens).toBe(entry.burst);
+          if ("weight" in entry) expect(snapshot?.weight).toBe(entry.weight);
         }
       }
     } finally {

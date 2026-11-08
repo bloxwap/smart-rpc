@@ -43,8 +43,10 @@ describe("Ink mainnet", () => {
     const client = ink({ fetchFn: mock.fetchFn, headLag: noProbes });
     try {
       expect(client.chainIds).toEqual([INK_MAINNET_CAIP]);
-      expect(client.endpoints.map(({ url }) => url)).toEqual([INK_RPC_URL, INK_SECONDARY_RPC_URL]);
-      expect(INK_MAINNET_ENDPOINTS).toEqual([INK_RPC_URL, INK_SECONDARY_RPC_URL]);
+      expect(INK_MAINNET_REGISTRY.length).toBeGreaterThan(0);
+      expect(INK_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
+      expect(client.endpoints.map(({ url }) => url)).toEqual(INK_MAINNET_ENDPOINTS);
+      expect(INK_MAINNET_ENDPOINTS).toEqual(INK_MAINNET_REGISTRY.map(({ url }) => url));
       expect(INK_NATIVE_CURRENCY).toEqual({ name: "Ether", symbol: "ETH", decimals: 18 });
       expect(mock.calls).toEqual([]);
       expect(INK_MAINNET_REGISTRY[0].websocketUrls).toContain("wss://ws-gel.inkonchain.com");
@@ -63,7 +65,9 @@ describe("Ink mainnet", () => {
   test("quarantines a wrong chain before a user call and verifies the replacement", async () => {
     const mock = mockRpc(({ url, method }) => method === "eth_chainId"
       ? url === INK_RPC_URL ? "0x1" : identity : "0x10");
-    const client = ink({ fetchFn: mock.fetchFn, headLag: noProbes, routing: "best", race: false });
+    const client = ink({
+      endpoints: [INK_RPC_URL, INK_SECONDARY_RPC_URL], fetchFn: mock.fetchFn, headLag: noProbes, routing: "best", race: false,
+    });
     try {
       await expect(client.request({ method: "eth_blockNumber" })).resolves.toBe("0x10");
       expect(mock.calls.filter(({ url }) => url === INK_RPC_URL).map(({ method }) => method)).toEqual(["eth_chainId"]);
@@ -88,7 +92,10 @@ describe("Ink mainnet", () => {
 
   test("requires explicit advanced capabilities without retrying or degrading finality", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? identity : "0x10");
-    const client = ink({ fetchFn: mock.fetchFn, headLag: noProbes });
+    const client = ink({
+      endpoints: [{ url: INK_RPC_URL, capabilities: INK_MAINNET_REGISTRY[0].capabilities }],
+      fetchFn: mock.fetchFn, headLag: noProbes,
+    });
     try {
       for (const request of [
         { method: "eth_getBalance", params: ["0x0000000000000000000000000000000000000001", "finalized"] },
@@ -160,7 +167,7 @@ describe("Ink mainnet", () => {
 
   test("honors cancellation before sending an identity check or user request", async () => {
     const mock = mockRpc();
-    const client = ink({ fetchFn: mock.fetchFn, headLag: noProbes });
+    const client = ink({ endpoints: [INK_RPC_URL], fetchFn: mock.fetchFn, headLag: noProbes });
     try {
       const controller = new AbortController();
       controller.abort();

@@ -23,7 +23,8 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "benchmark": "tsup --config tsup.benchmark.config.ts && node .dev-dist/benchmark.js"
   },
   "devDependencies": {
     "tsup": "^8.5.0",

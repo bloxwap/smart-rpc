@@ -48,6 +48,7 @@ function mockRpc(answer: (call: Call) => unknown | Promise<unknown>) {
 }
 
 const clients: RpcPool[] = [];
+const officialDataseeds = [BSC_RPC_URL, "https://bsc-dataseed-public.bnbchain.org"];
 function client(options: BscOptions = {}): RpcPool {
   const pool = bsc({ headLag: { probeInterval: false }, ...options });
   clients.push(pool);
@@ -56,12 +57,14 @@ function client(options: BscOptions = {}): RpcPool {
 afterEach(() => { for (const pool of clients.splice(0)) pool.close(); vi.useRealTimers(); });
 
 describe("BNB Smart Chain defaults", () => {
-  test("registers BSC mainnet and documented dataseeds without network side effects", () => {
+  test("registers BSC mainnet and documented public defaults without network side effects", () => {
     const mock = mockRpc(() => "0x38");
     const pool = client({ fetchFn: mock.fetchFn });
     expect(BSC_CHAIN_ID).toBe(56);
     expect(pool.chainIds).toEqual([BSC_MAINNET_CAIP]);
     expect(BSC_NATIVE_CURRENCY).toEqual({ name: "BNB", symbol: "BNB", decimals: 18 });
+    expect(BSC_MAINNET_REGISTRY.map(({ url }) => url)).toEqual(BSC_MAINNET_ENDPOINTS);
+    expect(BSC_MAINNET_ENDPOINTS.length).toBeLessThanOrEqual(5);
     expect(pool.endpoints.map(({ url }) => url)).toEqual(BSC_MAINNET_ENDPOINTS);
     expect(BSC_PUBLIC_RATE_LIMIT).toEqual({ requests: 10_000, windowMs: 300_000 });
     expect(BSC_MAINNET_REGISTRY.every(({ sourceUrls }) => sourceUrls.length > 0)).toBe(true);
@@ -70,7 +73,7 @@ describe("BNB Smart Chain defaults", () => {
 
   test("quarantines an Ethereum endpoint before sending it a BSC user call", async () => {
     const mock = mockRpc(({ url, method }) => method === "eth_chainId" ? url === BSC_RPC_URL ? "0x1" : "0x38" : "0x10");
-    const pool = client({ fetchFn: mock.fetchFn, routing: "best", race: false });
+    const pool = client({ endpoints: officialDataseeds, fetchFn: mock.fetchFn, routing: "best", race: false });
     await expect(pool.request({ method: "eth_blockNumber" })).resolves.toBe("0x10");
     expect(mock.calls.filter(({ url }) => url === BSC_RPC_URL).map(({ method }) => method)).toEqual(["eth_chainId"]);
     expect(pool.snapshot().find(({ url }) => url === BSC_RPC_URL)?.quarantined).toBe(true);
@@ -92,7 +95,7 @@ describe("BNB Smart Chain defaults", () => {
 
   test.each(["eth_getLogs", ...BSC_EXTENSION_METHODS, "debug_traceTransaction", "trace_block"])("rejects unsupported public %s without an upstream call or endpoint penalty", async (method) => {
     const mock = mockRpc(() => "0x38");
-    const pool = client({ fetchFn: mock.fetchFn });
+    const pool = client({ endpoints: officialDataseeds, fetchFn: mock.fetchFn });
     await expect(pool.request({ method, params: [] })).rejects.toThrow();
     expect(mock.calls).toEqual([]);
     expect(pool.snapshot().every(({ ejected }) => !ejected)).toBe(true);
@@ -100,7 +103,7 @@ describe("BNB Smart Chain defaults", () => {
 
   test("retains latest on public dataseeds and refuses unverified historical/finalized state", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x38" : method === "eth_blockNumber" ? "0x100" : "0x42");
-    const pool = client({ fetchFn: mock.fetchFn, routing: "best", race: false });
+    const pool = client({ endpoints: officialDataseeds, fetchFn: mock.fetchFn, routing: "best", race: false });
     await pool.probe();
     const address = "0x0000000000000000000000000000000000000001";
     await pool.request({ method: "eth_getBalance", params: [address, "latest"] });
@@ -137,7 +140,7 @@ describe("configured BSC providers", () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
     const mock = mockRpc(() => "0x10");
-    const endpoints: EthereumEndpointConfig[] = BSC_MAINNET_ENDPOINTS.map((url, index) => ({
+    const endpoints: EthereumEndpointConfig[] = officialDataseeds.map((url, index) => ({
       url, rps: 100, burst: 100,
       providerBudget: { rps: 1, burst: 2 },
       supportedMethods: [index === 0 ? "eth_blockNumber" : "eth_gasPrice"],

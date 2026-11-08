@@ -1,0 +1,99 @@
+---
+title: Configuration
+description: Tune routing, caching, request budgets, sharing, and warm-start persistence.
+---
+
+Transport factories accept `retryCount`, `timeout`, `operationBudget`, `race`, `breaker`, `budget`, `cache`, `persist`, `sharing`, `endpoints`, `now`, and `random`. Chain-specific options are documented in the transport notes.
+
+## Cache
+
+```ts
+import { hyperevm } from "@bloxwap/smart-rpc/hyperevm";
+
+const transport = hyperevm({
+  cache: {
+    maxStaleBlocks: 1,
+    maxAgeMs: 2_000,
+    refreshInterval: 1_000,
+    hotKeys: 64,
+    hotIdleMs: 30_000,
+    maxEntries: 1_000,
+    maxBytes: 8 * 1024 * 1024,
+    logsWindow: 1_000,
+    copyResults: true,
+    immutableParams: false,
+  },
+});
+```
+
+Set `refreshInterval: false` to disable background ticks. Observed heads can still trigger refreshes. Set `copyResults: false` only when cached values are treated as immutable by both the provider and caller. Set `immutableParams: true` only when reused params arrays and their nested values are never mutated.
+
+Sends, errors, filters, subscriptions, latest nonces, gas estimates, and pending inclusion results are not cached. Numeric and by-hash results become permanently cacheable only where chain policy permits immutable entries.
+
+## Routing and retries
+
+Defaults include two extra attempts, a ten-second attempt timeout, power-of-two endpoint selection, safe-read racing, and a three-failure circuit breaker. Cooldown starts at five seconds and doubles to sixty seconds. Backoff starts between 100 and 200 milliseconds, doubles, and is capped at two seconds.
+
+```ts
+const transport = hyperevm({
+  timeout: 5_000,
+  retryCount: 1,
+  race: { width: 2 },
+  operationBudget: { maxRequests: 32, timeout: 15_000 },
+});
+```
+
+An operation budget covers identity checks, retries, races, and batch items. Unknown EVM extensions are not raced or coalesced unless explicitly listed as safe methods. Writes and stateful filters remain unshared.
+
+## Endpoint and provider budgets
+
+```ts
+const transport = hyperevm({
+  endpoints: [
+    { url: "https://rpc.hyperliquid.xyz/evm", rps: 1.5, burst: 3 },
+    {
+      url: process.env.PRIVATE_HYPEREVM_RPC!,
+      label: "dedicated",
+      rps: 25,
+      burst: 50,
+      providerGroup: "my-provider",
+    },
+  ],
+});
+```
+
+Budgets are local conservative settings, not provider guarantees. Provider groups share token buckets across equivalent pools when the same sharing scope and budget key are used. Separate processes and source IP traffic cannot be coordinated by the client.
+
+## Scoped sharing
+
+```ts
+import { createPoolScope } from "@bloxwap/smart-rpc";
+import { hyperevm } from "@bloxwap/smart-rpc/hyperevm";
+
+const scope = createPoolScope();
+const config = { chainId: 999 as const, endpoints: ["https://rpc.hyperliquid.xyz/evm"] };
+
+const first = hyperevm({
+  ...config,
+  sharing: { scope, key: "999:10000:2", budgetKey: "999" },
+});
+const second = hyperevm({
+  ...config,
+  sharing: { scope, key: "999:10000:2", budgetKey: "999" },
+});
+```
+
+Use the same key only for equivalent endpoints, credentials, chain, timeout, and retry policy. Keep `budgetKey` stable across variants only when their budget configuration is also equivalent. The last lease closes the shared pool; `scope.close()` closes the entire scope.
+
+## Warm-start persistence
+
+```ts
+import { localStoragePersistence } from "@bloxwap/smart-rpc";
+import { ethereum } from "@bloxwap/smart-rpc/ethereum";
+
+const transport = ethereum({
+  persist: localStoragePersistence("my-app:smart-rpc"),
+});
+```
+
+Every pool also exposes `scores()` and `restoreScores(snapshot)` for custom persistence. Saves are throttled and serialized. Snapshots contain learned score books, not raw unlabeled URLs, heads, identity state, or circuit-breaker state.

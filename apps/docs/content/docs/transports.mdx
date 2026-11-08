@@ -1,0 +1,42 @@
+---
+title: Transports
+description: Supported chains, package subpaths, and CAIP-2 network identifiers.
+---
+
+Import each factory from its subpath of the same `@bloxwap/smart-rpc` package. No additional chain package is required.
+
+| Transport | Import subpath | CAIP-2 ID | Details |
+| --- | --- | --- | --- |
+| Ethereum | `ethereum` | `eip155:1` | [Notes](./transports/ethereum) |
+| HyperEVM | `hyperevm` | `eip155:999`, `eip155:998` | [Notes](./transports/hyperevm) |
+| Solana | `solana` | `solana:mainnet` and cluster aliases | [Notes](./transports/solana) |
+| BNB Smart Chain | `bsc` | `eip155:56` | [Notes](./transports/bsc) |
+| Polygon PoS | `polygon` | `eip155:137` | [Notes](./transports/polygon) |
+| Base | `base` | `eip155:8453` | [Notes](./transports/base) |
+| Arbitrum One | `arbitrum` | `eip155:42161` | [Notes](./transports/arbitrum) |
+| Monad | `monad` | `eip155:143` | [Notes](./transports/monad) |
+| X Layer | `xlayer` | `eip155:196` | [Notes](./transports/xlayer) |
+| Robinhood Chain | `robinhood` | `eip155:4663` | [Notes](./transports/robinhood) |
+| Plasma | `plasma` | `eip155:9745` | [Notes](./transports/plasma) |
+| Ink | `ink` | `eip155:57073` | [Notes](./transports/ink) |
+| OP Mainnet | `optimism` | `eip155:10` | [Notes](./transports/optimism) |
+| opBNB | `opbnb` | `eip155:204` | [Notes](./transports/opbnb) |
+| Arc | `arc` | `eip155:5042` | [Notes](./transports/arc) |
+| Etherlink | `etherlink` | `eip155:42793` | [Notes](./transports/etherlink) |
+| Avalanche C-Chain | `avalanche` | `eip155:43114` | [Notes](./transports/avalanche) |
+| Celo | `celo` | `eip155:42220` | [Notes](./transports/celo) |
+| Gnosis | `gnosis` | `eip155:100` | [Notes](./transports/gnosis) |
+| Mantle | `mantle` | `eip155:5000` | [Notes](./transports/mantle) |
+| Flare | `flare` | `eip155:14` | [Notes](./transports/flare) |
+
+```ts
+import { createSmartRpc } from "@bloxwap/smart-rpc";
+import { arbitrum } from "@bloxwap/smart-rpc/arbitrum";
+import { base } from "@bloxwap/smart-rpc/base";
+
+const rpc = createSmartRpc({ transports: [arbitrum(), base()] });
+```
+
+Each factory verifies chain identity and accepts dedicated endpoints, HTTP headers, budgets, and explicit capabilities. Review the linked notes before enabling archive state, debug/trace methods, finality tags, HTTP batches, or subscriptions.
+
+To register a custom transport, use `createPool` and `ChainPolicy` from the package root. The complete example is in the [library reference](./reference#add-a-transport).

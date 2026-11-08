@@ -14,7 +14,7 @@ test.skipIf(!publicChecks)("public Etherlink identity and current full-block hea
 }, 25_000);
 
 test.skipIf(!publicChecks)("public Etherlink accepts a bounded numeric log filter", async () => {
-  const pool = etherlink({ headLag: idle, race: false, timeout: 10_000 });
+  const pool = etherlink({ endpoints: [ETHERLINK_RPC_URL], headLag: idle, race: false, timeout: 10_000 });
   try {
     const head = BigInt(String(await pool.request({ method: "eth_blockNumber" })));
     // A one-block query with a zero address avoids broad production traffic.

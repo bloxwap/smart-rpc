@@ -20,20 +20,32 @@ export {
   type BudgetOptions,
 } from "./budget.js";
 export {
+  DEFAULT_CACHE_HOT_IDLE_MS,
+  DEFAULT_CACHE_HOT_KEYS,
+  DEFAULT_CACHE_LOGS_WINDOW,
   DEFAULT_CACHE_MAX_AGE_MS,
   DEFAULT_CACHE_MAX_BYTES,
   DEFAULT_CACHE_MAX_ENTRIES,
   DEFAULT_CACHE_MAX_STALE_BLOCKS,
+  DEFAULT_CACHE_REFRESH_INTERVAL_MS,
+  evmCachePlan,
   evmCachePolicy,
   ReadCache,
   resolveCache,
   type CacheConfig,
   type CacheHit,
   type CacheKind,
+  type CacheLogFetch,
   type CacheMiss,
   type CacheOptions,
+  type CachePlan,
+  type CachePlanKind,
   type CachePolicy,
+  type CacheRead,
+  type CacheReadOptions,
+  type CacheSource,
   type CacheStats,
+  type EvmCachePolicyOptions,
 } from "./cache.js";
 export {
   coalesceKey,
@@ -41,6 +53,31 @@ export {
   DEFAULT_UNCOALESCED_METHODS,
   isCoalescableMethod,
 } from "./coalesce.js";
+export {
+  type BlockHashLogQueryPlan,
+  canonicalLogFilterKey,
+  DEFAULT_LOG_INDEX_MAX_BYTES,
+  DEFAULT_LOG_INDEX_MAX_ENTRIES,
+  DEFAULT_LOG_INDEX_WINDOW,
+  LogIndex,
+  planLogQuery,
+  resolveLogIndexConfig,
+  resolveLogRange,
+  type RollingLogQueryPlan,
+  type LogBlockBound,
+  type LogFilter,
+  type LogIndexConfig,
+  type LogIndexFetch,
+  type LogIndexHit,
+  type LogIndexLookupContext,
+  type LogIndexMetadata,
+  type LogIndexMiss,
+  type LogIndexOptions,
+  type LogIndexStats,
+  type LogQueryPlan,
+  type LogRange,
+  type LogValue,
+} from "./log-index.js";
 export {
   DEFAULT_MAX_AHEAD,
   DEFAULT_MAX_LAG,
@@ -90,6 +127,7 @@ export {
   type PinTarget,
 } from "./pin.js";
 export { createPool } from "./pool.js";
+export { createPoolScope } from "./share.js";
 export { blockNumberFromResult, parseQuantity, toHexQuantity } from "./quantity.js";
 export {
   DEFAULT_RACE_WIDTH,
@@ -120,6 +158,15 @@ export {
   type ScoreboardEndpoint,
   type ScoreboardOptions,
 } from "./scoreboard.js";
+export {
+  DEFAULT_SCORE_MAX_AGE_MS,
+  DEFAULT_SCORE_SAVE_INTERVAL_MS,
+  localStoragePersistence,
+  WarmStart,
+  type ScoreBook,
+  type ScorePersistence,
+  type ScoreSnapshot,
+} from "./warmstart.js";
 export type {
   ChainPolicy,
   EndpointCall,
@@ -127,6 +174,8 @@ export type {
   HedgeOptions,
   PoolEndpointConfig,
   PoolOptions,
+  PoolShareScope,
+  PoolSharingOptions,
   OperationBudgetOptions,
   RpcPool,
   RpcRequest,

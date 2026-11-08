@@ -9,6 +9,8 @@
 
 import {
   createSmartRpc,
+  evmCachePolicy,
+  isPrecompileCall,
   type RpcEvent,
   type RpcPool,
   type RpcRequest,
@@ -54,7 +56,7 @@ export const HYPEREVM_MAINNET_CAIP = "eip155:999";
 export const HYPEREVM_TESTNET_CAIP = "eip155:998";
 
 export interface HyperEvmOptions
-  extends Omit<EthereumOptions, "chainId" | "chainIds" | "endpoints" | "skipPrecompiles"> {
+  extends Omit<EthereumOptions, "chainId" | "chainIds" | "endpoints" | "skipPrecompiles" | "cachePolicy"> {
   /**
    * One HyperEVM chain. Omit to serve both `eip155:999` and `eip155:998`.
    */
@@ -85,6 +87,7 @@ export function hyperevm(options: HyperEvmOptions = {}): HyperEvmTransport {
       chainIds: [`eip155:${chainId}`],
       endpoints: endpointsFor(options, chainId),
       skipPrecompiles: options.skipPrecompiles ?? true,
+      cachePolicy: evmCachePolicy({ immutable: true, isTimedCall: isPrecompileCall }),
       safeMethods: [...HYPEREVM_SAFE_METHODS, ...(options.safeMethods ?? [])],
     }),
   );
@@ -109,9 +112,11 @@ function endpointsFor(options: HyperEvmOptions, chainId: 999 | 998): readonly Et
     : options.endpoints;
   if (configured !== undefined) return configured.map((endpoint) => tagOfficial(endpoint));
   const registry = chainId === 999 ? HYPEREVM_MAINNET_REGISTRY : HYPEREVM_TESTNET_REGISTRY;
-  return registry.map(({ url, rps, burst, unsupportedMethods, capabilities }) => ({
-    url, rps, burst, unsupportedMethods, capabilities,
-  }));
+  return registry
+    .filter((endpoint) => endpoint.eligible && endpoint.weight > 0)
+    .map(({ url, weight, rps, burst, unsupportedMethods, capabilities }) => ({
+      url, weight, rps, burst, unsupportedMethods, capabilities,
+    }));
 }
 
 /** Keep documented official restrictions and the reference budget for both networks. */

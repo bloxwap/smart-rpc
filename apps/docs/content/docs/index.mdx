@@ -1,0 +1,90 @@
+---
+title: Features and installation
+description: Every Smart RPC performance optimization, followed by installation instructions.
+---
+
+Smart RPC is a TypeScript JSON-RPC router for EVM chains and Solana. It combines live endpoint scoring, safe parallelism, bounded caching, and provider-aware traffic control in one package.
+
+## Performance features
+
+| Area | Feature | How it improves performance |
+| --- | --- | --- |
+| Bundle | Single published package | Installs the core and every built-in transport together; no chain-specific packages or duplicate core installs are needed. |
+| Bundle | Chain subpath exports | `@bloxwap/smart-rpc/<chain>` lets bundlers exclude transports that the application never imports. |
+| Bundle | Shared output chunks | The release build keeps one shared core chunk instead of duplicating routing code in every transport. |
+| Bundle | Explicit transport registration | The package root registers no chains, avoiding initialization and network work for unused transports. |
+| Routing | Global and per-method EWMA scores | Learns endpoint latency separately by method so a fast provider for one workload is not penalized by a slower specialized method. |
+| Routing | Tail-latency scoring | Includes an exponentially weighted tail estimate, favoring consistently fast endpoints rather than only good averages. |
+| Routing | Confidence blending | New endpoints start with a prior and gain influence from samples, preventing one lucky response from dominating routing. |
+| Routing | Error and liveness memory | Failed calls affect endpoint selection while health probes update liveness without distorting user-call latency. |
+| Routing | Power-of-two choices | Samples two candidates and selects the better score, providing adaptive routing without sorting the entire pool per request. |
+| Routing | In-flight penalty | Applies `1 + n + 0.25n²` to busy endpoints, shifting new work away from growing queues. |
+| Routing | Head freshness and lag awareness | Expires stale head observations and penalizes endpoints behind their peers, reducing slow retries against unsynchronized nodes. |
+| Routing | Historical HyperEVM ranking | Seeds mainnet weights from bounded rolling identity, lag, method-latency, log, and precompile observations instead of starting every install cold. |
+| Execution | In-flight coalescing | Identical concurrent safe reads share one upstream request and one response. |
+| Execution | Factory-scoped pool sharing | Equivalent clients share learned scores, caches, identity checks, probe timers, and budgets while independent configurations remain isolated. |
+| Execution | Top-two safe-read racing | Races the best two eligible endpoints when configured, reducing tail latency without broadcasting every request to the whole pool. |
+| Execution | Loser cancellation | Aborts losing race requests and excludes intentional cancellation from failure and latency accounting. |
+| Execution | Immediate failover | Tries another live endpoint after a retryable failure rather than waiting unnecessarily on the failed provider. |
+| Execution | Bounded retries with jitter | Limits extra attempts and uses capped exponential backoff with jitter when revisiting an endpoint, avoiding synchronized retry bursts. |
+| Execution | Operation budgets | Bounds upstream calls and total time across identity checks, retries, races, and batch items, preventing runaway amplification. |
+| Execution | Ordered settled batches | Preserves successful batch results when siblings fail and applies one operation budget across the batch. |
+| Execution | Latest-block pinning | Pins mutable `latest` reads to a commonly held block, reducing inconsistent responses and avoidable cross-provider retries. |
+| Execution | Stateful filter affinity | Keeps filter handles on their originating endpoint, avoiding failed requests and repeated filter setup on peers. |
+| Execution | Capability-aware selection | Avoids providers that do not support the requested method, state, finality tag, log range, batch, or subscription. |
+| Execution | Chain identity quarantine | Checks chain ID or genesis hash before traffic and isolates wrong-chain endpoints before they waste application requests. |
+| Cache | Canonical cache plans | Normalizes hex values, object keys, implied tags, and block forms so equivalent reads share entries. |
+| Cache | Freshness-bounded entries | Serves latest reads only within configured age and block-lag limits, eliminating upstream calls without accepting unbounded staleness. |
+| Cache | Hot-key background refresh | Refreshes recently used keys when heads advance, keeping hot responses ready before the next foreground request. |
+| Cache | Timed precompile entries | Handles HyperCore calls whose block tags are ignored using age-bounded keys rather than incorrect block-specific caching. |
+| Cache | Immutable-entry opt-in | Retains confirmed numbered, hash, transaction, and receipt results on no-reorg chains until eviction. |
+| Cache | Immutable-params memoization | Reuses a computed cache plan when callers guarantee stable params objects, avoiding repeated normalization and key generation. |
+| Cache | Optional zero-copy results | `copyResults: false` removes defensive-copy CPU work when providers and callers treat values as immutable. |
+| Cache | Entry and byte limits | Uses least-recently-used eviction and approximate memory budgets to keep cache work and memory bounded. |
+| Logs | Rolling log indexes | Reuses indexed logs across overlapping ranges instead of downloading the same history repeatedly. |
+| Logs | Incremental tail fetches | Fetches only missing blocks when an indexed range advances. |
+| Logs | Binary-search selection | Locates the first relevant block logarithmically and returns only logs inside the requested range. |
+| Logs | Log deduplication and ordering | Canonical fingerprints remove duplicate positions and preserve deterministic block/log-index ordering. |
+| Logs | Reorg invalidation | Drops stale chain data and ignores pre-invalidation fills, preventing useless or incorrect cache hits after a reorg. |
+| Traffic control | Endpoint token buckets | Applies sustained request and burst limits per endpoint, including calls, retries, identity checks, and probes. |
+| Traffic control | Provider-group budgets | Shares one ceiling across URLs operated by the same provider, reducing rate-limit failures and throttled retries. |
+| Traffic control | Probe token reservation | Automatic probes preserve the final budgeted token for caller traffic whenever possible. |
+| Traffic control | Circuit breakers | Ejects repeatedly failing endpoints with exponential cooldown, keeping requests away from known-bad providers. |
+| Traffic control | `Retry-After` handling | Honors provider cooldown signals immediately instead of repeatedly probing a rate-limited endpoint. |
+| Traffic control | Outlier-head rejection | Ignores implausibly far-ahead heads so a bad observation cannot distort endpoint selection. |
+| Traffic control | Idle probe shutdown | Stops health timers after an idle period, eliminating background traffic for unused pools. |
+| Warm start | Score snapshots | Restores global and per-method latency, tail, and error books so a new process does not rediscover every provider from zero. |
+| Warm start | Throttled serialized saves | Coalesces persistence writes and saves newest-last, reducing storage work without allowing an older snapshot to overwrite a newer one. |
+| Warm start | Safe persistence labels | Omits raw URLs for unlabeled endpoints and excludes transient heads, breakers, and identity state from restored data. |
+
+See the [library reference](./reference) for scoring constants, defaults, and detailed behavior.
+
+## Installation
+
+Smart RPC requires Node.js 22.12 or later. Install one package; all supported transports are included.
+
+### npm
+
+```sh
+npm install @bloxwap/smart-rpc
+```
+
+### pnpm
+
+```sh
+pnpm add @bloxwap/smart-rpc
+```
+
+### yarn
+
+```sh
+yarn add @bloxwap/smart-rpc
+```
+
+### bun
+
+```sh
+bun add @bloxwap/smart-rpc
+```
+
+Continue with the [quick start](./quick-start) to register transports and make your first request.

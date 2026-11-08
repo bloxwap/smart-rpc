@@ -14,20 +14,99 @@ export interface OptimismPublicRpcEndpoint extends EthereumEndpointConfig {
 }
 
 /** Unknown provider quotas and optional capabilities are not inferred. */
-export const OPTIMISM_MAINNET_REGISTRY: readonly OptimismPublicRpcEndpoint[] = [{
-  id: "optimism-mainnet",
-  url: OPTIMISM_RPC_URL,
-  provider: "Optimism",
-  sourceUrls: ["https://docs.optimism.io/op-mainnet/network-information/connecting-to-op"],
-  reviewedAt: "2026-11-06",
-  capabilities: {
-    archive: false,
-    batch: false,
-    debug: false,
-    trace: false,
-    subscriptions: false,
-    pinning: false,
+export const OPTIMISM_MAINNET_REGISTRY: readonly OptimismPublicRpcEndpoint[] = [
+  {
+    id: "optimism-mainnet",
+    url: OPTIMISM_RPC_URL,
+    provider: "Optimism",
+    sourceUrls: ["https://docs.optimism.io/op-mainnet/network-information/connecting-to-op"],
+    reviewedAt: "2026-11-07",
+    capabilities: {
+      archive: false,
+      batch: false,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+    },
   },
-}];
+  {
+    id: "optimism-publicnode",
+    url: "https://optimism-rpc.publicnode.com",
+    provider: "PublicNode",
+    sourceUrls: [
+      "https://chainlist.org/chain/10",
+      "https://www.publicnode.com/",
+    ],
+    reviewedAt: "2026-11-07",
+    capabilities: {
+      archive: false,
+      batch: false,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+    },
+  },
+  {
+    id: "optimism-drpc",
+    url: "https://optimism.drpc.org",
+    provider: "dRPC",
+    sourceUrls: [
+      "https://chainlist.org/chain/10",
+      "https://drpc.org/chainlist/optimism-mainnet-rpc",
+    ],
+    reviewedAt: "2026-11-07",
+    unsupportedMethods: [
+      "eth_newFilter",
+      "eth_newBlockFilter",
+      "eth_newPendingTransactionFilter",
+      "eth_getFilterChanges",
+      "eth_getFilterLogs",
+      "eth_uninstallFilter",
+    ],
+    capabilities: {
+      archive: false,
+      batch: false,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+    },
+  },
+  {
+    id: "optimism-pocket",
+    url: "https://op.api.pocket.network",
+    provider: "Pocket Network",
+    sourceUrls: ["https://docs.pocket.network/developers/supported-chains/"],
+    reviewedAt: "2026-11-07",
+    capabilities: {
+      archive: false,
+      batch: false,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+    },
+  },
+  {
+    id: "optimism-tenderly",
+    url: "https://optimism.gateway.tenderly.co",
+    provider: "Tenderly",
+    sourceUrls: [
+      "https://chainlist.org/chain/10",
+      "https://docs.tenderly.co/node-rpc/rpc-reference",
+    ],
+    reviewedAt: "2026-11-07",
+    capabilities: {
+      archive: false,
+      batch: false,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+    },
+  },
+];
 
 export const OPTIMISM_MAINNET_ENDPOINTS: readonly string[] = OPTIMISM_MAINNET_REGISTRY.map(({ url }) => url);

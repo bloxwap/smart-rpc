@@ -1,10 +1,11 @@
 import type { BreakerOptions } from "./breaker.js";
-import type { BudgetConfig, BudgetOptions } from "./budget.js";
+import type { BudgetConfig, BudgetOptions, Budgets } from "./budget.js";
 import type { CacheOptions, CachePolicy, CacheStats } from "./cache.js";
 import type { EndpointSnapshot, RpcEvent } from "./events.js";
 import type { PinLatestOptions } from "./pin.js";
 import type { RaceOptions } from "./race.js";
 import type { ScoreConfig } from "./score.js";
+import type { ScorePersistence, ScoreSnapshot } from "./warmstart.js";
 
 /** A JSON-RPC call. `chainId` is a CAIP-2 id such as `eip155:1` or `solana:mainnet`. */
 export interface RpcRequest {
@@ -32,7 +33,7 @@ export interface EndpointCall {
 
 /** One endpoint the pool can route to. */
 export interface PoolEndpointConfig {
-  /** Public label. Default: `url`. */
+  /** Public runtime label. Default: `url`. Unlabeled endpoints use an opaque URL hash in score snapshots. */
   id?: string | undefined;
   url: string;
   /** Routing weight above 0. Default: 1. */
@@ -51,7 +52,7 @@ export interface PoolEndpointConfig {
   /** URLs sharing a provider quota use the same group inside this pool. */
   providerGroup?: string | undefined;
   providerBudget?: BudgetOptions | undefined;
-  /** Release transport resources when the pool closes. */
+  /** Release owned resources on pool close, or immediately when a shared acquisition discards this duplicate. */
   close?: (() => void) | undefined;
   /**
    * Milliseconds a recent rate-limited response asked for in `Retry-After`.
@@ -139,6 +140,34 @@ export interface OperationBudgetOptions {
   timeout?: number | undefined;
 }
 
+/** A factory-local owner for shared pools and budgets. Create one with `createPoolScope()`. */
+export interface PoolShareScope {
+  /** @internal Called by `createPool` when `sharing` is set. */
+  acquire(
+    key: string,
+    budgetKey: string,
+    now: () => number,
+    build: (budgets: Budgets) => RpcPool,
+  ): RpcPool;
+  /** Close every pool in this scope. Existing and future leases cannot make requests. */
+  close(): void;
+}
+
+/** Opt in to reuse inside one explicit factory scope. No process-global registry is used. */
+export interface PoolSharingOptions {
+  scope: PoolShareScope;
+  /**
+   * Identity of every routing-relevant input. Dedicate a scope to fixed endpoints, credentials,
+   * and policy, then include per-consumer chain, timeout, and retry settings in this key.
+   */
+  key: string;
+  /**
+   * Identity of the provider allowance. Default: `key`. Use the same value across timeout/retry
+   * variants only when their endpoints, credentials, chain, and budget configuration match.
+   */
+  budgetKey?: string | undefined;
+}
+
 /** Options for {@link createPool}. Defaults match the HyperEVM transport at 092b8f9. */
 export interface PoolOptions {
   endpoints: readonly PoolEndpointConfig[];
@@ -187,10 +216,18 @@ export interface PoolOptions {
   /** Head probes send nothing while this returns false. Default: hidden browser tabs are inactive. */
   isActive?: (() => boolean) | undefined;
   score?: Partial<ScoreConfig> | undefined;
-  /** Clock used for latency, budgets, and the probe idle timeout. Tests inject this. Default: `Date.now`. */
+  /**
+   * Warm-start scores from storage. `load` runs once, on the instance's first request, and `save` runs at most every
+   * `saveInterval` and on `close()`. A load still pending at the first pick lands later, so it never delays or fails
+   * a call. Load and save errors fire a `persist` event. Use {@link localStoragePersistence} in a browser. Default: off.
+   */
+  persist?: ScorePersistence | undefined;
+  /** Clock used for latency, budgets, persistence freshness, and the probe idle timeout. Default: `Date.now`. */
   now?: (() => number) | undefined;
   /** Source of randomness for power-of-two-choices and backoff jitter. Default: `Math.random`. */
   random?: (() => number) | undefined;
+  /** Reuse equivalent pools and coordinate budgets only inside this explicit scope. Default: off. */
+  sharing?: PoolSharingOptions | undefined;
 }
 
 /** A routed pool. Register it with {@link createSmartRpc} or call `request` directly. */
@@ -202,6 +239,15 @@ export interface RpcPool extends SmartRpcTransport {
   probe(): Promise<void>;
   close(): void;
   snapshot(method?: string): readonly EndpointSnapshot[];
+  /** Learned latency, tail, and error books by endpoint label. Transient routing state is never included. */
+  scores(): ScoreSnapshot;
+  /**
+   * Seed books that have no samples yet from a {@link ScoreSnapshot} or its JSON, which may come from untrusted storage.
+   * Unknown endpoints, invalid books, and books older than `persist.maxAge` are ignored, and values are clamped.
+   * A seeded book counts as at most two samples, and the endpoint's first live sample replaces it.
+   * True when a book was seeded.
+   */
+  restoreScores(snapshot: unknown): boolean;
   onEvent(listener: (event: RpcEvent) => void): () => void;
   readonly endpoints: readonly { id: string; url: string; weight: number }[];
   cacheStats(): CacheStats;

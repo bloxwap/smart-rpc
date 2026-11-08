@@ -19,7 +19,8 @@ export interface MonadRpcEndpoint extends EthereumEndpointConfig {
 
 const networkSource = "https://docs.monad.xyz/developer-essentials/network-information";
 const limitsSource = "https://docs.monad.xyz/reference/json-rpc/overview";
-const reviewedAt = "2026-11-06";
+const chainlistSource = "https://chainlist.org/chain/143";
+const reviewedAt = "2026-11-07";
 
 /**
  * HTTP defaults. WebSocket addresses are recorded verbatim, never inferred.
@@ -32,7 +33,7 @@ export const MONAD_MAINNET_REGISTRY: readonly MonadRpcEndpoint[] = [
   {
     id: "monad-mf", label: "monad-mf", url: MONAD_RPC_URL,
     provider: "Monad Foundation", websocketUrl: "wss://rpc.monad.xyz",
-    sourceUrls: [networkSource, limitsSource], reviewedAt,
+    sourceUrls: [networkSource, chainlistSource, limitsSource], reviewedAt,
     rps: 2, burst: 3, providerGroup: "monad-foundation", providerBudget: { rps: 2, burst: 3 },
     documentedLimits: { requests: 20, windowMs: 1_000, batchSize: 100, batchesPerSecond: 5 },
     capabilities: { archive: true, pinning: true, batch: true, maxBatchSize: 100, maxLogBlockRange: 100, subscriptions: false },
@@ -40,14 +41,14 @@ export const MONAD_MAINNET_REGISTRY: readonly MonadRpcEndpoint[] = [
   {
     id: "monad-mf-1", label: "monad-mf-1", url: "https://rpc1.monad.xyz",
     provider: "Monad Foundation", websocketUrl: "wss://rpc1.monad.xyz",
-    sourceUrls: [networkSource, limitsSource], reviewedAt,
+    sourceUrls: [networkSource, chainlistSource, limitsSource], reviewedAt,
     rps: 2, burst: 3, providerGroup: "monad-foundation", providerBudget: { rps: 2, burst: 3 },
     documentedLimits: { requests: 20, windowMs: 1_000, batchSize: 100, batchesPerSecond: 5 },
     capabilities: { archive: true, pinning: true, batch: true, maxBatchSize: 100, maxLogBlockRange: 1_000, subscriptions: false },
   },
   {
     id: "monad-goldsky", label: "monad-goldsky", url: "https://rpc2.monad.xyz",
-    provider: "Goldsky Edge", sourceUrls: [networkSource], reviewedAt,
+    provider: "Goldsky Edge", sourceUrls: [networkSource, chainlistSource], reviewedAt,
     rps: 20, burst: 20, providerGroup: "monad-goldsky", providerBudget: { rps: 20, burst: 20 },
     documentedLimits: { requests: 300, windowMs: 10_000, batchSize: 10 },
     capabilities: { archive: true, pinning: true, batch: true, maxBatchSize: 10, subscriptions: false },
@@ -55,7 +56,7 @@ export const MONAD_MAINNET_REGISTRY: readonly MonadRpcEndpoint[] = [
   {
     id: "monad-ankr", label: "monad-ankr", url: "https://rpc3.monad.xyz",
     provider: "Ankr", websocketUrl: "wss://rpc3.monad.xyz",
-    sourceUrls: [networkSource, limitsSource], reviewedAt,
+    sourceUrls: [networkSource, chainlistSource, limitsSource], reviewedAt,
     rps: 20, burst: 20, providerGroup: "monad-ankr", providerBudget: { rps: 20, burst: 20 },
     documentedLimits: { requests: 300, windowMs: 10_000, batchSize: 10 },
     capabilities: { archive: false, pinning: false, debug: false, batch: true, maxBatchSize: 10, maxLogBlockRange: 1_000, subscriptions: false },
@@ -63,7 +64,7 @@ export const MONAD_MAINNET_REGISTRY: readonly MonadRpcEndpoint[] = [
   {
     id: "monad-mf-infra", label: "monad-mf-infra", url: "https://rpc-mainnet.monadinfra.com",
     provider: "Monad Foundation", websocketUrl: "wss://rpc-mainnet.monadinfra.com",
-    sourceUrls: [networkSource, limitsSource], reviewedAt,
+    sourceUrls: [networkSource, chainlistSource, limitsSource], reviewedAt,
     rps: 2, burst: 3, providerGroup: "monad-foundation", providerBudget: { rps: 2, burst: 3 },
     documentedLimits: { requests: 20, windowMs: 1_000, batchSize: 100, batchesPerSecond: 5 },
     capabilities: { archive: true, pinning: true, batch: true, maxBatchSize: 100, maxLogBlockRange: 100, subscriptions: false },

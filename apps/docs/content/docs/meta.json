@@ -1,0 +1,16 @@
+{
+  "title": "Smart RPC",
+  "pages": [
+    "index",
+    "quick-start",
+    "configuration",
+    "transports",
+    "public-rpcs",
+    "benchmarks",
+    "reference",
+    "migration",
+    "development",
+    "roadmap",
+    "..."
+  ]
+}

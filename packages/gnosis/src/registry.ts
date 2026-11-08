@@ -18,14 +18,33 @@ export const GNOSIS_MAINNET_REGISTRY: readonly GnosisPublicRpcEndpoint[] = [
   {
     id: "gnosis-starter", provider: "Gnosis", url: GNOSIS_RPC_URL,
     websocketUrl: GNOSIS_WEBSOCKET_URL,
-    sourceUrls: ["https://docs.gnosischain.com/about/networks/mainnet", "https://docs.gnosischain.com/tools/RPC%20Providers/"],
-    reviewedAt: "2026-11-06",
+    sourceUrls: ["https://docs.gnosischain.com/about/networks/mainnet", "https://docs.gnosischain.com/tools/RPC%20Providers/", "https://chainlist.org/chain/100"],
+    reviewedAt: "2026-11-07",
     capabilities: { archive: false, debug: false, trace: false, subscriptions: false, batch: false, pinning: false, blockTags: ["latest", "pending"] },
   },
   {
     id: "gnosis-gateway", provider: "Gateway.fm", url: GNOSIS_GATEWAY_RPC_URL,
-    sourceUrls: ["https://docs.gnosischain.com/about/networks/mainnet"],
-    reviewedAt: "2026-11-06",
+    sourceUrls: ["https://docs.gnosischain.com/about/networks/mainnet", "https://chainlist.org/chain/100"],
+    reviewedAt: "2026-11-07",
+    capabilities: { archive: false, debug: false, trace: false, subscriptions: false, batch: false, pinning: false, blockTags: ["latest", "pending"] },
+  },
+  {
+    id: "gnosis-pocket", provider: "Pocket Network", url: "https://gnosis.api.pocket.network",
+    sourceUrls: ["https://docs.pocket.network/developers/supported-chains/", "https://chainlist.org/chain/100"],
+    reviewedAt: "2026-11-07",
+    capabilities: { archive: false, debug: false, trace: false, subscriptions: false, batch: false, pinning: false, blockTags: ["latest", "pending"] },
+  },
+  {
+    id: "gnosis-drpc", provider: "dRPC", url: "https://gnosis.drpc.org",
+    sourceUrls: ["https://drpc.org/chainlist/gnosis-mainnet-rpc", "https://drpc.org/docs/howitworks/ratelimiting", "https://docs.gnosischain.com/tools/RPC%20Providers/", "https://chainlist.org/chain/100"],
+    reviewedAt: "2026-11-07",
+    unsupportedMethods: ["eth_newFilter", "eth_newBlockFilter", "eth_newPendingTransactionFilter", "eth_getFilterChanges", "eth_getFilterLogs", "eth_uninstallFilter"],
+    capabilities: { archive: false, debug: false, trace: false, subscriptions: false, batch: false, pinning: false, blockTags: ["latest", "pending"] },
+  },
+  {
+    id: "gnosis-publicnode", provider: "PublicNode", url: "https://gnosis-rpc.publicnode.com",
+    sourceUrls: ["https://gnosis.publicnode.com/", "https://chainlist.org/chain/100"],
+    reviewedAt: "2026-11-07",
     capabilities: { archive: false, debug: false, trace: false, subscriptions: false, batch: false, pinning: false, blockTags: ["latest", "pending"] },
   },
 ];

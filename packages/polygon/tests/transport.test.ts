@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { EthereumEndpointConfig } from "@smart-rpc/ethereum";
-import { POLYGON_CHAIN_ID, POLYGON_MAINNET_CAIP, POLYGON_MAINNET_ENDPOINTS, POLYGON_MAINNET_REGISTRY, POLYGON_NATIVE_CURRENCY, POLYGON_PUBLIC_METHODS, POLYGON_WS_URL, polygon } from "../src/index.js";
+import { POLYGON_CHAIN_ID, POLYGON_MAINNET_CAIP, POLYGON_MAINNET_ENDPOINTS, POLYGON_MAINNET_REGISTRY, POLYGON_NATIVE_CURRENCY, POLYGON_PUBLIC_METHODS, POLYGON_RPC_URL, POLYGON_WS_URL, polygon } from "../src/index.js";
 
 interface Call { id: number; url: string; method: string; params: unknown[]; headers: Headers }
 
@@ -22,6 +22,14 @@ function mockRpc(answer: (call: Call) => unknown | Promise<unknown> = () => "0x1
 
 const inactive = { probeInterval: false as const };
 const account = "0x0000000000000000000000000000000000001234";
+const officialEndpoint: EthereumEndpointConfig = {
+  url: POLYGON_RPC_URL,
+  supportedMethods: POLYGON_PUBLIC_METHODS,
+  capabilities: {
+    archive: false, debug: false, trace: false, subscriptions: false,
+    pinning: false, batch: false, blockTags: ["latest", "pending"],
+  },
+};
 
 describe("Polygon PoS transport", () => {
   test("loads documented providers without network work or invented limits", () => {
@@ -31,6 +39,8 @@ describe("Polygon PoS transport", () => {
       expect(pool.chainIds).toEqual([POLYGON_MAINNET_CAIP]);
       expect(POLYGON_CHAIN_ID).toBe(137);
       expect(POLYGON_NATIVE_CURRENCY).toEqual({ name: "POL", symbol: "POL", decimals: 18 });
+      expect(POLYGON_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
+      expect(POLYGON_MAINNET_ENDPOINTS).toEqual(POLYGON_MAINNET_REGISTRY.map(({ url }) => url));
       expect(pool.endpoints.map(({ url }) => url)).toEqual(POLYGON_MAINNET_ENDPOINTS);
       expect(POLYGON_WS_URL).toBe("wss://polygon.drpc.org");
       expect(mock.calls).toEqual([]);
@@ -73,7 +83,7 @@ describe("Polygon PoS transport", () => {
 
   test.each(["bor_getAuthor", "debug_traceTransaction", "trace_block"])("does not send unconfigured %s to public providers", async (method) => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x89" : "0x123");
-    const pool = polygon({ fetchFn: mock.fetchFn, headLag: inactive, race: false });
+    const pool = polygon({ endpoints: [officialEndpoint], fetchFn: mock.fetchFn, headLag: inactive, race: false });
     try {
       await expect(pool.request({ method, params: ["0x10"] })).rejects.toThrow();
       expect(mock.calls.some((call) => call.method === method)).toBe(false);
@@ -112,7 +122,7 @@ describe("Polygon PoS transport", () => {
 
   test("does not downgrade an unverified finality request to latest", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x89" : "0x1");
-    const pool = polygon({ fetchFn: mock.fetchFn, headLag: inactive });
+    const pool = polygon({ endpoints: [officialEndpoint], fetchFn: mock.fetchFn, headLag: inactive });
     try {
       await expect(pool.request({ method: "eth_getBalance", params: [account, "finalized"] })).rejects.toThrow();
       expect(mock.calls.some(({ method }) => method === "eth_getBalance")).toBe(false);
@@ -123,7 +133,7 @@ describe("Polygon PoS transport", () => {
     const controller = new AbortController();
     controller.abort();
     const mock = mockRpc();
-    const pool = polygon({ fetchFn: mock.fetchFn, headLag: inactive });
+    const pool = polygon({ endpoints: [officialEndpoint], fetchFn: mock.fetchFn, headLag: inactive });
     try {
       await expect(pool.request({ method: "eth_getBalance", params: [account, "latest"], signal: controller.signal })).rejects.toThrow();
       expect(mock.calls).toEqual([]);
