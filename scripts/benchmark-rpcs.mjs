@@ -16,8 +16,10 @@ const PROTOCOLS = [...Object.keys(EVM_CHAINS), "solana"];
 const HELP = `Usage: node scripts/benchmark-rpcs.mjs [options]
 
 Phase A probes every mainnet registry endpoint directly: head latency, success
-rate, head lag against the best endpoint in the same synchronized round, and
-batch / eth_getLogs / archive support. Phase B sends a mixed read workload
+rate, a same-method state read (eth_getBalance / getBalance with distinct
+params), time-aligned head lag, and batch / eth_getLogs / archive support.
+Compare the router against bestDirectReadP50: some providers answer the head
+method from an edge cache, which no real read can match. Phase B sends a mixed read workload
 through the transport's own router and records which endpoints served it.
 No transactions are submitted. Build the workspace with pnpm build first.
 
@@ -150,7 +152,7 @@ async function probeEndpoints(chain, options) {
   const stats = chain.entries.map((entry) => ({
     id: entry.id, provider: entry.provider, url: entry.url, rps: entry.rps ?? null,
     tier: entry.tier ?? entry.priority ?? entry.weight ?? null,
-    latencies: [], lags: [], errors: {}, attempts: 0, identity: null,
+    latencies: [], reads: [], lags: [], errors: {}, attempts: 0, identity: null,
   }));
   const headMethod = chain.solana ? "getSlot" : "eth_blockNumber";
   const headParams = chain.solana ? [{ commitment: "processed" }] : [];
@@ -174,7 +176,15 @@ async function probeEndpoints(chain, options) {
       const head = toHead(chain, r.result);
       if (head === null) { stats[i].errors.malformed = (stats[i].errors.malformed ?? 0) + 1; return null; }
       stats[i].latencies.push(r.ms);
-      return { head, at: performance.now() };
+      const at = performance.now();
+      // Same-method read: a state read with distinct params, which edge caches cannot answer.
+      await pace(entry);
+      const read = chain.solana
+        ? await call(entry.url, "getBalance", [solanaKey(round * 97 + i + 50000)], options.timeout)
+        : await call(entry.url, "eth_getBalance", [evmAddress(round * 97 + i + 50000), "latest"], options.timeout);
+      if (read.ok) stats[i].reads.push(read.ms);
+      else stats[i].errors[`read_${read.category}`] = (stats[i].errors[`read_${read.category}`] ?? 0) + 1;
+      return { head, at };
     }));
     // Time-aligned lag: an endpoint lags only behind heads other endpoints had
     // already reported by the time its own answer arrived (+50ms slack). A slow
@@ -226,6 +236,7 @@ async function probeEndpoints(chain, options) {
     id: s.id, provider: s.provider, url: s.url, rps: s.rps, identity: s.identity,
     successRate: s.attempts ? +(s.latencies.length / s.attempts).toFixed(2) : 0,
     p50: quantile(s.latencies, 0.5), p95: quantile(s.latencies, 0.95),
+    readP50: quantile(s.reads, 0.5), readP95: quantile(s.reads, 0.95),
     avgLag: s.lags.length ? +(s.lags.reduce((a, b) => a + b, 0) / s.lags.length).toFixed(2) : null,
     maxLag: s.lags.length ? Math.max(...s.lags) : null,
     errors: s.errors, probes: s.probes ?? null,
@@ -332,12 +343,16 @@ async function main() {
         const router = await benchRouter(chain, options);
         const healthy = endpoints.filter((e) => e.successRate >= 0.8 && e.p50 !== null);
         const bestP50 = healthy.length ? Math.min(...healthy.map((e) => e.p50)) : null;
+        const readable = healthy.filter((e) => e.readP50 !== null);
+        const bestRead = readable.length ? Math.min(...readable.map((e) => e.readP50)) : null;
         out[name] = {
           chainId: chain.chainId, endpointCount: endpoints.length, healthyCount: healthy.length,
-          bestDirectP50: bestP50, routerVsBestP50: router?.p50 && bestP50 ? +(router.p50 / bestP50).toFixed(2) : null,
+          bestDirectP50: bestP50, bestDirectReadP50: bestRead,
+          routerVsBestP50: router?.p50 && bestP50 ? +(router.p50 / bestP50).toFixed(2) : null,
+          routerVsBestReadP50: router?.p50 && bestRead ? +(router.p50 / bestRead).toFixed(2) : null,
           endpoints, router,
         };
-        process.stderr.write(`[bench] ${name} done: ${healthy.length}/${endpoints.length} healthy, router ${router?.successRate ?? "-"} p50 ${router?.p50 ?? "-"}ms\n`);
+        process.stderr.write(`[bench] ${name} done: ${healthy.length}/${endpoints.length} healthy, router ${router?.successRate ?? "-"} p50 ${router?.p50 ?? "-"}ms vs best read ${bestRead ?? "-"}ms\n`);
       } catch (error) {
         out[name] = { error: String(error?.stack ?? error) };
         process.stderr.write(`[bench] ${name} failed: ${error.message}\n`);
