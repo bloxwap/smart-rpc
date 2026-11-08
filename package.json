@@ -17,7 +17,8 @@
     "check:rpcs": "node scripts/check-rpcs.mjs",
     "benchmark:core": "pnpm --filter @smart-rpc/core benchmark",
     "rank:hyperevm": "pnpm --filter @smart-rpc/hyperevm rank",
-    "changeset": "changeset"
+    "changeset": "changeset",
+    "benchmark:rpcs": "node scripts/benchmark-rpcs.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.7",
@@ -26,6 +27,8 @@
     "typescript": "5.9.3"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
