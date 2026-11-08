@@ -31,32 +31,6 @@
     },
     {
       "at": "2026-10-30T22:26:01.293Z",
-      "url": "https://hyperliquid.api.onfinality.io/evm/public",
-      "ok": false,
-      "chainIdOk": true,
-      "head": null,
-      "lag": null,
-      "methods": {
-        "eth_chainId": {
-          "ms": 141.8,
-          "ok": true
-        },
-        "eth_blockNumber": {
-          "ms": 26.4,
-          "ok": false
-        },
-        "eth_call": {
-          "ms": 20.3,
-          "ok": false
-        },
-        "eth_getLogs": {
-          "ms": 0,
-          "ok": false
-        }
-      }
-    },
-    {
-      "at": "2026-10-30T22:26:01.293Z",
       "url": "https://hyperliquid.drpc.org/",
       "ok": true,
       "chainIdOk": true,
@@ -79,32 +53,6 @@
         "eth_getLogs": {
           "ms": 253.5,
           "ok": true
-        }
-      }
-    },
-    {
-      "at": "2026-10-30T22:26:01.293Z",
-      "url": "https://hyperliquid.rpc.blxrbdn.com/",
-      "ok": false,
-      "chainIdOk": false,
-      "head": null,
-      "lag": null,
-      "methods": {
-        "eth_chainId": {
-          "ms": 5408.5,
-          "ok": false
-        },
-        "eth_blockNumber": {
-          "ms": 407.8,
-          "ok": false
-        },
-        "eth_call": {
-          "ms": 135.2,
-          "ok": false
-        },
-        "eth_getLogs": {
-          "ms": 0,
-          "ok": false
         }
       }
     },
@@ -163,33 +111,6 @@
       }
     },
     {
-      "at": "2026-10-30T22:26:01.293Z",
-      "url": "https://rpc.purroofgroup.com/",
-      "ok": true,
-      "chainIdOk": true,
-      "head": 49961479,
-      "lag": 0,
-      "headAt": "2026-10-30T22:26:05.976Z",
-      "methods": {
-        "eth_chainId": {
-          "ms": 192.6,
-          "ok": true
-        },
-        "eth_blockNumber": {
-          "ms": 62.9,
-          "ok": true
-        },
-        "eth_call": {
-          "ms": 63.4,
-          "ok": true
-        },
-        "eth_getLogs": {
-          "ms": 62.7,
-          "ok": true
-        }
-      }
-    },
-    {
       "at": "2026-10-31T16:46:51.848Z",
       "url": "https://hyperliquid-json-rpc.stakely.io/",
       "ok": true,
@@ -226,40 +147,6 @@
     },
     {
       "at": "2026-10-31T16:46:51.848Z",
-      "url": "https://hyperliquid.api.onfinality.io/evm/public",
-      "ok": false,
-      "chainIdOk": true,
-      "head": null,
-      "lag": null,
-      "methods": {
-        "eth_chainId": {
-          "ms": 370.2,
-          "ok": true
-        },
-        "eth_blockNumber": {
-          "ms": 89,
-          "ok": false
-        },
-        "eth_call": {
-          "ms": 85.4,
-          "ok": false
-        },
-        "hypercore_l1BlockNumber": {
-          "ms": 86.7,
-          "ok": false
-        },
-        "eth_getLogs": {
-          "ms": 0,
-          "ok": false
-        },
-        "eth_getLogs_range": {
-          "ms": 0,
-          "ok": false
-        }
-      }
-    },
-    {
-      "at": "2026-10-31T16:46:51.848Z",
       "url": "https://hyperliquid.drpc.org/",
       "ok": true,
       "chainIdOk": true,
@@ -289,40 +176,6 @@
         },
         "eth_getLogs_range": {
           "ms": 40.5,
-          "ok": false
-        }
-      }
-    },
-    {
-      "at": "2026-10-31T16:46:51.848Z",
-      "url": "https://hyperliquid.rpc.blxrbdn.com/",
-      "ok": false,
-      "chainIdOk": false,
-      "head": null,
-      "lag": null,
-      "methods": {
-        "eth_chainId": {
-          "ms": 5475.4,
-          "ok": false
-        },
-        "eth_blockNumber": {
-          "ms": 5385.6,
-          "ok": false
-        },
-        "eth_call": {
-          "ms": 385.7,
-          "ok": false
-        },
-        "hypercore_l1BlockNumber": {
-          "ms": 120.3,
-          "ok": false
-        },
-        "eth_getLogs": {
-          "ms": 0,
-          "ok": false
-        },
-        "eth_getLogs_range": {
-          "ms": 0,
           "ok": false
         }
       }
@@ -393,41 +246,6 @@
         },
         "eth_getLogs_range": {
           "ms": 211.6,
-          "ok": true
-        }
-      }
-    },
-    {
-      "at": "2026-10-31T16:46:51.848Z",
-      "url": "https://rpc.purroofgroup.com/",
-      "ok": true,
-      "chainIdOk": true,
-      "head": 50028503,
-      "lag": 71,
-      "headAt": "2026-10-31T16:46:57.678Z",
-      "methods": {
-        "eth_chainId": {
-          "ms": 112.9,
-          "ok": true
-        },
-        "eth_blockNumber": {
-          "ms": 17.6,
-          "ok": true
-        },
-        "eth_call": {
-          "ms": 19.7,
-          "ok": true
-        },
-        "hypercore_l1BlockNumber": {
-          "ms": 16.2,
-          "ok": true
-        },
-        "eth_getLogs": {
-          "ms": 17.5,
-          "ok": true
-        },
-        "eth_getLogs_range": {
-          "ms": 22.2,
           "ok": true
         }
       }

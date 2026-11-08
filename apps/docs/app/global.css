@@ -1,0 +1,150 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 8%;
+}
+
+.dark {
+  --background: 240 10% 4%;
+  --foreground: 0 0% 98%;
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.landing {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 75% 15%, rgb(20 184 166 / 14%), transparent 32rem),
+    hsl(var(--background));
+}
+
+.landing-nav,
+.landing-main,
+.landing-footer {
+  margin: 0 auto;
+  max-width: 72rem;
+  padding-inline: 1.5rem;
+}
+
+.landing-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 1.5rem;
+  font-weight: 650;
+}
+
+.landing-nav nav {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 450;
+}
+
+.landing-main {
+  padding-block: 7rem 6rem;
+}
+
+.landing-eyebrow {
+  color: #0d9488;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.landing h1 {
+  max-width: 54rem;
+  margin-top: 1.25rem;
+  font-size: clamp(2.8rem, 7vw, 5.8rem);
+  font-weight: 680;
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.landing-copy {
+  max-width: 42rem;
+  margin-top: 1.75rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 1.125rem;
+  line-height: 1.75;
+}
+
+.landing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.landing-button {
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.6rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.landing-button-primary {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: white;
+}
+
+.landing-install {
+  margin-top: 2.5rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: hsl(var(--card));
+  color: hsl(var(--muted-foreground));
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+}
+
+.landing-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 4rem;
+}
+
+.landing-feature {
+  border-top: 1px solid hsl(var(--border));
+  padding-top: 1rem;
+}
+
+.landing-feature h2 {
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.landing-feature p {
+  margin-top: 0.5rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.landing-footer {
+  padding-block: 2rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8rem;
+}
+
+@media (max-width: 700px) {
+  .landing-main {
+    padding-block: 4rem;
+  }
+
+  .landing-features {
+    grid-template-columns: 1fr;
+  }
+}

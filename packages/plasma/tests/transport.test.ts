@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { plasma, PLASMA_CHAIN_ID, PLASMA_MAINNET, PLASMA_MAINNET_CAIP, PLASMA_MAINNET_REGISTRY, PLASMA_RPC_URL } from "../src/index.js";
+import { plasma, PLASMA_CHAIN_ID, PLASMA_MAINNET, PLASMA_MAINNET_CAIP, PLASMA_MAINNET_ENDPOINTS, PLASMA_MAINNET_REGISTRY } from "../src/index.js";
 
 interface Call {
   url: string;
@@ -43,7 +43,9 @@ describe("Plasma transport", () => {
     const client = plasma({ ...offline, fetchFn: mock.fetchFn });
     try {
       expect(client.chainIds).toEqual([PLASMA_MAINNET_CAIP]);
-      expect(client.endpoints.map(({ url }) => url)).toEqual([PLASMA_RPC_URL]);
+      expect(client.endpoints.map(({ url }) => url)).toEqual(PLASMA_MAINNET_ENDPOINTS);
+      expect(PLASMA_MAINNET_ENDPOINTS).toEqual(PLASMA_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(client.endpoints.length).toBeLessThanOrEqual(5);
       expect(PLASMA_MAINNET.nativeCurrency).toEqual({ name: "Plasma", symbol: "XPL", decimals: 18 });
       expect(PLASMA_MAINNET.blockTime).toBe(1_000);
       expect(PLASMA_MAINNET_REGISTRY[0].capabilities).toMatchObject({ archive: false, batch: false, subscriptions: false });
@@ -75,7 +77,7 @@ describe("Plasma transport", () => {
 
   test("keeps latest state unpinned on the conservative public endpoint", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? identity : method === "eth_blockNumber" ? "0x42" : "0x0");
-    const client = plasma({ ...offline, fetchFn: mock.fetchFn });
+    const client = plasma({ ...offline, endpoints: [PLASMA_MAINNET_REGISTRY[0]], fetchFn: mock.fetchFn });
     try {
       await client.probe();
       await client.request({ method: "eth_getBalance", params: [address, "latest"] });

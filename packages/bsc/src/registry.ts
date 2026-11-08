@@ -29,33 +29,86 @@ export interface BscPublicRpcEndpoint extends EthereumEndpointConfig {
   readonly reviewedAt: string;
 }
 
-/**
- * Source-backed public dataseeds. No logs, archive, debug/trace, WebSocket,
- * batch, or safe/finalized-tag guarantee is inferred from chain compatibility.
- */
+const chainList = "https://chainlist.org/chain/56";
+const networkDocs = "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/";
+
+/** Source-backed public HTTPS defaults. Optional capabilities are not inferred from chain compatibility. */
 export const BSC_MAINNET_REGISTRY: readonly BscPublicRpcEndpoint[] = [
-  ["bnb-dataseed", BSC_RPC_URL],
-  ["bnb-public-dataseed", "https://bsc-dataseed-public.bnbchain.org"],
-].map(([id, url]) => ({
-  id: id!,
-  url: url!,
-  provider: "BNB Chain public dataseeds",
-  sourceUrls: ["https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/"],
-  reviewedAt: "2026-11-06",
-  rps: 5,
-  burst: 10,
-  providerGroup: "bnb-public-dataseeds",
-  providerBudget: BSC_PROVIDER_BUDGET,
-  unsupportedMethods: ["eth_getLogs", ...BSC_EXTENSION_METHODS],
-  capabilities: {
-    archive: false,
-    pinning: false,
-    blockTags: ["latest", "pending"] as const,
-    debug: false,
-    trace: false,
-    subscriptions: false,
-    batch: false,
+  ...[
+    ["bnb-dataseed", BSC_RPC_URL],
+    ["bnb-public-dataseed", "https://bsc-dataseed-public.bnbchain.org"],
+  ].map(([id, url]) => ({
+    id: id!,
+    url: url!,
+    provider: "BNB Chain public dataseeds",
+    sourceUrls: [networkDocs, chainList],
+    reviewedAt: "2026-11-07",
+    rps: 5,
+    burst: 10,
+    providerGroup: "bnb-public-dataseeds",
+    providerBudget: BSC_PROVIDER_BUDGET,
+    unsupportedMethods: ["eth_getLogs", ...BSC_EXTENSION_METHODS],
+    capabilities: {
+      archive: false,
+      pinning: false,
+      blockTags: ["latest", "pending"] as const,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      batch: false,
+    },
+  })),
+  {
+    id: "bsc-publicnode",
+    url: "https://bsc-rpc.publicnode.com",
+    provider: "PublicNode",
+    sourceUrls: [networkDocs, chainList, "https://bsc.publicnode.com/"],
+    reviewedAt: "2026-11-07",
+    unsupportedMethods: [...BSC_EXTENSION_METHODS],
+    capabilities: {
+      archive: false,
+      pinning: false,
+      blockTags: ["latest", "pending"] as const,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      batch: false,
+    },
   },
-}));
+  {
+    id: "bsc-thirdweb",
+    url: "https://56.rpc.thirdweb.com",
+    provider: "thirdweb",
+    sourceUrls: [networkDocs, chainList, "https://portal.thirdweb.com/infrastructure/rpc-edge/overview"],
+    reviewedAt: "2026-11-07",
+    unsupportedMethods: [...BSC_EXTENSION_METHODS],
+    capabilities: {
+      archive: false,
+      pinning: false,
+      blockTags: ["latest", "pending"] as const,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      batch: false,
+    },
+  },
+  {
+    id: "bsc-pocket",
+    url: "https://bsc.api.pocket.network",
+    provider: "Pocket Network",
+    sourceUrls: [networkDocs, chainList, "https://api.pocket.network/"],
+    reviewedAt: "2026-11-07",
+    unsupportedMethods: [...BSC_EXTENSION_METHODS],
+    capabilities: {
+      archive: false,
+      pinning: false,
+      blockTags: ["latest", "pending"] as const,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      batch: false,
+    },
+  },
+];
 
 export const BSC_MAINNET_ENDPOINTS: readonly string[] = BSC_MAINNET_REGISTRY.map(({ url }) => url);

@@ -36,6 +36,8 @@ describe("Avalanche C-Chain transport", () => {
     try {
       expect(AVALANCHE_CHAIN_ID).toBe(43114);
       expect(pool.chainIds).toEqual([AVALANCHE_MAINNET_CAIP]);
+      expect(AVALANCHE_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
+      expect(AVALANCHE_MAINNET_ENDPOINTS).toEqual(AVALANCHE_MAINNET_REGISTRY.map(({ url }) => url));
       expect(pool.endpoints.map(({ url }) => url)).toEqual(AVALANCHE_MAINNET_ENDPOINTS);
       expect(AVALANCHE_NATIVE_CURRENCY).toEqual({ name: "Avalanche", symbol: "AVAX", decimals: 18 });
       expect(AVALANCHE_RPC_URL).toBe("https://api.avax.network/ext/bc/C/rpc");
@@ -55,7 +57,7 @@ describe("Avalanche C-Chain transport", () => {
 
   test("never sends atomic namespaces to a C-Chain execution endpoint", async () => {
     const mock = mockRpc(() => identity);
-    const pool = avalanche({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = avalanche({ endpoints: [AVALANCHE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       await expect(pool.request({ method: "avax.getUTXOs", params: { addresses: [] } })).rejects.toThrow();
       expect(mock.calls).toEqual([]);
@@ -92,7 +94,7 @@ describe("Avalanche C-Chain transport", () => {
     let executed = false;
     const log = { address, blockNumber: "0x65", data: "0xab", topics: [], removed: false };
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? identity : executed ? [log] : []);
-    const pool = avalanche({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = avalanche({ endpoints: [AVALANCHE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     const request = { method: "eth_getLogs", params: [{ address, fromBlock: "0x65", toBlock: "0x65" }] };
     try {
       expect(await pool.request(request)).toEqual([]);
@@ -106,7 +108,7 @@ describe("Avalanche C-Chain transport", () => {
     const header = { number: "0x65", stateRoot: "0xsettled", receiptsRoot: "0xsettledReceipts", logsBloom: "0x00", gasUsed: "0x10000", baseFeePerGas: "0x300" };
     const receipt = { blockNumber: "0x65", status: "0x1", gasUsed: "0x5208", effectiveGasPrice: "0x200", extension: { executed: true } };
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? identity : method === "eth_getBlockByNumber" ? header : receipt);
-    const pool = avalanche({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = avalanche({ endpoints: [AVALANCHE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       expect(await pool.request({ method: "eth_getBlockByNumber", params: ["latest", false] })).toEqual(header);
       expect(await pool.request({ method: "eth_getTransactionReceipt", params: ["0xdead"] })).toEqual(receipt);
@@ -116,7 +118,7 @@ describe("Avalanche C-Chain transport", () => {
   test("passes through C-Chain fee upper bounds and tier options", async () => {
     const prices = { slow: { maxPriorityFeePerGas: "0x1", maxFeePerGas: "0xa" }, normal: { maxPriorityFeePerGas: "0x2", maxFeePerGas: "0xb" }, fast: { maxPriorityFeePerGas: "0x3", maxFeePerGas: "0xc" } };
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? identity : method === "eth_baseFee" ? "0x300" : prices);
-    const pool = avalanche({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = avalanche({ endpoints: [AVALANCHE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       expect(await pool.request({ method: "eth_baseFee" })).toBe("0x300");
       expect(await pool.request({ method: "eth_suggestPriceOptions" })).toEqual(prices);
@@ -137,7 +139,7 @@ describe("Avalanche C-Chain transport", () => {
 
   test("unverified historical state/finality requests are rejected without state downgrade", async () => {
     const mock = mockRpc(() => identity);
-    const pool = avalanche({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = avalanche({ endpoints: [AVALANCHE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       for (const tag of ["0x1", "safe", "finalized"]) await expect(pool.request({ method: "eth_getBalance", params: [address, tag] })).rejects.toThrow();
       expect(mock.calls).toEqual([]);
@@ -146,7 +148,7 @@ describe("Avalanche C-Chain transport", () => {
 
   test("a pre-aborted caller sends neither identity nor user calls", async () => {
     const mock = mockRpc(() => identity);
-    const pool = avalanche({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = avalanche({ endpoints: [AVALANCHE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       await expect(pool.request({ method: "eth_blockNumber", signal: AbortSignal.abort() })).rejects.toThrow();
       expect(mock.calls).toEqual([]);
@@ -180,7 +182,7 @@ describe("Avalanche C-Chain transport", () => {
   test("bounds retry amplification and never lets successful probes heal failed calls", async () => {
     const events: RpcEvent[] = [];
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? identity : method === "eth_blockNumber" ? "0x64" : new Response("Unavailable", { status: 503 }));
-    const pool = avalanche({ fetchFn: mock.fetchFn, headLag: idle, race: false, retryCount: 0, onEvent: (event) => events.push(event) });
+    const pool = avalanche({ endpoints: [AVALANCHE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle, race: false, retryCount: 0, onEvent: (event) => events.push(event) });
     try {
       for (let attempt = 0; attempt < 3; attempt++) {
         await expect(pool.request({ method: "eth_getBalance", params: [address, "latest"] })).rejects.toThrow();
@@ -194,7 +196,7 @@ describe("Avalanche C-Chain transport", () => {
   test("probes track executed heads without latency samples and expire stale observations", async () => {
     let now = 0;
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? identity : "0x64");
-    const pool = avalanche({ fetchFn: mock.fetchFn, headLag: { probeInterval: false, staleMs: 1000 }, now: () => now });
+    const pool = avalanche({ endpoints: [AVALANCHE_RPC_URL], fetchFn: mock.fetchFn, headLag: { probeInterval: false, staleMs: 1000 }, now: () => now });
     try {
       await pool.probe();
       expect(pool.snapshot()[0]?.head).toBe(100);
@@ -206,7 +208,7 @@ describe("Avalanche C-Chain transport", () => {
 
   test("subscription requests need a dedicated session, never a receipt read", async () => {
     const mock = mockRpc(() => identity);
-    const pool = avalanche({ fetchFn: mock.fetchFn, headLag: idle });
+    const pool = avalanche({ endpoints: [AVALANCHE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       await expect(pool.request({ method: "eth_subscribe", params: ["newAcceptedTransactions", true] })).rejects.toThrow();
       expect(mock.calls).toEqual([]);

@@ -3,7 +3,7 @@ import type { RpcEvent } from "@smart-rpc/core";
 
 import {
   arc, ARC_CHAIN_ID, ARC_MAINNET_CAIP, ARC_MAINNET_REGISTRY, ARC_MAINNET_ENDPOINTS,
-  ARC_NATIVE_CURRENCY, ARC_NATIVE_TRANSFER_EMITTER, ARC_USDC_ERC20_ADDRESS, ARC_USDC_ERC20_DECIMALS,
+  ARC_NATIVE_CURRENCY, ARC_NATIVE_TRANSFER_EMITTER, ARC_RPC_URL, ARC_USDC_ERC20_ADDRESS, ARC_USDC_ERC20_DECIMALS,
 } from "../src/index.js";
 
 const address = "0x1111111111111111111111111111111111111111";
@@ -45,11 +45,20 @@ describe("Arc", () => {
       expect(client.chainIds).toEqual([ARC_MAINNET_CAIP]);
       expect(ARC_NATIVE_CURRENCY).toEqual({ name: "USDC", symbol: "USDC", decimals: 18 });
       expect(ARC_USDC_ERC20_DECIMALS).toBe(6);
-      expect(client.endpoints.map(({ url }) => url)).toEqual(ARC_MAINNET_ENDPOINTS);
+      expect(client.endpoints.map(({ url }) => url)).toEqual(ARC_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(ARC_MAINNET_REGISTRY.map(({ url }) => url)).toEqual(ARC_MAINNET_ENDPOINTS);
+      expect(ARC_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
+      expect(ARC_MAINNET_ENDPOINTS.length).toBeLessThanOrEqual(5);
       expect(ARC_MAINNET_REGISTRY.every((entry) => entry.rps === undefined && entry.capabilities?.maxBatchSize === undefined)).toBe(true);
       expect(ARC_MAINNET_REGISTRY.find(({ provider }) => provider === "Blockdaemon")?.webSocketUrl)
         .toBe("wss://rpc.blockdaemon.mainnet.arc.io/websocket");
-      expect(ARC_MAINNET_REGISTRY[0]?.webSocketUrl).toBeUndefined();
+      expect(ARC_MAINNET_REGISTRY.find(({ url }) => url === ARC_RPC_URL)?.webSocketUrl).toBeUndefined();
+      const drpc = ARC_MAINNET_REGISTRY.find(({ provider }) => provider === "dRPC");
+      expect(drpc?.sourceUrls).toContain("https://drpc.org/docs/howitworks/ratelimiting");
+      expect(drpc?.unsupportedMethods).toEqual([
+        "eth_newFilter", "eth_newBlockFilter", "eth_newPendingTransactionFilter",
+        "eth_getFilterChanges", "eth_getFilterLogs", "eth_uninstallFilter",
+      ]);
       expect(mock.calls).toHaveLength(0);
     } finally { client.close(); }
   });
@@ -67,7 +76,7 @@ describe("Arc", () => {
   test("preserves native balance hex without applying ERC-20 decimal conversion", async () => {
     const native = `0x${(10n ** 18n + 1n).toString(16)}`;
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x13b2" : native);
-    const client = arc({ fetchFn: mock.fetchFn, headLag: idle, race: false });
+    const client = arc({ endpoints: [ARC_RPC_URL], fetchFn: mock.fetchFn, headLag: idle, race: false });
     try {
       expect(await client.request({ method: "eth_getBalance", params: [address, "latest"] })).toBe(native);
     } finally { client.close(); }
@@ -76,7 +85,7 @@ describe("Arc", () => {
   test("relays Arc gas estimates and fee fields without imposing Ethereum gas policy", async () => {
     const tx = { from: address, to: ARC_USDC_ERC20_ADDRESS, value: "0x1", maxFeePerGas: "0x4a817c800", authorizationList: [] };
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x13b2" : "0xb71b");
-    const client = arc({ fetchFn: mock.fetchFn, headLag: idle, race: false });
+    const client = arc({ endpoints: [ARC_RPC_URL], fetchFn: mock.fetchFn, headLag: idle, race: false });
     try {
       expect(await client.request({ method: "eth_estimateGas", params: [tx] })).toBe("0xb71b");
       expect(mock.calls.find(({ method }) => method === "eth_estimateGas")?.params).toEqual([tx]);
@@ -101,7 +110,7 @@ describe("Arc", () => {
       { address: ARC_USDC_ERC20_ADDRESS, topics, data: `0x${(10n ** 6n).toString(16).padStart(64, "0")}`, logIndex: "0x1" },
     ];
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x13b2" : logs);
-    const client = arc({ fetchFn: mock.fetchFn, headLag: idle, race: false });
+    const client = arc({ endpoints: [ARC_RPC_URL], fetchFn: mock.fetchFn, headLag: idle, race: false });
     try {
       const filter = { address: [ARC_NATIVE_TRANSFER_EMITTER, ARC_USDC_ERC20_ADDRESS], fromBlock: "0x10", toBlock: "0x10" };
       expect(await client.request({ method: "eth_getLogs", params: [filter] })).toEqual(logs);
@@ -111,7 +120,8 @@ describe("Arc", () => {
 
   test("requires configured archive, debug and finality-tag capabilities without downgrading state", async () => {
     const mock = mockRpc(() => "0x13b2");
-    const client = arc({ fetchFn: mock.fetchFn, headLag: idle });
+    const primary = ARC_MAINNET_REGISTRY.find(({ url }) => url === ARC_RPC_URL)!;
+    const client = arc({ endpoints: [primary], fetchFn: mock.fetchFn, headLag: idle });
     try {
       for (const tag of ["0x1", "safe", "finalized"]) {
         await expect(client.request({ method: "eth_getBalance", params: [address, tag] })).rejects.toThrow();
@@ -160,7 +170,7 @@ describe("Arc", () => {
 
   test("a pre-cancelled call sends no identity or user request", async () => {
     const mock = mockRpc(() => "0x13b2");
-    const client = arc({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = arc({ endpoints: [ARC_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     const controller = new AbortController(); controller.abort();
     try {
       await expect(client.request({ method: "eth_blockNumber", signal: controller.signal })).rejects.toThrow();

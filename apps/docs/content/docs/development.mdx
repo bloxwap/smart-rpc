@@ -1,0 +1,55 @@
+---
+title: Development
+description: Repository layout, local commands, and automation.
+---
+
+## Layout
+
+| Path | Role |
+| --- | --- |
+| `apps/docs` | Next.js static documentation application powered by Fumadocs. |
+| `apps/docs/content/docs` | Guides, feature inventory, transport notes, research, and migration details. |
+| `packages/smart-rpc` | The only published package; builds the root and every chain subpath into a split ESM bundle. |
+| `packages/core` | Private routing, caching, scoring, retry, and health-check implementation. |
+| `packages/*` | Private chain adapters compiled into the published bundle. |
+| `examples/quick-start` | Minimal consumer example. |
+| `scripts` | Repository maintenance and public RPC checks. |
+
+## Install and verify
+
+```sh
+pnpm install
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+Node.js 22.12 or later and pnpm 10 are required. The workspace includes `apps/*`, `packages/*`, and `examples/*`.
+
+## Documentation
+
+```sh
+pnpm docs:dev
+pnpm docs:check
+pnpm docs:build
+```
+
+The development server listens on port 3901. The production build is a static export in `apps/docs/out`. `NEXT_PUBLIC_BASE_PATH` optionally sets a deployment base path such as `/smart-rpc`.
+
+## Bundle
+
+```sh
+pnpm --filter @bloxwap/smart-rpc build
+```
+
+The package publishes only `dist` and its package metadata. `viem` remains an external dependency; all private `@smart-rpc/*` workspaces are compiled into the output. Shared chunks prevent core duplication, and root imports do not pull in a transport.
+
+## Automation
+
+- **CI** installs dependencies, typechecks, tests, and builds library workspaces.
+- **Docs** validates the Fumadocs content and static export on documentation changes.
+- **Bundle** packs the published package, installs it in a clean consumer, and imports root and chain subpaths.
+- **Deploy docs** publishes the static export to GitHub Pages from `main`.
+- **Release** builds the package and uses Changesets for version pull requests and npm publishing.
+- **Public RPC smoke** provides opt-in live endpoint verification without making normal CI depend on public services.
+- **Rank HyperEVM registry** opens a bounded weekly registry-update pull request.

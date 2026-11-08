@@ -8,10 +8,14 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "build": "turbo run build",
-    "typecheck": "turbo run typecheck",
+    "build": "turbo run build --filter=!@bloxwap/smart-rpc-docs",
+    "typecheck": "turbo run typecheck --filter=!@bloxwap/smart-rpc-docs",
     "test": "turbo run test",
+    "docs:dev": "pnpm --filter @bloxwap/smart-rpc-docs dev",
+    "docs:check": "pnpm --filter @bloxwap/smart-rpc-docs check",
+    "docs:build": "pnpm --filter @bloxwap/smart-rpc-docs build",
     "check:rpcs": "node scripts/check-rpcs.mjs",
+    "benchmark:core": "pnpm --filter @smart-rpc/core benchmark",
     "rank:hyperevm": "pnpm --filter @smart-rpc/hyperevm rank",
     "changeset": "changeset"
   },

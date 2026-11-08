@@ -61,26 +61,10 @@
       }
     },
     {
-      "url": "https://rpc.purroofgroup.com",
-      "eligible": true,
-      "weight": 0.15,
-      "rank": 4,
-      "stats": {
-        "observations": 2,
-        "successes": 2,
-        "uptime": 1,
-        "latencyMs": 152.8,
-        "tailMs": 192.6,
-        "medianLag": 35.5,
-        "established": false,
-        "precompileOk": true
-      }
-    },
-    {
       "url": "https://hyperliquid-json-rpc.stakely.io",
       "eligible": true,
       "weight": 0.15,
-      "rank": 5,
+      "rank": 4,
       "stats": {
         "observations": 2,
         "successes": 2,
@@ -94,70 +78,6 @@
     },
     {
       "url": "https://hyperliquid-rpc.publicnode.com",
-      "eligible": false,
-      "weight": 0,
-      "rank": null,
-      "stats": {
-        "observations": 0,
-        "successes": 0,
-        "uptime": 0,
-        "latencyMs": null,
-        "tailMs": null,
-        "medianLag": null,
-        "established": false,
-        "precompileOk": null
-      }
-    },
-    {
-      "url": "https://hyperliquid.api.onfinality.io/evm/public",
-      "eligible": false,
-      "weight": 0,
-      "rank": null,
-      "stats": {
-        "observations": 2,
-        "successes": 0,
-        "uptime": 0,
-        "latencyMs": null,
-        "tailMs": null,
-        "medianLag": null,
-        "established": false,
-        "precompileOk": null
-      }
-    },
-    {
-      "url": "https://hyperliquid.api.pocket.network",
-      "eligible": false,
-      "weight": 0,
-      "rank": null,
-      "stats": {
-        "observations": 0,
-        "successes": 0,
-        "uptime": 0,
-        "latencyMs": null,
-        "tailMs": null,
-        "medianLag": null,
-        "established": false,
-        "precompileOk": null
-      }
-    },
-    {
-      "url": "https://hyperliquid.rpc.blxrbdn.com",
-      "eligible": false,
-      "weight": 0,
-      "rank": null,
-      "stats": {
-        "observations": 2,
-        "successes": 0,
-        "uptime": 0,
-        "latencyMs": null,
-        "tailMs": null,
-        "medianLag": null,
-        "established": false,
-        "precompileOk": null
-      }
-    },
-    {
-      "url": "https://hyperliquid.web3cdn.rest",
       "eligible": false,
       "weight": 0,
       "rank": null,

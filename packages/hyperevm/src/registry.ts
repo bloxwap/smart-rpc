@@ -37,7 +37,7 @@ export const HYPEREVM_RPC_URL = "https://rpc.hyperliquid.xyz/evm";
 /** Official HyperEVM testnet HTTP RPC. */
 export const HYPEREVM_TESTNET_RPC_URL = "https://rpc.hyperliquid-testnet.xyz/evm";
 
-const reviewedAt = "2026-11-06";
+const reviewedAt = "2026-11-07";
 
 /** dRPC disables stateful filter methods on public endpoints. */
 const drpcUnsupportedMethods: readonly string[] = [
@@ -94,43 +94,10 @@ const mainnetSources: readonly MainnetEndpointSource[] = [
     unsupportedMethods: drpcUnsupportedMethods,
   },
   {
-    id: "purroof-mainnet",
-    url: "https://rpc.purroofgroup.com",
-    provider: "Purroof",
-    sourceUrls: ["https://www.purroofgroup.com/"],
-    reviewedAt,
-    capabilities: publicCapabilities,
-    rps: 1,
-    burst: 2,
-  },
-  {
     id: "stakely-mainnet",
     url: "https://hyperliquid-json-rpc.stakely.io",
     provider: "Stakely",
     sourceUrls: ["https://stakely.io/web3-api-load-balancer/hyperliquid"],
-    reviewedAt,
-    capabilities: publicCapabilities,
-    rps: 1,
-    burst: 2,
-  },
-  {
-    id: "onfinality-mainnet",
-    url: "https://hyperliquid.api.onfinality.io/evm/public",
-    provider: "OnFinality",
-    sourceUrls: [
-      "https://onfinality.io/en/networks/hyperliquid",
-      "https://documentation.onfinality.io/support/hyperliquid",
-    ],
-    reviewedAt,
-    capabilities: publicCapabilities,
-    rps: 1,
-    burst: 2,
-  },
-  {
-    id: "bloxroute-mainnet",
-    url: "https://hyperliquid.rpc.blxrbdn.com",
-    provider: "bloXroute",
-    sourceUrls: ["https://docs.bloxroute.com/core-solutions/rpc-service/fast-rpc"],
     reviewedAt,
     capabilities: publicCapabilities,
     rps: 1,
@@ -144,28 +111,6 @@ const mainnetSources: readonly MainnetEndpointSource[] = [
     reviewedAt,
     capabilities: publicCapabilities,
     rps: 1,
-    burst: 2,
-  },
-  {
-    id: "pocket-mainnet",
-    url: "https://hyperliquid.api.pocket.network",
-    provider: "Pocket Network",
-    sourceUrls: ["https://docs.pocket.network/developers/supported-chains/"],
-    reviewedAt,
-    capabilities: publicCapabilities,
-    rps: 1,
-    burst: 2,
-  },
-  {
-    id: "web3cdn-mainnet",
-    url: "https://hyperliquid.web3cdn.rest",
-    provider: "Web3CDN",
-    sourceUrls: ["https://web3cdn.network/rpc/hyperliquid"],
-    reviewedAt,
-    capabilities: publicCapabilities,
-    // Shares provider quotas with its other networks. One pool per network stays
-    // below the advertised daily allowance; budgets do not coordinate processes.
-    rps: 0.025,
     burst: 2,
   },
 ];

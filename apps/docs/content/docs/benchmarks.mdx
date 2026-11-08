@@ -1,0 +1,29 @@
+---
+title: Benchmarks
+description: Run reproducible single-threaded and multi-threaded core performance tests.
+---
+
+The core benchmark measures independent worker-thread workloads for cache hits, rolling log-index queries, and cache-plan generation. Worker construction, initial state, and warmup are excluded from the measured interval.
+
+## Run
+
+```sh
+pnpm install
+pnpm benchmark:core -- --scenario cache --threads 1,2,4,8 --iterations 1000000
+pnpm benchmark:core -- --scenario logs --threads 1,2,4,8
+pnpm benchmark:core -- --scenario plan --threads 1,2,4,8
+```
+
+Options:
+
+| Option | Meaning |
+| --- | --- |
+| `--scenario cache\|logs\|plan` | Selects the workload. |
+| `--threads 1,2,4` | Runs each comma-separated worker count. |
+| `--iterations n` | Sets measured operations per worker. |
+| `--warmup n` | Sets unmeasured warmup operations per worker. |
+| `--json` | Prints machine-readable results, including per-worker timings. |
+
+Run scenarios separately and avoid concurrent builds or tests while collecting numbers. Each worker owns independent state, so results measure parallel CPU scaling rather than shared-cache contention. Local throughput is not a provider latency or uptime guarantee.
+
+For end-to-end public endpoint checks, run `pnpm check:rpcs --protocol base` or omit `--protocol` to check every registry. These checks make live read-only identity and head requests and are intentionally separate from deterministic CI.

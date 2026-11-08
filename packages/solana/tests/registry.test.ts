@@ -13,17 +13,56 @@ import {
 } from "../src/index.js";
 
 const clusters = [
-  { cluster: "mainnet", endpoints: MAINNET_ENDPOINTS, registry: MAINNET_REGISTRY },
-  { cluster: "devnet", endpoints: DEVNET_ENDPOINTS, registry: DEVNET_REGISTRY },
-  { cluster: "testnet", endpoints: TESTNET_ENDPOINTS, registry: TESTNET_REGISTRY },
+  {
+    cluster: "mainnet",
+    endpoints: MAINNET_ENDPOINTS,
+    registry: MAINNET_REGISTRY,
+    urls: [
+      "https://solana-rpc.publicnode.com",
+      "https://solana.api.pocket.network",
+      "https://api.mainnet.solana.com",
+      "https://public.rpc.solanavibestation.com",
+      "https://solana-mainnet.gateway.tatum.io",
+    ],
+  },
+  {
+    cluster: "devnet",
+    endpoints: DEVNET_ENDPOINTS,
+    registry: DEVNET_REGISTRY,
+    urls: [
+      "https://api.devnet.solana.com",
+      "https://solana-devnet.gateway.tatum.io",
+    ],
+  },
+  {
+    cluster: "testnet",
+    endpoints: TESTNET_ENDPOINTS,
+    registry: TESTNET_REGISTRY,
+    urls: [
+      "https://api.testnet.solana.com",
+      "https://solana-testnet-rpc.publicnode.com",
+      "https://solana-testnet.web3cdn.rest",
+    ],
+  },
 ] as const;
 
 describe("Solana public registry", () => {
-  test.each(clusters)("$cluster defaults preserve config arrays and enforce endpoint budgets", ({ cluster, endpoints, registry }) => {
+  test.each(clusters)("$cluster defaults preserve curated config arrays and enforce endpoint budgets", ({ cluster, endpoints, registry, urls }) => {
     const pool = solana({ cluster, headLag: false, now: () => 0 });
     try {
+      expect(registry.map((endpoint) => endpoint.url)).toEqual(urls);
+      expect(endpoints.map((endpoint) => endpoint.url)).toEqual(urls);
+      expect(registry.length).toBeLessThanOrEqual(5);
+      expect(endpoints.length).toBeLessThanOrEqual(5);
+      expect(endpoints).toEqual(registry.map((endpoint) => ({
+        label: endpoint.id,
+        url: endpoint.url,
+        rps: endpoint.rps,
+        burst: endpoint.burst,
+        unsupportedMethods: endpoint.unsupportedMethods,
+      })));
       expect(defaultEndpoints(cluster)).toBe(endpoints);
-      expect(pool.endpoints.map((endpoint) => endpoint.url)).toEqual(registry.map((endpoint) => endpoint.url));
+      expect(pool.endpoints.map((endpoint) => endpoint.url)).toEqual(urls);
       expect(pool.snapshot().map((endpoint) => ({ id: endpoint.id, tokens: endpoint.tokens }))).toEqual(
         registry.map((endpoint) => ({ id: endpoint.id, tokens: endpoint.burst })),
       );
@@ -75,11 +114,13 @@ describe("Solana public registry", () => {
     }
   });
 
-  test("known method restrictions skip Pocket during default failover", async () => {
+  test("known method restrictions skip Pocket during configured failover", async () => {
     const calls: { url: string; method: string }[] = [];
-    const first = MAINNET_ENDPOINTS[0]!.url;
-    const pocket = MAINNET_REGISTRY.find((endpoint) => endpoint.id === "pocket")!;
+    const first = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "publicnode")!;
+    const pocket = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "pocket")!;
+    const fallback = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "solana")!;
     const pool = solana({
+      endpoints: [first, pocket, fallback],
       routing: "best",
       race: false,
       headLag: false,
@@ -89,7 +130,7 @@ describe("Solana public registry", () => {
         const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
         const body = JSON.parse(String(init?.body)) as { id: number; method: string };
         calls.push({ url, method: body.method });
-        if (url === first && body.method === "getTokenAccountsByOwner") {
+        if (url === first.url && body.method === "getTokenAccountsByOwner") {
           return new Response("unavailable", { status: 503 });
         }
         const result = body.method === "getGenesisHash" ? MAINNET_GENESIS_HASH : { context: { slot: 12 }, value: [] };

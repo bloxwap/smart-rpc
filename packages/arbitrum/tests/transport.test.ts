@@ -2,8 +2,8 @@ import { describe, expect, test } from "vitest";
 import type { RpcEvent } from "@smart-rpc/core";
 
 import {
-  arbitrum, ARBITRUM_CHAIN_ID, ARBITRUM_MAINNET_CAIP, ARBITRUM_MAINNET_REGISTRY,
-  ARBITRUM_NATIVE_CURRENCY, ARBITRUM_PRECOMPILES, ARBITRUM_RPC_URL,
+  arbitrum, ARBITRUM_CHAIN_ID, ARBITRUM_MAINNET_CAIP, ARBITRUM_MAINNET_ENDPOINTS,
+  ARBITRUM_MAINNET_REGISTRY, ARBITRUM_NATIVE_CURRENCY, ARBITRUM_PRECOMPILES, ARBITRUM_RPC_URL,
   ARBITRUM_SEQUENCER_URL, ARBITRUM_SEQUENCER_FEED_URL,
   type ArbitrumBlockFields, type ArbitrumReceiptFields,
 } from "../src/index.js";
@@ -27,14 +27,20 @@ function mockRpc(answer: (call: Call) => unknown) {
 const quiet = { headLag: { probeInterval: false as const }, race: false, cache: false, routing: "best" as const };
 
 describe("Arbitrum One", () => {
-  test("registers the official execution RPC and ETH metadata without network I/O", () => {
+  test("registers the default execution RPCs and ETH metadata without network I/O", () => {
     const mock = mockRpc(() => "0xa4b1");
-    const rpc = arbitrum({ ...quiet, fetchFn: mock.fetchFn });
+    const rpc = arbitrum({
+      ...quiet, fetchFn: mock.fetchFn,
+    });
     try {
       expect(rpc.chainIds).toEqual([ARBITRUM_MAINNET_CAIP]);
       expect(ARBITRUM_CHAIN_ID).toBe(42161);
       expect(ARBITRUM_NATIVE_CURRENCY).toEqual({ name: "Ether", symbol: "ETH", decimals: 18 });
-      expect(rpc.endpoints.map(({ url }) => url)).toEqual([ARBITRUM_RPC_URL]);
+      expect(ARBITRUM_MAINNET_ENDPOINTS).toEqual(ARBITRUM_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(ARBITRUM_MAINNET_ENDPOINTS.length).toBeGreaterThanOrEqual(1);
+      expect(ARBITRUM_MAINNET_ENDPOINTS.length).toBeLessThanOrEqual(5);
+      expect(ARBITRUM_MAINNET_ENDPOINTS[0]).toBe(ARBITRUM_RPC_URL);
+      expect(rpc.endpoints.map(({ url }) => url)).toEqual(ARBITRUM_MAINNET_ENDPOINTS);
       expect(ARBITRUM_MAINNET_REGISTRY[0]?.capabilities).toMatchObject({ subscriptions: false, archive: false, batch: false });
       expect(mock.calls).toEqual([]);
     } finally { rpc.close(); }
@@ -127,7 +133,7 @@ describe("Arbitrum One", () => {
 
   test("rejects a cancelled caller without marking the endpoint unhealthy", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0xa4b1" : "0x100");
-    const rpc = arbitrum({ ...quiet, fetchFn: mock.fetchFn });
+    const rpc = arbitrum({ ...quiet, endpoints: [ARBITRUM_RPC_URL], fetchFn: mock.fetchFn });
     const controller = new AbortController();
     controller.abort();
     try {
@@ -155,7 +161,7 @@ describe("Arbitrum One", () => {
     { method: "eth_getBlockByNumber", params: ["finalized", false] },
   ])("does not send unverified $method capabilities to the public default", async (request) => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0xa4b1" : "0x100");
-    const rpc = arbitrum({ ...quiet, fetchFn: mock.fetchFn });
+    const rpc = arbitrum({ ...quiet, endpoints: [ARBITRUM_MAINNET_REGISTRY[0]!], fetchFn: mock.fetchFn });
     try {
       await expect(rpc.request(request)).rejects.toThrow();
       expect(mock.calls.filter(({ method }) => method === request.method)).toEqual([]);

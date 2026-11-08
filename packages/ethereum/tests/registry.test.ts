@@ -14,6 +14,9 @@ describe("Ethereum public registry defaults", () => {
       expect(pool.snapshot().map(({ id, tokens }) => ({ id, tokens }))).toEqual(
         ETHEREUM_MAINNET_REGISTRY.map(({ url, burst }) => ({ id: url, tokens: burst })),
       );
+      expect(ETHEREUM_MAINNET_REGISTRY.map(({ url }) => url)).toEqual(ETHEREUM_MAINNET_ENDPOINTS);
+      expect(ETHEREUM_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
+      expect(ETHEREUM_MAINNET_ENDPOINTS.length).toBeLessThanOrEqual(5);
       expect(ETHEREUM_MAINNET_ENDPOINTS).not.toContain("https://rpc.ankr.com/eth");
       expect(ETHEREUM_MAINNET_ENDPOINTS).not.toContain("https://cloudflare-eth.com");
     } finally {
@@ -47,9 +50,9 @@ describe("Ethereum public registry defaults", () => {
     }
   });
 
-  test("a failing default provider falls back after verifying the next provider's chain", async () => {
-    const first = new URL(ETHEREUM_MAINNET_ENDPOINTS[0]!).href;
-    const second = new URL(ETHEREUM_MAINNET_ENDPOINTS[1]!).href;
+  test("a failing endpoint falls back after verifying the next provider's chain", async () => {
+    const first = "https://first.example/rpc";
+    const second = "https://second.example/rpc";
     const calls: { url: string; method: string }[] = [];
     const fetchFn = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -65,6 +68,7 @@ describe("Ethereum public registry defaults", () => {
       }), { headers: { "content-type": "application/json" } });
     };
     const pool = ethereum({
+      endpoints: [first, second],
       fetchFn,
       routing: "best",
       race: false,

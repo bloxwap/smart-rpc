@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { RpcEvent } from "@smart-rpc/core";
-import { gnosis, GNOSIS_CHAIN_ID, GNOSIS_MAINNET_REGISTRY, GNOSIS_NATIVE_CURRENCY, GNOSIS_WEBSOCKET_URL, GNOSIS_CONSENSUS } from "../src/index.js";
+import { gnosis, GNOSIS_CHAIN_ID, GNOSIS_MAINNET_ENDPOINTS, GNOSIS_MAINNET_REGISTRY, GNOSIS_NATIVE_CURRENCY, GNOSIS_WEBSOCKET_URL, GNOSIS_CONSENSUS } from "../src/index.js";
 
 interface Call { url: string; method: string; params: unknown[]; headers: Headers }
 interface Body { id: number; method: string; params?: unknown[] }
@@ -32,7 +32,9 @@ describe("Gnosis execution transport", () => {
       expect(GNOSIS_CHAIN_ID).toBe(100);
       expect(GNOSIS_NATIVE_CURRENCY).toEqual({ name: "xDAI", symbol: "xDAI", decimals: 18 });
       expect(GNOSIS_CONSENSUS).toEqual({ slotSeconds: 5, slotsPerEpoch: 16, approximateFinalizationSeconds: 162 });
-      expect(pool.endpoints.map(({ url }) => url)).toEqual(GNOSIS_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(pool.endpoints.map(({ url }) => url)).toEqual(GNOSIS_MAINNET_ENDPOINTS);
+      expect(GNOSIS_MAINNET_ENDPOINTS).toEqual(GNOSIS_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(GNOSIS_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
       expect(GNOSIS_MAINNET_REGISTRY.every(({ rps }) => rps === undefined)).toBe(true);
       expect(GNOSIS_WEBSOCKET_URL).toBe("wss://rpc.gnosischain.com/wss");
       expect(wire.calls).toEqual([]);

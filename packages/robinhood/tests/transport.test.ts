@@ -31,15 +31,18 @@ const noTimer = { probeInterval: false } as const;
 const address = "0x0000000000000000000000000000000000000064";
 
 describe("Robinhood mainnet", () => {
-  test("registers only the mainnet public RPC and documents capabilities without inventing a quota", () => {
+  test("registers mainnet public RPCs and documents capabilities without inventing a quota", () => {
     const mock = mockRpc(() => "0x1237");
-    const pool = robinhood({ fetchFn: mock.fetchFn, headLag: noTimer });
+    const pool = robinhood({
+      fetchFn: mock.fetchFn, headLag: noTimer,
+    });
     try {
       expect(ROBINHOOD_CHAIN_ID).toBe(4663);
       expect(pool.chainIds).toEqual([ROBINHOOD_MAINNET_CAIP]);
       expect(ROBINHOOD_NATIVE_CURRENCY).toEqual({ name: "Ether", symbol: "ETH", decimals: 18 });
       expect(pool.endpoints.map(({ url }) => url)).toEqual(ROBINHOOD_MAINNET_ENDPOINTS);
-      expect(pool.endpoints).toHaveLength(1);
+      expect(ROBINHOOD_MAINNET_ENDPOINTS).toEqual(ROBINHOOD_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(pool.endpoints.length).toBeLessThanOrEqual(5);
       expect(pool.snapshot()[0]?.tokens).toBeNull();
       expect(ROBINHOOD_MAINNET_REGISTRY[0].sourceUrls).toContain("https://docs.robinhood.com/chain/connecting/");
       expect(ROBINHOOD_MAINNET_REGISTRY[0].capabilities).toMatchObject({ archive: false, pinning: false, batch: false });
@@ -55,7 +58,7 @@ describe("Robinhood mainnet", () => {
 
   test("quarantines a testnet response before sending a user request", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0xb626" : "0x1");
-    const pool = robinhood({ fetchFn: mock.fetchFn, headLag: noTimer });
+    const pool = robinhood({ endpoints: [ROBINHOOD_RPC_URL], fetchFn: mock.fetchFn, headLag: noTimer });
     try {
       await expect(pool.request({ method: "eth_blockNumber" })).rejects.toThrow();
       expect(mock.calls.map(({ method }) => method)).toEqual(["eth_chainId"]);
@@ -65,7 +68,7 @@ describe("Robinhood mainnet", () => {
 
   test("verifies identity before a successful mainnet read", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x1237" : "0xabc");
-    const pool = robinhood({ fetchFn: mock.fetchFn, headLag: noTimer });
+    const pool = robinhood({ endpoints: [ROBINHOOD_RPC_URL], fetchFn: mock.fetchFn, headLag: noTimer });
     try {
       await expect(pool.request({ method: "eth_blockNumber" })).resolves.toBe("0xabc");
       expect(mock.calls.map(({ method }) => method)).toEqual(["eth_chainId", "eth_blockNumber"]);
@@ -97,7 +100,7 @@ describe("Robinhood mainnet", () => {
 
   test.each(["safe", "finalized", "0x1"])('does not downgrade "%s" state requests on the public endpoint', async (tag) => {
     const mock = mockRpc(() => "0x1237");
-    const pool = robinhood({ fetchFn: mock.fetchFn, headLag: noTimer });
+    const pool = robinhood({ endpoints: [ROBINHOOD_RPC_URL], fetchFn: mock.fetchFn, headLag: noTimer });
     try {
       await expect(pool.request({ method: "eth_getBalance", params: [address, tag] })).rejects.toThrow();
       expect(mock.calls.some(({ method }) => method === "eth_getBalance")).toBe(false);
@@ -121,7 +124,7 @@ describe("Robinhood mainnet", () => {
   test("preserves Nitro receipt fee fields and precompile call data", async () => {
     const receipt = { transactionHash: "0xdead", gasUsed: "0x2100", gasUsedForL1: "0x200", l1BlockNumber: "0x100", status: "0x1" };
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x1237" : method === "eth_getTransactionReceipt" ? receipt : "0x1234");
-    const pool = robinhood({ fetchFn: mock.fetchFn, headLag: noTimer });
+    const pool = robinhood({ endpoints: [ROBINHOOD_RPC_URL], fetchFn: mock.fetchFn, headLag: noTimer });
     try {
       await expect(pool.request({ method: "eth_getTransactionReceipt", params: ["0xdead"] })).resolves.toEqual(receipt);
       const params = [{ to: address, data: "0xa3b1b31d", value: "0x0" }, "latest"];
@@ -143,7 +146,7 @@ describe("Robinhood mainnet", () => {
     const controller = new AbortController();
     controller.abort();
     const mock = mockRpc(() => "0x1237");
-    const pool = robinhood({ fetchFn: mock.fetchFn, headLag: noTimer });
+    const pool = robinhood({ endpoints: [ROBINHOOD_RPC_URL], fetchFn: mock.fetchFn, headLag: noTimer });
     try {
       await expect(pool.request({ method: "eth_blockNumber", signal: controller.signal })).rejects.toThrow();
       expect(mock.calls).toEqual([]);
@@ -156,7 +159,7 @@ describe("Robinhood mainnet", () => {
       JSON.stringify({ jsonrpc: "2.0", id, error: { code: -32602, message: "invalid params" } }),
       { headers: { "content-type": "application/json" } },
     ));
-    const pool = robinhood({ fetchFn: mock.fetchFn, headLag: noTimer, race: false });
+    const pool = robinhood({ endpoints: [ROBINHOOD_RPC_URL], fetchFn: mock.fetchFn, headLag: noTimer, race: false });
     try {
       const results = await pool.requestBatch([{ method: "eth_blockNumber" }, { method: "eth_getBalance", params: ["invalid", "latest"] }]);
       expect(results[0]).toEqual({ status: "fulfilled", value: "0xabc" });
@@ -179,7 +182,7 @@ describe("Robinhood mainnet", () => {
 
   test("successful probes do not clear a caller failure streak", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x1237" : method === "eth_blockNumber" ? "0x100" : new Response("unavailable", { status: 503 }));
-    const pool = robinhood({ fetchFn: mock.fetchFn, headLag: noTimer, race: false, retryCount: 0, cache: false });
+    const pool = robinhood({ endpoints: [ROBINHOOD_RPC_URL], fetchFn: mock.fetchFn, headLag: noTimer, race: false, retryCount: 0, cache: false });
     try {
       for (let i = 0; i < 3; i++) {
         await expect(pool.request({ method: "eth_getBalance", params: [address, "latest"] })).rejects.toThrow();

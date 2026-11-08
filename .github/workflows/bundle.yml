@@ -1,0 +1,74 @@
+name: Bundle
+
+on:
+  pull_request:
+    paths:
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/bundle.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/bundle.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bundle-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  consumer-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Build published bundle
+        run: pnpm --filter @bloxwap/smart-rpc build
+
+      - name: Pack published bundle
+        run: pnpm --filter @bloxwap/smart-rpc pack --pack-destination "$RUNNER_TEMP"
+
+      - name: Install tarball in a clean consumer
+        run: |
+          TARBALL=$(node -e 'const fs = require("node:fs"); const path = require("node:path"); const file = fs.readdirSync(process.env.RUNNER_TEMP).find((name) => name.startsWith("bloxwap-smart-rpc-") && name.endsWith(".tgz")); if (!file) throw new Error("Package tarball not found"); process.stdout.write(path.join(process.env.RUNNER_TEMP, file));')
+          mkdir "$RUNNER_TEMP/consumer"
+          cd "$RUNNER_TEMP/consumer"
+          npm init --yes
+          npm install --ignore-scripts --no-audit --no-fund "$TARBALL"
+
+      - name: Import root and chain subpaths
+        run: |
+          cd "$RUNNER_TEMP/consumer"
+          node --input-type=module -e '
+            import { createSmartRpc } from "@bloxwap/smart-rpc";
+            import { base } from "@bloxwap/smart-rpc/base";
+            import { hyperevm } from "@bloxwap/smart-rpc/hyperevm";
+            import { solana } from "@bloxwap/smart-rpc/solana";
+            const rpc = createSmartRpc({ transports: [base(), hyperevm(), solana()] });
+            if (typeof rpc.request !== "function") throw new Error("Missing router request API");
+          '

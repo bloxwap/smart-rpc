@@ -69,15 +69,17 @@ const receipt = {
 };
 
 describe("Base transport", () => {
-  test("registers Base mainnet lazily with documented ETH metadata and one full RPC", () => {
+  test("registers Base mainnet lazily with documented ETH metadata and RPC defaults", () => {
     const mock = mockRpc(() => "0x1");
     const client = base({ fetchFn: mock.fetchFn, headLag: idle });
     try {
       expect(client.chainIds).toEqual([BASE_MAINNET_CAIP]);
       expect(BASE_CHAIN_ID).toBe(8453);
       expect(BASE_NATIVE_CURRENCY).toEqual({ name: "Ether", symbol: "ETH", decimals: 18 });
-      expect(BASE_MAINNET_ENDPOINTS).toEqual([BASE_RPC_URL]);
-      expect(client.endpoints.map(({ url }) => url)).toEqual([BASE_RPC_URL]);
+      expect(BASE_MAINNET_REGISTRY.length).toBeGreaterThan(0);
+      expect(BASE_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
+      expect(BASE_MAINNET_ENDPOINTS).toEqual(BASE_MAINNET_REGISTRY.map(({ url }) => url));
+      expect(client.endpoints.map(({ url }) => url)).toEqual(BASE_MAINNET_ENDPOINTS);
       expect(BASE_MAINNET_REGISTRY[0]?.rps).toBeUndefined();
       expect(mock.calls).toEqual([]);
     } finally {
@@ -116,7 +118,7 @@ describe("Base transport", () => {
   test("keeps latest, safe and finalized independent in request and cache keys", async () => {
     const values: Record<string, string> = { latest: "0x3", safe: "0x2", finalized: "0x1" };
     const mock = mockRpc(({ method, params }) => method === "eth_chainId" ? "0x2105" : values[String(params[1])]);
-    const client = base({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = base({ endpoints: [BASE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       for (const tag of ["latest", "safe", "finalized"] as const) {
         expect(await client.request({ method: "eth_getBalance", params: [address, tag] })).toBe(values[tag]);
@@ -133,7 +135,7 @@ describe("Base transport", () => {
 
   test("preserves receipt execution gas and independent L1 calldata/blob fee fields", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x2105" : receipt);
-    const client = base({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = base({ endpoints: [BASE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     try {
       expect(await client.request({ method: "eth_getTransactionReceipt", params: [receipt.transactionHash] })).toEqual(receipt);
     } finally {
@@ -162,7 +164,7 @@ describe("Base transport", () => {
 
   test("honors cancellation before dispatch", async () => {
     const mock = mockRpc(() => "0x2105");
-    const client = base({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = base({ endpoints: [BASE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle });
     const controller = new AbortController();
     controller.abort();
     try {
@@ -176,7 +178,7 @@ describe("Base transport", () => {
   test("bounds transient retries by the configured attempt count", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x2105" : new Response("Unavailable", { status: 503 }));
     const client = base({
-      fetchFn: mock.fetchFn, headLag: idle, retryCount: 1, retryDelay: 1, race: false,
+      endpoints: [BASE_RPC_URL], fetchFn: mock.fetchFn, headLag: idle, retryCount: 1, retryDelay: 1, race: false,
     });
     try {
       await expect(client.request({ method: "eth_getBalance", params: [address, "latest"] })).rejects.toThrow();
@@ -222,7 +224,10 @@ describe("Base transport", () => {
 
   test("does not degrade an explicitly unsupported archive read to latest", async () => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x2105" : "0x10");
-    const client = base({ fetchFn: mock.fetchFn, headLag: idle });
+    const client = base({
+      endpoints: [{ url: BASE_RPC_URL, capabilities: BASE_MAINNET_REGISTRY[0]!.capabilities }],
+      fetchFn: mock.fetchFn, headLag: idle,
+    });
     try {
       await expect(client.request({ method: "eth_getBalance", params: [address, "0x1"] })).rejects.toThrow();
       expect(mock.calls.filter(({ method }) => method === "eth_getBalance")).toEqual([]);
