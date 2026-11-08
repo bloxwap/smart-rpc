@@ -79,3 +79,33 @@ Compare the router with `bestDirectReadP50`. dRPC answers `eth_blockNumber` from
 On chains whose registries carry request budgets, router latency is bounded by those budgets. They are documented provider limits or conservative local settings below them. Four workers with a 100ms pause, plus races, can ask for more requests per second than the pool's total budget. Examples: Solana mainnet's four endpoints total 10 rps, HyperEVM mainnet's five total 5.5 rps, X Layer allows 2 rps per endpoint, and Monad's Foundation aliases share 2 rps. Once the buckets are empty the pool waits for tokens or spills to slower endpoints. On those chains, a router p50 above the best direct read reflects the documented provider limits, not a routing defect.
 
 Results describe one machine's network path at one time. Other processes on the same IP share provider quotas, and rate limits caused by them show up in the run. Treat a single run as a sample, and compare runs taken close together.
+
+### Results: 2026-11-08 audit
+
+Before (commit `4f2f051`) and after this audit, measured back to back from one machine with `--rounds 8 --router 80`. Router p50/p95 are network requests only. *Best read* is the fastest healthy endpoint's same-method `eth_getBalance`/`getBalance` p50 in the after run. Ejections are breaker ejections; after the audit, rate limits throttle instead.
+
+| Chain | Healthy endpoints | Best read (ms) | Router p50 before → after | Router p95 before → after | Success before → after | Ejections before → after |
+| --- | --- | --- | --- | --- | --- | --- |
+| arbitrum | 5/5 → 5/5 | 103 | 107 → 97 | 220 → 134 | 1 → 1 | 0 → 0 |
+| arc | 5/5 → 5/5 | 49 | 51 → 49 | 142 → 96 | 1 → 1 | 0 → 0 |
+| avalanche | 4/4 → 4/4 | 59 | 59 → 67 | 114 → 131 | 1 → 1 | 0 → 0 |
+| base | 4/5 → 5/5 | 44 | 103 → 46 | 159 → 120 | 1 → 1 | 1 → 0 |
+| bsc | 5/5 → 5/5 | 77 | 92 → 82 | 309 → 153 | 1 → 1 | 1 → 0 |
+| celo | 4/5 → 4/5 | 66 | 94 → 72 | 231 → 118 | 1 → 1 | 0 → 0 |
+| ethereum | 5/5 → 5/5 | 46 | 218 → 54 | 995 → 114 | 0.975 → 1 | 0 → 0 |
+| etherlink | 3/4 → 2/3 | 96 | 100 → 98 | 202 → 268 | 1 → 1 | 0 → 0 |
+| flare | 4/4 → 4/4 | 90 | 96 → 90 | 167 → 233 | 1 → 1 | 0 → 0 |
+| gnosis | 5/5 → 5/5 | 113 | 121 → 148 | 438 → 304 | 1 → 1 | 0 → 0 |
+| hyperevm | 5/5 → 5/5 | 107 | 755 → 536 | 1332 → 976 | 1 → 1 | 0 → 0 |
+| ink | 5/5 → 5/5 | 108 | 108 → 110 | 349 → 148 | 1 → 1 | 0 → 0 |
+| mantle | 5/5 → 5/5 | 121 | 123 → 126 | 333 → 224 | 1 → 1 | 1 → 0 |
+| monad | 5/5 → 5/5 | 79 | 125 → 93 | 1062 → 391 | 0.988 → 0.988 | 0 → 0 |
+| opbnb | 5/5 → 5/5 | 80 | 105 → 85 | 232 → 180 | 1 → 1 | 1 → 0 |
+| optimism | 4/5 → 5/5 | 93 | 110 → 109 | 954 → 190 | 1 → 1 | 0 → 0 |
+| plasma | 1/3 → 3/3 | 86 | 85 → 97 | 204 → 175 | 1 → 1 | 8 → 0 |
+| polygon | 5/5 → 5/5 | 67 | 44 → 39 | 204 → 121 | 1 → 1 | 0 → 0 |
+| robinhood | 5/5 → 5/5 | 77 | 97 → 90 | 157 → 130 | 1 → 1 | 1 → 0 |
+| solana | 4/5 → 4/4 | 52 | 229 → 216 | 516 → 552 | 1 → 1 | 1 → 0 |
+| xlayer | 5/5 → 5/5 | 55 | 254 → 225 | 557 → 485 | 1 → 1 | 1 → 0 |
+
+The registry identity and head check (`pnpm check:rpcs`) passed 108 of 108 endpoints after the audit, against 109 of 111 before. Solana, HyperEVM and X Layer stay above the best direct read because the workload asks for more than their documented budgets (see above). Etherlink thirdweb was rate-limited in this run by thirdweb's per-IP limit, which is shared across the five chains probed at the same time. The router throttled it and served every request from the other two endpoints.
