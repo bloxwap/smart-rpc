@@ -35,6 +35,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Validate release plan
+        run: pnpm changeset status
+
       - name: Test
         run: pnpm test
 

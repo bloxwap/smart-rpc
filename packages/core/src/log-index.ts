@@ -395,6 +395,12 @@ function normalize(value: unknown, path: Set<object>, state: { invalid: boolean 
   return out;
 }
 
+/** Normalize a complete response even when the cache cannot retain its full range. */
+export function completeLogResult(result: unknown, from: number, to: number, copyResults: boolean): LogValue[] | undefined {
+  const logs = parseLogs(result, from, to, false);
+  return logs ? selectLogs(logs, from, to, copyResults) : undefined;
+}
+
 function parseLogs(result: unknown, from: number, to: number, copyResults: boolean): StoredLog[] | undefined {
   if (!Array.isArray(result)) return undefined;
   const unique = new Map<string, ParsedLog>();

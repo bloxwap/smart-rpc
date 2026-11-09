@@ -320,6 +320,29 @@ describe("fresh and immutable entries", () => {
 });
 
 describe("background refresh", () => {
+  test.each([false, 1_000] as const)("expires idle keys before a head-driven refresh with interval %s", async (refreshInterval) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const head = { value: 100 };
+    const a = node("a", head);
+    const client = opened([a.config], {
+      cache: { refreshInterval, hotIdleMs: 50 },
+      now: () => Date.now(),
+    });
+    try {
+      await client.probe();
+      await client.request({ method: "eth_call", params: [TX] });
+      await vi.advanceTimersByTimeAsync(51);
+      head.value = 101;
+      await client.probe();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(a.count("eth_call")).toBe(1);
+      expect(client.cacheStats()).toMatchObject({ hotKeys: 0, refreshes: 0 });
+    } finally {
+      client.close();
+    }
+  });
+
   test("pins to the newest servable head, coalesces, and never races a refresh", async () => {
     const headA = { value: 100 };
     const headB = { value: 100 };

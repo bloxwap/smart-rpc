@@ -385,14 +385,36 @@ describe("pool rolling log cache", () => {
       now: () => 0,
     });
     await client.probe();
-    await client.request({ method: "eth_getLogs", params: [filter(90)] });
+    await expect(client.request({ method: "eth_getLogs", params: [filter(90)] })).resolves.toEqual([
+      TABLE[1], TABLE[2], TABLE[0],
+    ]);
+    expect(node.count("eth_getLogs")).toBe(1);
     await client.request({ method: "eth_getLogs", params: [filter(96, 100)] });
-    expect(node.count("eth_getLogs")).toBe(2);
+    expect(node.count("eth_getLogs")).toBe(1);
     await client.request({ method: "eth_chainId", params: [] });
     expect(client.cacheStats().entries).toBe(1);
     expect(client.cacheStats().bytes).toBeLessThanOrEqual(8 * 1024 * 1024);
     await client.request({ method: "eth_getLogs", params: [filter(96, 100)] });
-    expect(node.count("eth_getLogs")).toBe(3);
+    expect(node.count("eth_getLogs")).toBe(2);
     client.close();
+  });
+
+  test.each([{ maxEntries: 0 }, { maxBytes: 1 }])("does not repeat a complete fetch evicted by %o", async (capacity) => {
+    const node = logsNode("a", { value: 100 }, [...TABLE, TABLE[0]!]);
+    const client = opened([node.config], {
+      cache: { ...capacity, refreshInterval: false },
+      operationBudget: { maxRequests: 1 },
+      isActive: () => false,
+      now: () => 0,
+    });
+    try {
+      await client.probe();
+      const results = await client.requestBatch([{ method: "eth_getLogs", params: [filter(90)] }]);
+      expect(results).toEqual([{ status: "fulfilled", value: [TABLE[1], TABLE[2], TABLE[0]] }]);
+      expect(node.count("eth_getLogs")).toBe(1);
+      expect(client.cacheStats().entries).toBe(0);
+    } finally {
+      client.close();
+    }
   });
 });
