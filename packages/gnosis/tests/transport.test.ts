@@ -67,12 +67,30 @@ describe("Gnosis execution transport", () => {
     } finally { pool.close(); }
   });
 
-  test.each(["safe", "finalized", "0x1"])("does not silently degrade unsupported state selector %s", async (tag) => {
+  test.each(["safe", "finalized"])("does not silently degrade unsupported state selector %s", async (tag) => {
     const wire = mock(({ method }) => identity(method));
     const pool = gnosis({ fetchFn: wire.fetchFn, headLag: idle });
     try {
       await expect(pool.request({ method: "eth_getBalance", params: [address, tag] })).rejects.toThrow();
       expect(wire.calls).toEqual([]);
+    } finally { pool.close(); }
+  });
+
+  test("routes default historical state only to live-verified archive endpoints", async () => {
+    const archive = GNOSIS_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities?.archive).map(({ url }) => url);
+    expect(archive).toEqual(["https://rpc.gnosischain.com", "https://rpc.gnosis.gateway.fm", "https://gnosis.drpc.org"]);
+    const wire = mock(({ method }) => identity(method));
+    const pool = gnosis({ fetchFn: wire.fetchFn, headLag: idle, race: false });
+    try {
+      await expect(pool.request({ method: "eth_getBalance", params: [address, "0x1"] })).resolves.toBe("0x100");
+      const historical = wire.calls.filter(({ method }) => method === "eth_getBalance");
+      expect(historical.length).toBeGreaterThan(0);
+      const archiveOrigins = archive.map((url) => new URL(url).origin);
+      expect(historical.map(({ url, params }) => ({ origin: new URL(url).origin, block: params[1] })))
+        .toEqual(historical.map(({ url }) => {
+          const origin = new URL(url).origin;
+          return { origin: archiveOrigins.includes(origin) ? origin : "non-archive", block: "0x1" };
+        }));
     } finally { pool.close(); }
   });
 

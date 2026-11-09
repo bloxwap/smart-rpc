@@ -20,6 +20,9 @@ export interface CeloFeeCurrencyFields {
   feeCurrency?: `0x${string}` | null | undefined;
 }
 
+/** 1s blocks on mainnet (measured 2026-11-08: 1,000 blocks in 1,000s) and Celo Sepolia. Lag tolerance is one block. */
+const CELO_BLOCK_TIME_MS = 1_000;
+
 /** Celo uses the canonical EVM adapter; complete params remain in shared cache/coalescing keys. */
 export function celo(options: CeloOptions = {}): RpcPool {
   const chainId = options.chainId ?? CELO_CHAIN_ID;
@@ -31,5 +34,6 @@ export function celo(options: CeloOptions = {}): RpcPool {
     chainId,
     chainIds: [`eip155:${chainId}`],
     endpoints: options.endpoints ?? (chainId === CELO_CHAIN_ID ? CELO_MAINNET_REGISTRY : CELO_SEPOLIA_REGISTRY),
+    blockTimeMs: options.blockTimeMs ?? CELO_BLOCK_TIME_MS,
   });
 }

@@ -42,6 +42,12 @@ export function jsonRpcCaller(url: string, fetchFn: FetchLike = fetch): Endpoint
       if (rpcError && Object.hasOwn(rpcError, "data")) {
         Object.defineProperty(error, "data", { value: rpcError.data });
       }
+      if (!rpcError) {
+        // A gateway's own error body (plain text, or JSON without the JSON-RPC envelope) says why: a rate limit,
+        // or a request this endpoint will not serve. Keep it so routing can tell the two apart.
+        const reason = envelope && typeof envelope.message === "string" ? envelope.message : text.trim().slice(0, 500);
+        if (reason !== "") Object.defineProperty(error, "details", { value: reason });
+      }
       throw error;
     }
     // A proxy's HTTP 200 page must fail over, not become a cached undefined result.

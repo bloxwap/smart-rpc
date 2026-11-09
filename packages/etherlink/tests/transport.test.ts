@@ -96,17 +96,30 @@ describe("Etherlink EVM transport", () => {
     const mock = mockRpc();
     const pool = etherlink({ endpoints: [`${ETHERLINK_RPC_URL}/`], fetchFn: mock.fetchFn, headLag: idle });
     try {
-      await expect(pool.request({ method: "eth_getBalance", params: [account, "0x1"] })).rejects.toThrow();
-      await expect(pool.request({ method: "eth_getBalance", params: [account, "finalized"] })).rejects.toThrow();
+      // `safe` is rejected by Etherlink nodes with terminal -32600, so it never leaves the client.
+      await expect(pool.request({ method: "eth_getBalance", params: [account, "safe"] })).rejects.toThrow();
       await expect(pool.request({ method: "debug_traceTransaction", params: ["0x1234"] })).rejects.toThrow();
+      for (const method of ["eth_newBlockFilter", "eth_getProof"]) await expect(pool.request({ method })).rejects.toThrow();
       expect(mock.calls).toEqual([]);
+    } finally { pool.close(); }
+  });
+
+  test("routes verified finalized tags and archive state to the public node unchanged", async () => {
+    const mock = mockRpc(({ method, params }) => method === "eth_chainId" ? chain : params[1]);
+    const pool = etherlink({ endpoints: [ETHERLINK_RPC_URL], fetchFn: mock.fetchFn, headLag: idle, race: false, cache: false });
+    try {
+      for (const tag of ["finalized", "pending", "0x1"]) expect(await pool.request({ method: "eth_getBalance", params: [account, tag] })).toBe(tag);
+      expect(ETHERLINK_MAINNET_REGISTRY.map(({ id }) => id)).toEqual(["etherlink-mainnet", "etherlink-ankr-public", "etherlink-thirdweb-public"]);
+      expect(ETHERLINK_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities?.archive).map(({ id }) => id))
+        .toEqual(["etherlink-mainnet", "etherlink-ankr-public"]);
+      expect(ETHERLINK_MAINNET_REGISTRY.every(({ capabilities }) => !capabilities?.blockTags?.includes("safe"))).toBe(true);
     } finally { pool.close(); }
   });
 
   test("routes archive requests only to a configured provider and preserves HTTP headers", async () => {
     const mock = mockRpc();
     const pool = etherlink({
-      endpoints: [ETHERLINK_RPC_URL, { url: "https://archive.example", headers: { "x-api-key": "fixture-only" }, capabilities: { archive: true, blockTags: ["latest", "safe", "finalized"] } }],
+      endpoints: [ETHERLINK_MAINNET_REGISTRY.find(({ id }) => id === "etherlink-thirdweb-public")!, { url: "https://archive.example", headers: { "x-api-key": "fixture-only" }, capabilities: { archive: true, blockTags: ["latest", "safe", "finalized"] } }],
       fetchFn: mock.fetchFn, headLag: idle, race: false,
     });
     try {

@@ -7,6 +7,12 @@ export const AVALANCHE_CHAIN_ID = 43114;
 export const AVALANCHE_MAINNET_CAIP = "eip155:43114";
 export const AVALANCHE_NATIVE_CURRENCY = { name: "Avalanche", symbol: "AVAX", decimals: 18 } as const;
 
+/**
+ * About 1s blocks (measured 2026-11-08: 1,000 blocks in 1,026-1,034s; blocks are produced on demand, so 1s is the
+ * fast end). Lag tolerance is one block.
+ */
+const AVALANCHE_BLOCK_TIME_MS = 1_000;
+
 export interface AvalancheOptions extends Omit<EthereumOptions, "chainId" | "chainIds"> {}
 
 /** Avalanche C-Chain execution RPC; routing and retry policy remain in the shared core. */
@@ -18,6 +24,7 @@ export function avalanche(options: AvalancheOptions = {}): RpcPool {
     endpoints: (options.endpoints ?? AVALANCHE_MAINNET_REGISTRY).map(endpointConfig),
     cachePolicy: options.cachePolicy ?? evmCachePolicy({ logs: false }),
     safeMethods: [...AVALANCHE_READ_METHODS, ...(options.safeMethods ?? [])],
+    blockTimeMs: options.blockTimeMs ?? AVALANCHE_BLOCK_TIME_MS,
   });
 }
 

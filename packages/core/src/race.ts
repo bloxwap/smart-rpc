@@ -1,8 +1,10 @@
 /**
  * Racing a safe read across the best-scored endpoints at once.
  *
- * The first answer wins and cancels pending losers. Intentional cancellation is
- * excluded from endpoint failure and latency accounting.
+ * The first answer wins. Pending losers are released, not aborted: they finish in the background, their
+ * answers are discarded, and their latency is scored. Aborting a loser throws away its keep-alive connection,
+ * so its next request pays a new TLS handshake, and a loser that never reports a sample is never learned.
+ * Cancelling the whole race (the caller gave up) still aborts every call, without accounting.
  * @module
  */
 
@@ -21,6 +23,8 @@ export interface RaceCall {
   promise: Promise<unknown>;
   cancel: () => void;
   cancelled: () => boolean;
+  /** Stop waiting for this call but let it finish and be scored. Calls without it are cancelled instead. */
+  release?: (() => void) | undefined;
 }
 
 /** Where racers come from. The pool backs this with its scoreboard, breaker, and chain gates. */
@@ -73,7 +77,7 @@ export function pickRacers<T extends { readonly id: string }>(
 /**
  * Settle with the first success among `calls`. A failure waits for the others unless `decisive` says the
  * failover loop would stop on it anyway. When every call fails, reject with the last error and hand the
- * earlier ones to `failed`. Finishing or cancelling the race cancels every pending loser.
+ * earlier ones to `failed`. Finishing the race releases every pending loser; cancelling it cancels them.
  */
 export function raceCalls(
   calls: readonly RaceCall[],
@@ -83,6 +87,10 @@ export function raceCalls(
   let settled = false;
   let cancelled = false;
   let pending = calls.length;
+  const settle = (loser: RaceCall): void => {
+    if (loser.release) loser.release();
+    else loser.cancel();
+  };
   const errors: Error[] = [];
   const promise = new Promise<unknown>((resolve, reject) => {
     if (calls.length === 0) {
@@ -94,7 +102,7 @@ export function raceCalls(
         (result) => {
           if (settled) return;
           settled = true;
-          for (const other of calls) if (other !== call) other.cancel();
+          for (const other of calls) if (other !== call) settle(other);
           resolve(result);
         },
         (error: unknown) => {
@@ -106,7 +114,7 @@ export function raceCalls(
             return;
           }
           settled = true;
-          for (const other of calls) if (other !== call) other.cancel();
+          for (const other of calls) if (other !== call) settle(other);
           failed(errors);
           reject(wrapped);
         },

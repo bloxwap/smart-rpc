@@ -118,16 +118,46 @@ describe("Arc", () => {
     } finally { client.close(); }
   });
 
-  test("requires configured archive, debug and finality-tag capabilities without downgrading state", async () => {
+  test("requires configured archive and debug capabilities without downgrading state", async () => {
     const mock = mockRpc(() => "0x13b2");
-    const primary = ARC_MAINNET_REGISTRY.find(({ url }) => url === ARC_RPC_URL)!;
-    const client = arc({ endpoints: [primary], fetchFn: mock.fetchFn, headLag: idle });
+    const pruned = ARC_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities?.archive === false);
+    expect(pruned.map(({ id }) => id)).toEqual(["arc-blockdaemon", "arc-publicnode"]);
+    const client = arc({ endpoints: pruned, fetchFn: mock.fetchFn, headLag: idle });
     try {
-      for (const tag of ["0x1", "safe", "finalized"]) {
+      for (const tag of ["0x1", "earliest"]) {
         await expect(client.request({ method: "eth_getBalance", params: [address, tag] })).rejects.toThrow();
       }
       await expect(client.request({ method: "debug_traceTransaction", params: ["0x01"] })).rejects.toThrow();
       expect(mock.calls).toHaveLength(0);
+    } finally { client.close(); }
+  });
+
+  test("routes verified finality tags and historical state to archive defaults unchanged", async () => {
+    const mock = mockRpc(({ method, params }) => method === "eth_chainId" ? "0x13b2" : params[1]);
+    const primary = ARC_MAINNET_REGISTRY.find(({ url }) => url === ARC_RPC_URL)!;
+    const client = arc({ endpoints: [primary], fetchFn: mock.fetchFn, headLag: idle, race: false, cache: false });
+    try {
+      for (const tag of ["safe", "finalized", "0x1"]) {
+        expect(await client.request({ method: "eth_getBalance", params: [address, tag] })).toBe(tag);
+      }
+      expect(ARC_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities?.archive).map(({ id }) => id))
+        .toEqual(["arc-primary", "arc-drpc", "arc-quicknode"]);
+    } finally { client.close(); }
+  });
+
+  test("keeps methods a default endpoint refuses away from it", async () => {
+    const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x13b2" : method === "eth_getLogs" ? [] : "0x1");
+    const byId = (id: string) => ARC_MAINNET_REGISTRY.find((entry) => entry.id === id)!;
+    const client = arc({ endpoints: [byId("arc-primary"), byId("arc-publicnode")], fetchFn: mock.fetchFn, headLag: idle, race: false });
+    try {
+      await expect(client.request({ method: "eth_getProof", params: [address, [], "latest"] })).resolves.toBe("0x1");
+      await expect(client.request({ method: "eth_newBlockFilter" })).resolves.toBe("0x1");
+      await expect(client.request({ method: "eth_getLogs", params: [{ address, fromBlock: "0x10", toBlock: "0x10" }] })).resolves.toEqual([]);
+      const served = (method: string) => mock.calls.filter((call) => call.method === method).map(({ url }) => new URL(url).host);
+      expect(served("eth_getProof")).toEqual(["arc-rpc.publicnode.com"]);
+      expect(served("eth_newBlockFilter")).toEqual(["arc-rpc.publicnode.com"]);
+      expect(served("eth_getLogs")).toEqual([new URL(ARC_RPC_URL).host]);
+      expect(byId("arc-drpc").capabilities?.maxLogBlockRange).toBe(100);
     } finally { client.close(); }
   });
 

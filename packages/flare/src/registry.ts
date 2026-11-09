@@ -33,8 +33,15 @@ const drpcUnsupportedMethods: readonly string[] = [
 const drpcSupportedMethods = supportedMethods.filter((method) => !drpcUnsupportedMethods.includes(method));
 
 /**
- * No numeric provider quota or batch ceiling was documented. Optional capabilities
- * stay disabled until explicitly configured and tested for the chosen endpoint.
+ * Snowman++ gives Flare fast finality, and every default endpoint answered `safe`,
+ * `finalized`, `pending` and `earliest` for blocks and state (live probes 2026-11-08).
+ */
+const verifiedBlockTags = ["latest", "pending", "safe", "finalized", "earliest"] as const;
+
+/**
+ * No numeric provider quota or batch ceiling was documented. Capabilities record live
+ * probes (2026-11-08): `archive` is true only where `eth_getBalance` at block 1 was
+ * served. Batching, pinning, debug, trace and subscriptions stay off.
  */
 export const FLARE_MAINNET_REGISTRY: readonly FlarePublicRpcEndpoint[] = [
   {
@@ -46,6 +53,9 @@ export const FLARE_MAINNET_REGISTRY: readonly FlarePublicRpcEndpoint[] = [
       "https://dev.flare.network/network/overview",
       "https://chainlist.org/chain/14",
     ],
+    // State 128 blocks back already returns "missing trie node". The node's own error is
+    // "requested too many blocks ..., maximum is set to 30" for eth_getLogs.
+    capabilities: { archive: false, maxLogBlockRange: 30 },
   },
   {
     id: "flare-quicknode-public",
@@ -53,6 +63,7 @@ export const FLARE_MAINNET_REGISTRY: readonly FlarePublicRpcEndpoint[] = [
     url: FLARE_QUICKNODE_RPC_URL,
     websocketUrl: FLARE_QUICKNODE_WS_URL,
     sourceUrls: ["https://dev.flare.network/network/overview"],
+    capabilities: { archive: true },
   },
   {
     id: "flare-drpc-public",
@@ -65,6 +76,10 @@ export const FLARE_MAINNET_REGISTRY: readonly FlarePublicRpcEndpoint[] = [
       "https://drpc.org/docs/howitworks/ratelimiting",
     ],
     unsupportedMethods: drpcUnsupportedMethods,
+    // The free tier serves no state behind the head ("Unknown state. First available state
+    // is <head>"), answers 101-block log ranges and rejects 1000-block ranges (code 35),
+    // and rejects batches larger than 3.
+    capabilities: { archive: false, maxLogBlockRange: 100 },
   },
   {
     id: "flare-tenderly-public",
@@ -75,14 +90,16 @@ export const FLARE_MAINNET_REGISTRY: readonly FlarePublicRpcEndpoint[] = [
       "https://docs.tenderly.co/node-rpc/rpc-reference",
       "https://docs.tenderly.co/node-rpc/overview#public-endpoint-limits",
     ],
+    capabilities: { archive: true },
   },
 ].map((entry): FlarePublicRpcEndpoint => ({
   ...entry,
-  reviewedAt: "2026-11-07",
+  reviewedAt: "2026-11-08",
   supportedMethods: entry.id === "flare-drpc-public" ? drpcSupportedMethods : supportedMethods,
   capabilities: {
-    archive: false, debug: false, trace: false, batch: false,
-    subscriptions: false, pinning: false, blockTags: ["latest", "pending"],
+    debug: false, trace: false, batch: false,
+    subscriptions: false, pinning: false, blockTags: verifiedBlockTags,
+    ...entry.capabilities,
   },
 }));
 

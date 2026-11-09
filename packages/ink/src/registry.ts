@@ -10,6 +10,7 @@ export interface InkPublicEndpoint extends EthereumEndpointConfig {
   readonly provider: string;
   readonly sourceUrls: readonly string[];
   readonly reviewedAt: string;
+  /** Documented WebSocket URLs; empty when the operator documents none. */
   readonly websocketUrls: readonly string[];
 }
 
@@ -19,24 +20,29 @@ const sources = [
 ] as const;
 
 /**
- * HTTP defaults. Advanced capabilities are opt-in after testing a provider.
- * No provider-wide numeric request or JSON batch maximum is documented here.
+ * HTTP defaults, re-verified live on 2026-11-08. Every listed provider served historical
+ * state back to genesis (`archive: true`) and a 10-item JSON batch (`batch: true`).
+ * `maxBatchSize: 10` is the largest size verified across them (Tenderly answered a 20-item
+ * batch with 429), not a published maximum. Debug, trace, subscriptions, numeric pinning
+ * and safe/finalized tags stay disabled: providers disagreed on the finalized head.
+ * Only Pocket publishes a numeric keyless allowance; no other request quota is asserted.
  */
 export const INK_MAINNET_REGISTRY = [
   {
     url: INK_RPC_URL,
     provider: "Gelato",
     sourceUrls: [...sources, "https://chainlist.org/chain/57073"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     // The RPC guide and network table document different Gelato WS hostnames.
     websocketUrls: ["wss://ws-gel.inkonchain.com", "wss://rpc-gel.inkonchain.com"],
     capabilities: {
-      archive: false,
+      archive: true,
       debug: false,
       trace: false,
       subscriptions: false,
       pinning: false,
-      batch: false,
+      batch: true,
+      maxBatchSize: 10,
       blockTags: ["latest", "pending"],
     },
   },
@@ -44,55 +50,33 @@ export const INK_MAINNET_REGISTRY = [
     url: INK_SECONDARY_RPC_URL,
     provider: "QuickNode",
     sourceUrls: [...sources, "https://chainlist.org/chain/57073"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     websocketUrls: ["wss://rpc-qnd.inkonchain.com"],
     capabilities: {
-      archive: false,
+      archive: true,
       debug: false,
       trace: false,
       subscriptions: false,
       pinning: false,
-      batch: false,
+      batch: true,
+      maxBatchSize: 10,
       blockTags: ["latest", "pending"],
     },
   },
   {
     url: "https://rpc-ten.inkonchain.com",
     provider: "Tenderly",
-    sourceUrls: sources,
-    reviewedAt: "2026-11-07",
+    sourceUrls: [...sources, "https://docs.tenderly.co/node-rpc/overview#public-endpoint-limits"],
+    reviewedAt: "2026-11-08",
     websocketUrls: ["wss://rpc-ten.inkonchain.com"],
     capabilities: {
-      archive: false,
+      archive: true,
       debug: false,
       trace: false,
       subscriptions: false,
       pinning: false,
-      batch: false,
-      blockTags: ["latest", "pending"],
-    },
-  },
-  {
-    url: "https://ink.drpc.org",
-    provider: "dRPC",
-    sourceUrls: [...sources, "https://chainlist.org/chain/57073"],
-    reviewedAt: "2026-11-07",
-    websocketUrls: ["wss://ink.drpc.org"],
-    unsupportedMethods: [
-      "eth_newFilter",
-      "eth_newBlockFilter",
-      "eth_newPendingTransactionFilter",
-      "eth_getFilterChanges",
-      "eth_getFilterLogs",
-      "eth_uninstallFilter",
-    ],
-    capabilities: {
-      archive: false,
-      debug: false,
-      trace: false,
-      subscriptions: false,
-      pinning: false,
-      batch: false,
+      batch: true,
+      maxBatchSize: 10,
       blockTags: ["latest", "pending"],
     },
   },
@@ -100,15 +84,37 @@ export const INK_MAINNET_REGISTRY = [
     url: "https://ink-rpc.publicnode.com",
     provider: "PublicNode",
     sourceUrls: ["https://ink.publicnode.com/", "https://chainlist.org/chain/57073"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     websocketUrls: ["wss://ink-rpc.publicnode.com"],
     capabilities: {
-      archive: false,
+      archive: true,
       debug: false,
       trace: false,
       subscriptions: false,
       pinning: false,
-      batch: false,
+      batch: true,
+      maxBatchSize: 10,
+      blockTags: ["latest", "pending"],
+    },
+  },
+  {
+    // Replaced ink.drpc.org on 2026-11-08: its keyless reads ran ~350 ms p50 and returned
+    // HTTP 500 "Temporary internal error" on ~17% of plain reads and ~40% of eth_getLogs.
+    url: "https://ink.api.pocket.network",
+    provider: "Pocket Network",
+    sourceUrls: ["https://docs.pocket.network/developers/supported-chains/", "https://chainlist.org/chain/57073"],
+    reviewedAt: "2026-11-08",
+    // Published: "2,000 requests per IP per minute" (about 33 per second).
+    rps: 33,
+    websocketUrls: [],
+    capabilities: {
+      archive: true,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+      batch: true,
+      maxBatchSize: 10,
       blockTags: ["latest", "pending"],
     },
   },

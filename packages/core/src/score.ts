@@ -131,12 +131,18 @@ export function observeLiveness(
   stat.error = mix(stat.error, 1, config.errorAlpha);
 }
 
-/** Estimated service time in milliseconds, pulled toward `priorMs` while the sample count is low. */
+/**
+ * Estimated service time in milliseconds. While the sample count is low a slow or failure-only book is pulled
+ * toward `priorMs`; a book whose successful answers already beat the prior is credited at once. Otherwise one
+ * 40ms answer reads as `0.2 * 40 + 0.8 * 250 = 208ms`, a fast endpoint hides behind slower but better-sampled
+ * peers, and it never gets the traffic that would prove it.
+ */
 export function serviceMs(stat: MethodStat, config: ScoreConfig = defaultScoreConfig): number {
   if (stat.n === 0) return config.priorMs;
   const measured = stat.ewma > 0 ? config.latencyMix * stat.ewma + (1 - config.latencyMix) * stat.tail : stat.tail;
   const confidence = Math.min(1, stat.n / config.confidenceSamples);
-  return confidence * measured + (1 - confidence) * config.priorMs;
+  const blended = confidence * measured + (1 - confidence) * config.priorMs;
+  return stat.ewma > 0 && measured < blended ? measured : blended;
 }
 
 /**

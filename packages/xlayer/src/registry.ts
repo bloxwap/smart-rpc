@@ -34,7 +34,12 @@ export interface XLayerPublicEndpoint extends EthereumEndpointConfig {
   readonly reviewedAt: string;
 }
 
-/** Conservative client settings; unverified advanced features require explicit opt-in. */
+/**
+ * Conservative client settings; unverified advanced features require explicit opt-in.
+ * Archive flags and log ranges below come from live probes on 2026-11-08 (state at
+ * block 1 and head-100k, and each provider's own range-limit error). Latest-state
+ * pinning stays off, so these flags only open explicit historical reads.
+ */
 export const XLAYER_MAINNET_REGISTRY: readonly XLayerPublicEndpoint[] = [
   ...[
     XLAYER_RPC_URL,
@@ -46,7 +51,7 @@ export const XLAYER_MAINNET_REGISTRY: readonly XLayerPublicEndpoint[] = [
       "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/build-on-xlayer/network-information",
       "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/rpc-endpoints/rpc-endpoints",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     // Local defaults leave room for probes and other users of the same public IP.
     rps: 2,
     burst: 3,
@@ -54,13 +59,16 @@ export const XLAYER_MAINNET_REGISTRY: readonly XLayerPublicEndpoint[] = [
     providerBudget: XLAYER_PUBLIC_RPC_BUDGET,
     supportedMethods: XLAYER_PUBLIC_METHODS,
     capabilities: {
-      archive: false,
+      // Live probes served state at block 1 and head-100k; latest stays unpinned.
+      archive: true,
       blockTags: ["latest", "pending"] as const,
       debug: false,
       trace: false,
       subscriptions: false,
       pinning: false,
       batch: false,
+      // Observed: "block range greater than 100 max".
+      maxLogBlockRange: 100,
     },
   })),
   {
@@ -71,7 +79,7 @@ export const XLAYER_MAINNET_REGISTRY: readonly XLayerPublicEndpoint[] = [
       "https://drpc.org/chainlist/xlayer-mainnet-rpc",
       "https://drpc.org/docs/howitworks/ratelimiting",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     unsupportedMethods: [
       "eth_newFilter",
       "eth_newBlockFilter",
@@ -83,13 +91,15 @@ export const XLAYER_MAINNET_REGISTRY: readonly XLayerPublicEndpoint[] = [
     rps: 2,
     burst: 3,
     capabilities: {
-      archive: false,
+      archive: true,
       blockTags: ["latest", "pending"] as const,
       debug: false,
       trace: false,
       subscriptions: false,
       pinning: false,
       batch: false,
+      // Observed free-plan ceiling: 101 blocks pass, 102 return "ranges over 10000 blocks".
+      maxLogBlockRange: 100,
     },
   },
   {
@@ -99,17 +109,19 @@ export const XLAYER_MAINNET_REGISTRY: readonly XLayerPublicEndpoint[] = [
       "https://chainlist.org/chain/196",
       "https://docs.sentio.xyz/docs/supported-network",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     rps: 2,
     burst: 3,
     capabilities: {
-      archive: false,
+      archive: true,
       blockTags: ["latest", "pending"] as const,
       debug: false,
       trace: false,
       subscriptions: false,
       pinning: false,
       batch: false,
+      // Observed: "public eth_getLogs is limited to 1000 blocks".
+      maxLogBlockRange: 1_000,
     },
   },
   {
@@ -119,7 +131,7 @@ export const XLAYER_MAINNET_REGISTRY: readonly XLayerPublicEndpoint[] = [
       "https://chainlist.org/chain/196",
       "https://portal.thirdweb.com/infrastructure/rpc-edge/overview",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     rps: 2,
     burst: 3,
     capabilities: {
@@ -130,6 +142,8 @@ export const XLAYER_MAINNET_REGISTRY: readonly XLayerPublicEndpoint[] = [
       subscriptions: false,
       pinning: false,
       batch: false,
+      // Observed: "block range greater than 100 max".
+      maxLogBlockRange: 100,
     },
   },
 ];

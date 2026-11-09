@@ -39,8 +39,10 @@ describe.skipIf(process.env.SMART_RPC_INK_CAPABILITIES !== "1")("Ink provider ca
     } finally { client.close(); }
   });
 
-  test.each(INK_MAINNET_REGISTRY)("$provider subscribes on its documented WS URL", async ({ websocketUrls }) => {
-    const session = connectViem(websocketUrls[0], { timeout: 8_000, expectedChainId: INK_CHAIN_ID, reconnect: true });
+  const withWebSocket = INK_MAINNET_REGISTRY.flatMap(({ provider, websocketUrls }) =>
+    websocketUrls.length > 0 ? [{ provider, websocketUrl: websocketUrls[0] as string }] : []);
+  test.each(withWebSocket)("$provider subscribes on its documented WS URL", async ({ websocketUrl }) => {
+    const session = connectViem(websocketUrl, { timeout: 8_000, expectedChainId: INK_CHAIN_ID, reconnect: true });
     try {
       const subscription = await session.subscribe({ params: ["newHeads"], onData: () => undefined });
       expect(subscription.subscriptionId).toBeTruthy();

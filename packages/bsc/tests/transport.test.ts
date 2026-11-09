@@ -93,6 +93,25 @@ describe("BNB Smart Chain defaults", () => {
     expect(pool.snapshot().find(({ url }) => url === BSC_RPC_URL)?.ejected).toBe(false);
   });
 
+  test("routes logs to registry peers that serve them, never to the dataseeds", async () => {
+    const logs = [{ address: "0x0000000000000000000000000000000000000001", topics: [], data: "0x" }];
+    const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x38" : logs);
+    const thirdweb = "https://56.rpc.thirdweb.com";
+    const pool = client({ endpoints: [...officialDataseeds, thirdweb], fetchFn: mock.fetchFn, routing: "best", race: false });
+    await expect(pool.request({ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x2" }] })).resolves.toEqual(logs);
+    const logCalls = mock.calls.filter(({ method }) => method === "eth_getLogs");
+    expect(logCalls.length).toBeGreaterThan(0);
+    expect(logCalls.every(({ url }) => url === thirdweb)).toBe(true);
+  });
+
+  test("enables historical state only on live-verified archive defaults", () => {
+    expect(BSC_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities?.archive).map(({ id }) => id)).toEqual(["bsc-thirdweb"]);
+    expect(BSC_MAINNET_REGISTRY.every(({ capabilities }) => capabilities?.batch === false && capabilities.pinning === false)).toBe(true);
+    // Pocket's BSC suppliers reject address-less log filters with a terminal -32602.
+    expect(BSC_MAINNET_REGISTRY.filter(({ unsupportedMethods }) => !unsupportedMethods?.includes("eth_getLogs")).map(({ id }) => id))
+      .toEqual(["bsc-publicnode", "bsc-thirdweb"]);
+  });
+
   test.each(["eth_getLogs", ...BSC_EXTENSION_METHODS, "debug_traceTransaction", "trace_block"])("rejects unsupported public %s without an upstream call or endpoint penalty", async (method) => {
     const mock = mockRpc(() => "0x38");
     const pool = client({ endpoints: officialDataseeds, fetchFn: mock.fetchFn });

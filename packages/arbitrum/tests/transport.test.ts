@@ -41,8 +41,32 @@ describe("Arbitrum One", () => {
       expect(ARBITRUM_MAINNET_ENDPOINTS.length).toBeLessThanOrEqual(5);
       expect(ARBITRUM_MAINNET_ENDPOINTS[0]).toBe(ARBITRUM_RPC_URL);
       expect(rpc.endpoints.map(({ url }) => url)).toEqual(ARBITRUM_MAINNET_ENDPOINTS);
-      expect(ARBITRUM_MAINNET_REGISTRY[0]?.capabilities).toMatchObject({ subscriptions: false, archive: false, batch: false });
+      expect(ARBITRUM_MAINNET_REGISTRY[0]?.capabilities).toMatchObject({ subscriptions: false, archive: false, batch: true, maxBatchSize: 10 });
       expect(mock.calls).toEqual([]);
+    } finally { rpc.close(); }
+  });
+
+  test("registry records re-verified archive, batch and log-range capabilities", () => {
+    const byId = new Map(ARBITRUM_MAINNET_REGISTRY.map((endpoint) => [endpoint.id, endpoint]));
+    expect(ARBITRUM_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities.archive).map(({ id }) => id))
+      .toEqual(["arbitrum-pocket", "arbitrum-tenderly"]);
+    expect(byId.get("arbitrum-drpc")?.capabilities).toMatchObject({ batch: true, maxBatchSize: 3, maxLogBlockRange: 100 });
+    expect(byId.get("arbitrum-pocket")).toMatchObject({ rps: 33 });
+    for (const endpoint of ARBITRUM_MAINNET_REGISTRY) {
+      expect(endpoint.reviewedAt).toBe("2026-11-08");
+      expect(endpoint.capabilities).toMatchObject({ batch: true, debug: false, trace: false, subscriptions: false, pinning: false });
+      expect(endpoint.capabilities.blockTags).toEqual(["latest", "pending"]);
+    }
+  });
+
+  test("routes registry archive reads only to providers that served historical state", async () => {
+    const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0xa4b1" : "0x100");
+    const rpc = arbitrum({ ...quiet, fetchFn: mock.fetchFn, race: false, cache: false, routing: "best" });
+    try {
+      await rpc.request({ method: "eth_getBalance", params: ["0x0000000000000000000000000000000000000001", "0x1600000"] });
+      const reads = mock.calls.filter(({ method }) => method === "eth_getBalance").map(({ url }) => new URL(url).host);
+      expect(reads).toHaveLength(1);
+      expect(["arb-one.api.pocket.network", "arbitrum.gateway.tenderly.co"]).toContain(reads[0]);
     } finally { rpc.close(); }
   });
 

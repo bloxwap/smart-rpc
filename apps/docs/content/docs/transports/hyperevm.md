@@ -14,13 +14,13 @@ const rpc = createSmartRpc({ transports: [hyperevm()] });
 await rpc.request({ chainId: "eip155:999", method: "eth_blockNumber" });
 ```
 
-The [official network documentation](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm) lists the mainnet URL `https://rpc.hyperliquid.xyz/evm` and testnet URL `https://rpc.hyperliquid-testnet.xyz/evm`. Both retain a conservative local budget of 1.5 requests/second, burst 3. This is the project's reference client setting, not a provider quota or service guarantee. Public alternatives and their sources remain exported in `HYPEREVM_MAINNET_REGISTRY` and `HYPEREVM_TESTNET_REGISTRY`.
+The [official network documentation](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm) lists the mainnet URL `https://rpc.hyperliquid.xyz/evm` and testnet URL `https://rpc.hyperliquid-testnet.xyz/evm`. Both retain a conservative local budget of 1.5 requests/second, burst 3. This stays below the official RPC's [documented 100 requests per minute](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/rate-limits-and-user-limits) and is not a service guarantee. Public alternatives and their sources remain exported in `HYPEREVM_MAINNET_REGISTRY` and `HYPEREVM_TESTNET_REGISTRY`.
 
 ## Requested state and capabilities
 
 The official RPC supports latest state reads; historical block and transaction metadata do not imply archive state access. Its capability record disables numeric pinning of latest reads and historical state routing. A request for unsupported state fails or selects a configured capable endpoint; it is never rewritten to latest. The [JSON-RPC reference](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/json-rpc) documents these restrictions.
 
-Public defaults conservatively disable unverified archive, batch, debug/trace, subscription and additional finality-tag capabilities. These flags control what this client enables; they do not assert that every public provider lacks those features. Supply verified capabilities with a dedicated endpoint to opt in:
+Only dRPC mainnet enables historical state routing. In live probes on 2026-11-08 it returned distinct, repeatable balances at old blocks. Hypurrscan and PublicNode answered every numeric block with the current balance, the same as the official RPC. Stakely did so once. They therefore keep archive off, so a historical read is never answered silently from latest state. Numeric pinning of latest reads stays off everywhere. Observed log ceilings are 1,000 blocks on the three community nodes and 100 on dRPC's free plan, on both mainnet and testnet. The ranking probe caps its log page at each endpoint's declared range, so a documented limit is not counted as downtime. Public defaults otherwise disable unverified batch, debug/trace, subscription and additional finality-tag capabilities. These flags control what this client enables; they do not assert that every public provider lacks those features. Supply verified capabilities with a dedicated endpoint to opt in:
 
 ```ts
 const transport = hyperevm({
@@ -51,6 +51,8 @@ HyperEVM's small and large blocks share an increasing EVM block-number sequence.
 Calls to HyperCore read precompiles in `0x…0800`–`0x…08ff` retain their supplied tag when latest pinning is enabled on capable providers. Their cache entries ignore that tag, use age-bounded keys, and refresh on hot-key ticks. Confirmed numbered and by-hash results use immutable entries under HyperEVM's no-reorg chain policy; pending inclusion results are never retained. Ordinary archive state availability does not guarantee historical hypothetical precompile results. See the [read-precompile reference](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/interacting-with-hypercore).
 
 HyperEVM uses Cancun without blobs. The client preserves RPC results rather than inventing blob support or replacing a zero priority-fee quote. Error code `10055` alone is not a retry verdict: nonce, funds and underpriced replacement messages are deterministic, while a duplicate transaction hash is handled as already known. Shared core error classification supplies these rules.
+
+Blocks arrive every about 1s for small blocks on mainnet and testnet (measured 2026-11-08: 1,000 mainnet blocks in 983s), so the factory passes `blockTimeMs: 1000` and the default `headLag.maxLag` is 1 block, about one second of staleness. An endpoint further behind does not lead, race or hedge `latest`, `pending` or other head reads while a fresh endpoint can serve them; it still serves block-number, block-hash, `safe`/`finalized` and transaction reads, and remains a failover. Pass `blockTimeMs` or `headLag: { maxLag }` to change it.
 
 ## Verification
 

@@ -22,6 +22,13 @@ export interface PlasmaRpcEndpoint extends EthereumEndpointConfig {
  * Public HTTPS endpoints documented by Plasma, Chainlist, and providers. Advanced features
  * stay disabled until the caller supplies verified provider capabilities. No numeric public
  * rate or batch ceiling is documented, so this registry does not invent one.
+ *
+ * Reviewed with live probes on 2026-11-08. The Plasma and Tenderly URLs served state at
+ * block 1 and head-100k, so historical reads may route to them; latest state stays
+ * unpinned. Tatum's keyless gateway was removed: it answers "exceeded your limit of 5
+ * requests per minute" after four calls, which cannot carry pool traffic. dRPC ("chain is
+ * not available on free plan"), OnFinality (1 rps / 2 per minute) and PublicNode (404)
+ * were probed as replacements and rejected.
  */
 export const PLASMA_MAINNET_REGISTRY = [
   {
@@ -32,9 +39,27 @@ export const PLASMA_MAINNET_REGISTRY = [
       "https://www.plasma.org/docs/plasma-chain/tools/rpc-providers",
       "https://chainlist.org/chain/9745",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     capabilities: {
-      archive: false,
+      archive: true,
+      pinning: false,
+      batch: false,
+      subscriptions: false,
+      debug: false,
+      trace: false,
+      blockTags: ["latest", "pending"],
+    },
+  },
+  {
+    url: "https://plasma.gateway.tenderly.co",
+    provider: "Tenderly",
+    sourceUrls: [
+      "https://docs.tenderly.co/node-rpc/rpc-reference",
+      "https://www.plasma.org/docs/plasma-chain/tools/rpc-providers",
+    ],
+    reviewedAt: "2026-11-08",
+    capabilities: {
+      archive: true,
       pinning: false,
       batch: false,
       subscriptions: false,
@@ -50,25 +75,7 @@ export const PLASMA_MAINNET_REGISTRY = [
       "https://chainlist.org/chain/9745",
       "https://www.plasma.org/docs/plasma-chain/tools/rpc-providers",
     ],
-    reviewedAt: "2026-11-07",
-    capabilities: {
-      archive: false,
-      pinning: false,
-      batch: false,
-      subscriptions: false,
-      debug: false,
-      trace: false,
-      blockTags: ["latest", "pending"],
-    },
-  },
-  {
-    url: "https://plasma-mainnet.gateway.tatum.io",
-    provider: "Tatum",
-    sourceUrls: [
-      "https://chainlist.org/chain/9745",
-      "https://docs.tatum.io/reference/rpc-plasma",
-    ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     capabilities: {
       archive: false,
       pinning: false,

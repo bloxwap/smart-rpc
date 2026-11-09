@@ -54,6 +54,8 @@ describe("Monad registry and identity", () => {
           expect(endpoint.documentedLimits).toEqual({ requests: 20, windowMs: 1_000, batchSize: 100, batchesPerSecond: 5 });
           expect(endpoint.providerGroup).toBe("monad-foundation");
           expect(endpoint.providerBudget).toEqual({ rps: 2, burst: 3 });
+          // rpc, rpc1 and monadinfra all rejected 1,000-block log ranges in live probes.
+          expect(endpoint.capabilities?.maxLogBlockRange).toBe(100);
         } else {
           expect(endpoint.documentedLimits).toEqual({ requests: 300, windowMs: 10_000, batchSize: 10 });
         }

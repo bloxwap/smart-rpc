@@ -66,6 +66,21 @@ describe("HyperEVM probe observations", () => {
     expect(observation.methods[LOGS_RANGE_PROBE]?.ok).toBe(true);
   });
 
+  test("caps the log page at an endpoint's declared range so documented limits are not downtime", async () => {
+    const { fetchImpl, requests } = node((request) => {
+      if (request.method !== "eth_getLogs") return undefined;
+      const range = request.params[0] as { fromBlock: string; toBlock: string };
+      const width = Number.parseInt(range.toBlock, 16) - Number.parseInt(range.fromBlock, 16) + 1;
+      return width > 50 ? Response.json({ jsonrpc: "2.0", id: 1, error: { code: -32005, message: "max 50 blocks" } }) : undefined;
+    });
+    const observation = await probeEndpoint(URL_UNDER_TEST, { fetchImpl, now: NOW, logsRangeBlocks: 50 });
+    const wide = requests.filter((request) => request.method === "eth_getLogs")
+      .map((request) => request.params[0] as { fromBlock: string; toBlock: string })
+      .find((range) => range.fromBlock !== range.toBlock);
+    expect(Number.parseInt(wide?.toBlock ?? "", 16) - Number.parseInt(wide?.fromBlock ?? "", 16) + 1).toBe(50);
+    expect(observation.methods[LOGS_RANGE_PROBE]?.ok).toBe(true);
+  });
+
   test("records missing HyperCore support and makes the endpoint ineligible", async () => {
     const { fetchImpl } = node((request) => {
       const target = (request.params[0] as { to?: string } | undefined)?.to;

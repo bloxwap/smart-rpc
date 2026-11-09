@@ -103,7 +103,11 @@ describe("hyperevm public defaults", () => {
       expect(reads[0]?.url).toBe(new URL(primary).href);
       expect(reads[1]?.url).not.toBe(new URL(primary).href);
       expect(mock.calls.some((call) => call.url === reads[1]?.url && call.method === "eth_chainId")).toBe(true);
-      expect(client.snapshot?.().find((row) => new URL(row.url).href === new URL(primary).href)?.ejected).toBe(true);
+      // Rate limited is not unhealthy: the endpoint cools down for its Retry-After instead of being ejected.
+      const limited = client.snapshot?.().find((row) => new URL(row.url).href === new URL(primary).href);
+      expect(limited?.ejected).toBe(false);
+      expect(limited?.throttledMs).toBeGreaterThan(4_000);
+      expect(events).toContainEqual(expect.objectContaining({ type: "throttle", endpoint: primary, cooldownMs: 5_000 }));
       expect(events).toContainEqual(expect.objectContaining({ type: "failover", from: primary }));
     } finally {
       client.close?.();

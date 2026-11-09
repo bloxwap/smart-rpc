@@ -32,7 +32,12 @@ export interface BscPublicRpcEndpoint extends EthereumEndpointConfig {
 const chainList = "https://chainlist.org/chain/56";
 const networkDocs = "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/";
 
-/** Source-backed public HTTPS defaults. Optional capabilities are not inferred from chain compatibility. */
+/**
+ * Source-backed public HTTPS defaults. Optional capabilities are not inferred from chain compatibility.
+ * `archive` is enabled only where repeated live probes (2026-11-08: block 1 plus five spread
+ * historical blocks, on separate runs) returned historical state. Pocket answered those on BSC
+ * but not consistently on its other chains' supplier sets, so it stays disabled there.
+ */
 export const BSC_MAINNET_REGISTRY: readonly BscPublicRpcEndpoint[] = [
   ...[
     ["bnb-dataseed", BSC_RPC_URL],
@@ -42,7 +47,7 @@ export const BSC_MAINNET_REGISTRY: readonly BscPublicRpcEndpoint[] = [
     url: url!,
     provider: "BNB Chain public dataseeds",
     sourceUrls: [networkDocs, chainList],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     rps: 5,
     burst: 10,
     providerGroup: "bnb-public-dataseeds",
@@ -63,7 +68,7 @@ export const BSC_MAINNET_REGISTRY: readonly BscPublicRpcEndpoint[] = [
     url: "https://bsc-rpc.publicnode.com",
     provider: "PublicNode",
     sourceUrls: [networkDocs, chainList, "https://bsc.publicnode.com/"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     unsupportedMethods: [...BSC_EXTENSION_METHODS],
     capabilities: {
       archive: false,
@@ -80,10 +85,10 @@ export const BSC_MAINNET_REGISTRY: readonly BscPublicRpcEndpoint[] = [
     url: "https://56.rpc.thirdweb.com",
     provider: "thirdweb",
     sourceUrls: [networkDocs, chainList, "https://portal.thirdweb.com/infrastructure/rpc-edge/overview"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     unsupportedMethods: [...BSC_EXTENSION_METHODS],
     capabilities: {
-      archive: false,
+      archive: true,
       pinning: false,
       blockTags: ["latest", "pending"] as const,
       debug: false,
@@ -97,8 +102,11 @@ export const BSC_MAINNET_REGISTRY: readonly BscPublicRpcEndpoint[] = [
     url: "https://bsc.api.pocket.network",
     provider: "Pocket Network",
     sourceUrls: [networkDocs, chainList, "https://api.pocket.network/"],
-    reviewedAt: "2026-11-07",
-    unsupportedMethods: [...BSC_EXTENSION_METHODS],
+    reviewedAt: "2026-11-08",
+    // eth_getLogs without an address returned -32602 "missing required field 'address'"
+    // on 9/9 calls (1-50 blocks) across three 2026-11-08 runs. That code is terminal, so
+    // it would reach the caller instead of failing over; thirdweb and PublicNode serve logs.
+    unsupportedMethods: ["eth_getLogs", ...BSC_EXTENSION_METHODS],
     capabilities: {
       archive: false,
       pinning: false,

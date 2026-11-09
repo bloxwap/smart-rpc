@@ -56,10 +56,13 @@ describe("opBNB execution transport", () => {
     for (const endpoint of OPBNB_MAINNET_REGISTRY) {
       expect(endpoint.rps).toBeUndefined();
       expect(endpoint.capabilities?.maxBatchSize).toBeUndefined();
-      expect(endpoint.capabilities).toMatchObject({ archive: false, batch: false, subscriptions: false, pinning: false });
+      expect(endpoint.capabilities).toMatchObject({ batch: false, subscriptions: false, pinning: false });
       expect(endpoint.provider).toBeTruthy();
       expect(endpoint.sourceUrls.length).toBeGreaterThan(0);
     }
+    // Historical state only where verified live; dRPC's public eth_getLogs path fails.
+    expect(OPBNB_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities?.archive).map(({ id }) => id)).toEqual(["opbnb-thirdweb"]);
+    expect(OPBNB_MAINNET_REGISTRY.find(({ id }) => id === "opbnb-drpc")?.unsupportedMethods).toContain("eth_getLogs");
   });
 
   test.each(["0x38", "0x1", "0xa"])("quarantines another chain %s before any user method", async (wrong) => {

@@ -13,6 +13,9 @@ export const ARC_USDC_ERC20_DECIMALS = 6;
 /** EIP-7708 Transfer logs use native 18-decimal units. */
 export const ARC_NATIVE_TRANSFER_EMITTER = "0xffffFFFfFFffffffffffffffFfFFFfffFFFfFFfE";
 
+/** 500ms blocks (measured 2026-11-08: 1,000 blocks in 507s). Lag tolerance is two blocks, one second. */
+const ARC_BLOCK_TIME_MS = 500;
+
 export interface ArcOptions extends Omit<EthereumOptions, "chainId" | "chainIds"> {}
 
 /** Arc mainnet; raw EVM quantities, errors, system logs and extension fields pass through. */
@@ -22,5 +25,6 @@ export function arc(options: ArcOptions = {}): RpcPool {
     chainId: ARC_CHAIN_ID,
     chainIds: [ARC_MAINNET_CAIP],
     endpoints: options.endpoints ?? ARC_MAINNET_REGISTRY,
+    blockTimeMs: options.blockTimeMs ?? ARC_BLOCK_TIME_MS,
   });
 }

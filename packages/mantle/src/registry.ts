@@ -11,7 +11,13 @@ export interface MantlePublicRpcEndpoint extends EthereumEndpointConfig {
   readonly reviewedAt: string;
 }
 
-/** Unknown numeric limits are omitted. Advanced capabilities require explicit opt-in. */
+/**
+ * Unknown numeric limits are omitted. Advanced capabilities require explicit opt-in.
+ * Archive flags and log ranges come from live probes on 2026-11-08: historical state at
+ * block 1 and head-100k, and each provider's own range-limit error. Latest-state pinning
+ * stays off. PublicNode and Pocket answered "historical state is not available" at
+ * head-100k, and PublicNode rejects unfiltered eth_getLogs without an address.
+ */
 export const MANTLE_MAINNET_REGISTRY: readonly MantlePublicRpcEndpoint[] = [
   {
     id: "mantle-mainnet",
@@ -21,10 +27,10 @@ export const MANTLE_MAINNET_REGISTRY: readonly MantlePublicRpcEndpoint[] = [
       "https://docs.mantle.xyz/network/for-developers/quick-access",
       "https://docs.mantle.xyz/network/for-developers/resources-and-tooling/mantle-api",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     unsupportedMethods: ["eth_getBlockRange", "eth_sendTransaction"],
     capabilities: {
-      archive: false,
+      archive: true,
       blockTags: ["latest", "pending"],
       debug: false,
       trace: false,
@@ -41,7 +47,7 @@ export const MANTLE_MAINNET_REGISTRY: readonly MantlePublicRpcEndpoint[] = [
       "https://chainlist.org/chain/5000",
       "https://mantle.publicnode.com/",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     capabilities: {
       archive: false,
       blockTags: ["latest", "pending"],
@@ -61,7 +67,7 @@ export const MANTLE_MAINNET_REGISTRY: readonly MantlePublicRpcEndpoint[] = [
       "https://drpc.org/chainlist/mantle-mainnet-rpc",
       "https://drpc.org/docs/howitworks/ratelimiting",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     unsupportedMethods: [
       "eth_newFilter",
       "eth_newBlockFilter",
@@ -71,13 +77,15 @@ export const MANTLE_MAINNET_REGISTRY: readonly MantlePublicRpcEndpoint[] = [
       "eth_uninstallFilter",
     ],
     capabilities: {
-      archive: false,
+      archive: true,
       blockTags: ["latest", "pending"],
       debug: false,
       trace: false,
       subscriptions: false,
       pinning: false,
       batch: false,
+      // Observed free-plan ceiling: 101 blocks pass, 102 return "ranges over 10000 blocks".
+      maxLogBlockRange: 100,
     },
   },
   {
@@ -88,7 +96,7 @@ export const MANTLE_MAINNET_REGISTRY: readonly MantlePublicRpcEndpoint[] = [
       "https://chainlist.org/chain/5000",
       "https://pocket.network/foundation-partnerships/",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     capabilities: {
       archive: false,
       blockTags: ["latest", "pending"],
@@ -107,7 +115,7 @@ export const MANTLE_MAINNET_REGISTRY: readonly MantlePublicRpcEndpoint[] = [
       "https://chainlist.org/chain/5000",
       "https://portal.thirdweb.com/infrastructure/rpc-edge/overview",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     capabilities: {
       archive: false,
       blockTags: ["latest", "pending"],
@@ -116,6 +124,8 @@ export const MANTLE_MAINNET_REGISTRY: readonly MantlePublicRpcEndpoint[] = [
       subscriptions: false,
       pinning: false,
       batch: false,
+      // Observed: "Maximum allowed number of requested blocks is 1000".
+      maxLogBlockRange: 1_000,
     },
   },
 ];

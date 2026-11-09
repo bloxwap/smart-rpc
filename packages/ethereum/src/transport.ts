@@ -33,6 +33,12 @@ export { ETHEREUM_MAINNET_ENDPOINTS } from "./registry.js";
 /** CAIP-2 id for Ethereum mainnet. */
 export const ETHEREUM_MAINNET_CAIP = "eip155:1";
 
+/**
+ * 12s slots (measured 2026-11-08: 1,000 blocks in 12,036s, so few missed slots). Lag tolerance is one block, the
+ * minimum, and the head-growth ceiling 0.104 blocks/s. Applied only to chain 1; other chain ids pass their own.
+ */
+const ETHEREUM_BLOCK_TIME_MS = 12_000;
+
 // Explicit read extensions cannot turn transaction submission or wallet/admin calls into reads.
 const WRITE_PREFIX = /^(?:eth_(?:send|sign|submit|new|uninstall|subscribe|unsubscribe)|personal_|wallet_|engine_|mev_|builder_|flashbots_)/;
 
@@ -79,8 +85,14 @@ export interface EthereumOptions
   nonIdempotentMethods?: readonly string[] | undefined;
   /** Explicit chain-specific read extensions safe to retry/race. Writes must never be included. */
   safeMethods?: readonly string[] | undefined;
-  /** Chain-specific head growth bound used for peer outlier rejection. */
+  /** Chain-specific head growth bound used for peer outlier rejection. Default: from `blockTimeMs`, else 2. */
   maxUnitsPerSecond?: number | undefined;
+  /**
+   * Typical milliseconds between blocks. Sets the default `headLag.maxLag` to about one second of blocks (at least
+   * one) and `maxUnitsPerSecond` to the production rate plus 25%. Chain packages set it from measured block times.
+   * Default: 12000 on chain 1; unset elsewhere (`maxLag` 2, `maxUnitsPerSecond` 2).
+   */
+  blockTimeMs?: number | undefined;
   /**
    * Fail over `eth_sendRawTransaction` and `eth_sendRawTransactionSync` on endpoint errors.
    * Default: true.
@@ -108,11 +120,13 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
     nonIdempotentMethods,
     safeMethods,
     maxUnitsPerSecond,
+    blockTimeMs,
     rebroadcastRawTransactions,
     batch,
     fetchFn,
     ...poolOptions
   } = options;
+  const readableFetch = readableErrorBodies(fetchFn);
   void _chainId;
   void _chainIds;
   void _endpoints;
@@ -125,7 +139,7 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
       const caps = config.capabilities;
       validateCapabilities(caps);
       const connection = connectViem(config.url, {
-        timeout, batch: endpointBatch(batch, caps), fetchFn, headers: config.headers, expectedChainId: chainId,
+        timeout, batch: endpointBatch(batch, caps), fetchFn: readableFetch, headers: config.headers, expectedChainId: chainId,
       });
       const unsupported = new Set(config.unsupportedMethods ?? []);
       const supported = config.supportedMethods ? new Set(config.supportedMethods) : undefined;
@@ -166,6 +180,7 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
         !(nonIdempotentMethods ?? []).includes(method) &&
         (isIdempotentMethod(method) || (safeMethods ?? []).includes(method)),
       maxUnitsPerSecond,
+      blockTimeMs: blockTimeMs ?? (chainId === 1 ? ETHEREUM_BLOCK_TIME_MS : undefined),
       statefulMethods: {
         create: ["eth_newFilter", "eth_newBlockFilter", "eth_newPendingTransactionFilter", "eth_newFinalizedHeaderFilter"],
         use: ["eth_getFilterChanges", "eth_getFilterLogs"],
@@ -183,14 +198,54 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
   });
 }
 
+type FetchFn = NonNullable<EthereumOptions["fetchFn"]>;
+
+/**
+ * A fetch whose non-2xx answers keep their reason. viem keeps the message of a JSON-RPC error body, but a JSON body
+ * without the envelope (Sentio's HTTP 429 `{"code":8,"message":"public eth_getLogs is limited to 1000 blocks"}`)
+ * reaches the pool as a bare "HTTP request failed" and reads as a rate limit. Such a body is rewritten into a
+ * JSON-RPC error with the provider's message and the original body as `data`, under the same status and headers.
+ */
+function readableErrorBodies(fetchFn: FetchFn | undefined): FetchFn {
+  return async (input, init) => {
+    const response = await (fetchFn ?? globalThis.fetch)(input, init);
+    if (response.ok) return response;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(await response.clone().text());
+    } catch {
+      return response;
+    }
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return response;
+    if ("error" in parsed || "result" in parsed || !("message" in parsed) || typeof parsed.message !== "string") {
+      return response;
+    }
+    const body = JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32000, message: parsed.message, data: parsed } });
+    // Keep Retry-After and the rest, but describe the new body: the old length and encoding no longer apply.
+    const headers = new Headers(response.headers);
+    headers.delete("content-length");
+    headers.delete("content-encoding");
+    headers.set("content-type", "application/json");
+    return new Response(body, { status: response.status, statusText: response.statusText, headers });
+  };
+}
+
 function defaultEndpoints(chainId: number): readonly EthereumEndpoint[] {
   if (chainId === 1) {
-    return ETHEREUM_MAINNET_REGISTRY.map(({ url, rps, burst, unsupportedMethods }) => ({
-      url,
-      rps,
-      burst,
-      unsupportedMethods,
-    }));
+    // Capabilities and provider budgets are routing facts: dropping them would send archive reads to a
+    // latest-only node, oversize batches or log ranges, or let URLs of one provider overspend its quota.
+    return ETHEREUM_MAINNET_REGISTRY.map((entry) => {
+      const shared = entry as { providerGroup?: string | undefined; providerBudget?: BudgetConfig | undefined };
+      return {
+        url: entry.url,
+        rps: entry.rps,
+        burst: entry.burst,
+        unsupportedMethods: entry.unsupportedMethods,
+        capabilities: entry.capabilities,
+        providerGroup: shared.providerGroup,
+        providerBudget: shared.providerBudget,
+      };
+    });
   }
   throw new Error(
     `ethereum() has no default endpoints for chain ${chainId}. Pass endpoints, or use a chain package that knows them.`,
