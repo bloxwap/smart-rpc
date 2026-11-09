@@ -43,7 +43,7 @@ const evm = (create: (options: Record<string, unknown>) => RpcPool): Factory =>
 
 /**
  * Lag each chain tolerates before a behind endpoint stops leading head reads: about one second of blocks at the
- * block times measured on 2026-11-08, and the two-block default where no block time is set.
+ * block times measured on 2026-11-08 (at least one block), and the two-block default where no block time is set.
  */
 const chains: readonly { name: string; maxLag: number; create: Factory; solana?: boolean }[] = [
   { name: "robinhood (100ms)", maxLag: 10, create: evm(robinhood) },
@@ -63,9 +63,10 @@ const chains: readonly { name: string; maxLag: number; create: Factory; solana?:
   { name: "etherlink (1.2s)", maxLag: 1, create: evm(etherlink) },
   { name: "optimism (2s)", maxLag: 1, create: evm(optimism) },
   { name: "mantle (2s)", maxLag: 1, create: evm(mantle) },
-  { name: "gnosis (explicit 2)", maxLag: 2, create: evm(gnosis) },
-  { name: "polygon (default)", maxLag: 2, create: evm(polygon) },
-  { name: "ethereum (default)", maxLag: 2, create: evm(ethereum) },
+  { name: "polygon (1.5s)", maxLag: 1, create: evm(polygon) },
+  { name: "gnosis (5s slots)", maxLag: 1, create: evm(gnosis) },
+  { name: "ethereum (12s)", maxLag: 1, create: evm(ethereum) },
+  { name: "ethereum() on another chain id (no block time)", maxLag: 2, create: evm((options) => ethereum({ ...options, chainId: 5 })) },
   { name: "solana (220ms slots)", maxLag: 5, create: (options) => solana(options), solana: true },
 ];
 

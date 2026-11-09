@@ -82,7 +82,8 @@ describe("provider error bodies", () => {
 describe("blockTimeMs", () => {
   test("sets the lag tolerance to about one second of blocks", async () => {
     // Two endpoints whose heads differ by four blocks. At 250ms blocks that is one second: caught up.
-    // With no block time the two-block default applies and the behind endpoint does not lead head reads.
+    // Without an explicit value chain 1 uses its 12s default (one block of lag), so the behind endpoint does not
+    // lead head reads.
     const leader = async (blockTimeMs: number | undefined): Promise<string | undefined> => {
       const reads: string[] = [];
       const { fetchFn } = wire((url, method) => {
