@@ -81,9 +81,10 @@ Lag tolerance follows each chain's block time. A transport that declares `blockT
 | Arc | 500ms | 2 |
 | Avalanche C-Chain, Celo, Ink, X Layer, HyperEVM, Flare, Plasma | 1s | 1 |
 | Etherlink | 1.2s | 1 |
+| Polygon | 1.5s | 1 |
 | OP Mainnet, Mantle | 2s | 1 |
-| Ethereum, Polygon | not declared | 2 |
-| Gnosis | 5s slots (explicit `maxLag`) | 2 |
+| Gnosis | 5s slots | 1 |
+| Ethereum | 12s slots | 1 |
 
 Pass `blockTimeMs` (or `slotTimeMs` for Solana) to a factory to change the cadence, or `headLag: { maxLag }` to set the tolerance directly; an explicit `maxLag` always wins.
 

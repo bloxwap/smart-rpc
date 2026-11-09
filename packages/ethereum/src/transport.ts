@@ -33,6 +33,12 @@ export { ETHEREUM_MAINNET_ENDPOINTS } from "./registry.js";
 /** CAIP-2 id for Ethereum mainnet. */
 export const ETHEREUM_MAINNET_CAIP = "eip155:1";
 
+/**
+ * 12s slots (measured 2026-11-08: 1,000 blocks in 12,036s, so few missed slots). Lag tolerance is one block, the
+ * minimum, and the head-growth ceiling 0.104 blocks/s. Applied only to chain 1; other chain ids pass their own.
+ */
+const ETHEREUM_BLOCK_TIME_MS = 12_000;
+
 // Explicit read extensions cannot turn transaction submission or wallet/admin calls into reads.
 const WRITE_PREFIX = /^(?:eth_(?:send|sign|submit|new|uninstall|subscribe|unsubscribe)|personal_|wallet_|engine_|mev_|builder_|flashbots_)/;
 const UNSAFE_EXTENSION = /send|sign|submit|subscribe|unsubscribe|^personal_|^wallet_|^engine_|^mev_|^builder_|^flashbots_/i;
@@ -90,7 +96,7 @@ export interface EthereumOptions
   /**
    * Typical milliseconds between blocks. Sets the default `headLag.maxLag` to about one second of blocks (at least
    * one) and `maxUnitsPerSecond` to the production rate plus 25%. Chain packages set it from measured block times.
-   * Default: unset (`maxLag` 2, `maxUnitsPerSecond` 2).
+   * Default: 12000 on chain 1; unset elsewhere (`maxLag` 2, `maxUnitsPerSecond` 2).
    */
   blockTimeMs?: number | undefined;
   /**
@@ -128,6 +134,7 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
     fetchFn,
     ...poolOptions
   } = options;
+  const resolvedBlockTimeMs = blockTimeMs ?? (chainId === 1 ? ETHEREUM_BLOCK_TIME_MS : undefined);
   const readableFetch = readableErrorBodies(fetchFn);
   void _chainId;
   void _chainIds;
@@ -184,7 +191,7 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
         (isIdempotentMethod(method) || ((safeMethods ?? []).includes(method) && acceptedSafeMethod(method))),
       maxUnitsPerSecond,
       blockHashProbe,
-      blockTimeMs,
+      blockTimeMs: resolvedBlockTimeMs,
       shareId: ethereumShareId({
         safeMethods: safeMethods ?? [],
         nonIdempotentMethods: nonIdempotentMethods ?? [],
@@ -192,7 +199,7 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
         skipPrecompiles,
         pinLatest: pinLatest ?? null,
         maxUnitsPerSecond: maxUnitsPerSecond ?? null,
-        blockTimeMs: blockTimeMs ?? null,
+        blockTimeMs: resolvedBlockTimeMs ?? null,
         fetchFn,
         batch: batch ?? null,
         blockHashProbe: blockHashProbe === true,
