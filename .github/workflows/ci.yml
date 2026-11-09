@@ -19,6 +19,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -34,6 +36,9 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Validate release plan
+        run: pnpm changeset status --since=origin/main
 
       - name: Test
         run: pnpm test

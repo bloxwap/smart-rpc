@@ -9,9 +9,11 @@
 import { coalesceKey } from "./coalesce.js";
 import type { RpcEvent } from "./events.js";
 import {
+  completeLogResult,
   DEFAULT_LOG_INDEX_WINDOW,
   LogIndex,
   planLogQuery,
+  resolveLogRange,
   type LogIndexFetch,
   type RollingLogQueryPlan,
 } from "./log-index.js";
@@ -401,7 +403,7 @@ export class ReadCache {
       originalParams: plan.params,
       pinRequired: plan.log?.from === "latest" || plan.log?.to === "latest",
       complete: (result: unknown): unknown | undefined => {
-        this.#storeLogFetch(plan, fetch, result, now);
+        const stored = this.#storeLogFetch(plan, fetch, result, now);
         if (!plan.log) return undefined;
         // A coalesced caller may have merged this range first. Serve its coverage instead of repeating the query.
         const completed = this.#logIndex.lookup(plan.log, {
@@ -410,7 +412,13 @@ export class ReadCache {
           maxStaleBlocks: this.#config.maxStaleBlocks,
           maxAgeMs: this.#config.maxAgeMs,
         });
-        return completed?.hit ? completed.result : undefined;
+        if (completed?.hit) return completed.result;
+        // Eviction or the rolling window may discard part of a successful full-query fetch. Return that response
+        // directly instead of repeating the RPC. Partial tails and invalidated fills still require the fallback.
+        const range = resolveLogRange(plan.log, fetch.to);
+        return stored && range?.from === fetch.from && range.to === fetch.to
+          ? completeLogResult(result, fetch.from, fetch.to, this.#config.copyResults)
+          : undefined;
       },
     };
   }
@@ -588,8 +596,7 @@ export class ReadCache {
   async #tick(): Promise<void> {
     const source = this.#source;
     if (!source) return;
-    const now = source.now();
-    for (const [key, hot] of this.#hot) if (now - hot.lastReadAt > this.#config.hotIdleMs) this.#hot.delete(key);
+    this.#expireHot(source.now());
     if (this.#hot.size === 0 || this.#closed) return;
     this.#arm();
     if (!source.active()) return;
@@ -599,7 +606,9 @@ export class ReadCache {
 
   #round(tick: boolean): void {
     const source = this.#source;
-    if (!source || this.#closed || !source.active()) return;
+    if (!source || this.#closed) return;
+    this.#expireHot(source.now());
+    if (!source.active()) return;
     for (const hot of [...this.#hot.values()]) {
       if (hot.refreshing || hot.pending) continue;
       if (hot.plan.kind === "logs") {
@@ -618,6 +627,12 @@ export class ReadCache {
       void this.#read(hot.plan.method, params).finally(() => {
         hot.refreshing = false;
       });
+    }
+  }
+
+  #expireHot(now: number): void {
+    for (const [key, hot] of this.#hot) {
+      if (now - hot.lastReadAt > this.#config.hotIdleMs) this.#hot.delete(key);
     }
   }
 
