@@ -1,5 +1,5 @@
 export { Activity, defaultIsActive } from "./activity.js";
-export { backoffMs } from "./retry.js";
+export { backoffMs, unitRandom } from "./retry.js";
 export {
   Breaker,
   DEFAULT_BREAKER_COOLDOWN_MS,
@@ -128,7 +128,7 @@ export {
 } from "./pin.js";
 export { createPool } from "./pool.js";
 export { createPoolScope } from "./share.js";
-export { blockNumberFromResult, parseQuantity, toHexQuantity } from "./quantity.js";
+export { blockNumberFromResult, nonNegativeHead, parseQuantity, toHexQuantity } from "./quantity.js";
 export {
   DEFAULT_RACE_WIDTH,
   pickRacers,
@@ -142,6 +142,7 @@ export { createSmartRpc, type SmartRpc } from "./router.js";
 export type { PublicRpcEndpoint } from "./registry.js";
 export {
   defaultScoreConfig,
+  resolveScoreConfig,
   emptyStat,
   endpointScore,
   inflation,

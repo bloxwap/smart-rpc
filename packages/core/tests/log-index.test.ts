@@ -82,7 +82,7 @@ describe("log query planning", () => {
     const second = rolling({
       toBlock: "0x20",
       address: ADDRESS.toLowerCase(),
-      fromBlock: "earliest",
+      fromBlock: "0x0",
       topics: [HASH, null, [ADDRESS.toLowerCase()]],
     });
     expect(first.key).toBe(second.key);
@@ -105,6 +105,7 @@ describe("log query planning", () => {
     const byHash = planLogQuery([{ address: ADDRESS, blockHash: HASH.toUpperCase() }]);
     expect(byHash).toMatchObject({ kind: "blockHash", filter: { blockHash: HASH } });
     expect(planLogQuery([{ fromBlock: "pending" }])).toBeUndefined();
+    expect(planLogQuery([{ fromBlock: "earliest", toBlock: "0x20" }])).toBeUndefined();
     expect(planLogQuery([{ blockHash: 1 }])).toBeUndefined();
     expect(planLogQuery([])).toBeUndefined();
     expect(planLogQuery([{}, {}])).toBeUndefined();
@@ -275,9 +276,9 @@ describe("rolling log index", () => {
   test("evicts whole filter indexes by LRU count and byte budget with accurate accounting", () => {
     const index = new LogIndex({ maxEntries: 1 });
     const first = rolling(range(1, 1, { address: "0x01" }));
-    seed(index, 1, 1, [log(1, 0)], range(1, 1, { address: "0x01" }));
+    seed(index, 1, 1, [log(1, 0, { address: "0x01" })], range(1, 1, { address: "0x01" }));
     expect(index.metadata(first.key)).toBeDefined();
-    seed(index, 2, 2, [log(2, 0)], range(2, 2, { address: "0x02" }));
+    seed(index, 2, 2, [log(2, 0, { address: "0x02" })], range(2, 2, { address: "0x02" }));
     expect(index.metadata(first.key)).toBeUndefined();
     expect(index.stats()).toMatchObject({ entries: 1, logs: 1 });
     const bytes = index.stats().bytes;
@@ -297,5 +298,18 @@ describe("rolling log index", () => {
     if (!hit?.hit) throw new Error("expected a hit");
     expect(hit.result[0]).toBe(input);
     expect(hit.result).not.toBe(input);
+  });
+
+  test("rejects an eth_getLogs body that includes an address or topic outside the filter", () => {
+    const index = new LogIndex();
+    const pending = miss(index, range(1, 2));
+    const foreign = log(1, 0, { address: `0x${"11".repeat(20)}` });
+    expect(pending.fetch.fill([foreign, log(1, 1)], 0)).toBe(false);
+    expect(index.stats().logs).toBe(0);
+    const topic = `0x${"cd".repeat(32)}`;
+    const filtered = miss(index, range(1, 2, { topics: [topic] }));
+    expect(filtered.fetch.fill([log(1, 0, { topics: [`0x${"ee".repeat(32)}`] })], 0)).toBe(false);
+    expect(filtered.fetch.fill([log(1, 0, { topics: [topic] })], 0)).toBe(true);
+    expect(index.stats().logs).toBe(1);
   });
 });

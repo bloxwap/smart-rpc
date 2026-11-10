@@ -68,9 +68,13 @@ export interface PinSource {
 
 export function resolvePin(value: boolean | PinLatestOptions | undefined, skipPrecompiles = false): PinConfig {
   const options = typeof value === "object" ? value : {};
+  const freshMs = options.freshMs ?? DEFAULT_PIN_FRESH_MS;
+  if (!Number.isFinite(freshMs) || freshMs < 0) {
+    throw new Error(`smart-rpc pin.freshMs must be a finite number, 0 or more, got ${String(freshMs)}.`);
+  }
   return {
     enabled: value !== false,
-    freshMs: options.freshMs ?? DEFAULT_PIN_FRESH_MS,
+    freshMs,
     blockNumber: options.blockNumber ?? true,
     skipPrecompiles: options.skipPrecompiles ?? skipPrecompiles,
   };

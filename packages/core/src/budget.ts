@@ -30,6 +30,9 @@ interface Bucket {
   at: number | undefined;
 }
 
+/** `undefined` means the endpoint was registered without a bucket. A later budget must match. */
+type RecordedBudget = BudgetConfig | undefined;
+
 /** `max(1, ceil(rps * 2))`: two seconds of traffic, and always room for one request. */
 export function defaultBurst(rps: number): number {
   return Math.max(1, Math.ceil(rps * 2));
@@ -72,6 +75,7 @@ function validBudget(rps: number, burst: number | undefined, where: string): Bud
 /** Token buckets keyed by endpoint id. Endpoints without a budget are unlimited and hold no bucket. */
 export class Budgets {
   readonly #buckets = new Map<string, Bucket>();
+  readonly #recorded = new Map<string, RecordedBudget>();
   readonly #providers = new Map<string, Bucket>();
   readonly #groups = new Map<string, string>();
   readonly #now: () => number;
@@ -80,6 +84,14 @@ export class Budgets {
 
   /** Endpoint and provider buckets are charged together; adding a URL never refills a provider. */
   configure(id: string, config: BudgetConfig | undefined, group?: string, provider?: BudgetConfig): void {
+    if (this.#recorded.has(id)) {
+      const previous = this.#recorded.get(id);
+      if (previous?.rps !== config?.rps || previous?.burst !== config?.burst) {
+        throw new Error(`Conflicting request budgets for endpoint ${id}.`);
+      }
+    } else {
+      this.#recorded.set(id, config);
+    }
     if (config && !this.#buckets.has(id)) this.#buckets.set(id, this.#make(config));
     if (group !== undefined) this.#groups.set(id, group);
     if (provider) {
@@ -129,6 +141,9 @@ export class Budgets {
 
   #refill(bucket: Bucket): Bucket {
     const now = this.#now();
+    // A non-finite or backwards sample does not move the bucket. The pool clock already
+    // drops those samples; this keeps a raw clock from freezing the bucket at NaN.
+    if (!Number.isFinite(now)) return bucket;
     if (bucket.at !== undefined && now > bucket.at) {
       bucket.tokens = Math.min(bucket.burst, bucket.tokens + ((now - bucket.at) * bucket.rps) / 1_000);
     }

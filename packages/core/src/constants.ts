@@ -28,6 +28,12 @@ export const DEFAULT_PROBE_IDLE_MS = 60_000;
 /** How long past its deadline an attempt still counts as in flight. */
 export const INFLIGHT_GRACE_MS = 1_000;
 
+/**
+ * Largest delay `setTimeout` and `setInterval` accept on Node.
+ * A larger value is scheduled as 1ms.
+ */
+export const MAX_TIMER_MS = 2_147_483_647;
+
 /** Freshness units a head may lead the other endpoints' median before it is ignored. */
 export const DEFAULT_MAX_AHEAD = 1_000;
 

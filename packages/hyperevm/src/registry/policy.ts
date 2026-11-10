@@ -77,10 +77,15 @@ function median(values: readonly number[]): number | null {
   return right ?? null;
 }
 
-/** Equivalent host-root URLs with and without a trailing slash share history. */
+/** Equivalent host-root URLs with and without a trailing slash share history. Host case is ignored. */
 export function endpointKey(url: string): string {
   try {
-    return new URL(url).href;
+    const parsed = new URL(url);
+    if (parsed.pathname.length > 1 && parsed.pathname.endsWith("/")) {
+      parsed.pathname = parsed.pathname.replace(/\/+$/, "");
+    }
+    parsed.hash = "";
+    return parsed.href;
   } catch {
     return url;
   }

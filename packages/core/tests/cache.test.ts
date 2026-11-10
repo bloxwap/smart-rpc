@@ -129,7 +129,9 @@ describe("cache configuration and canonical plans", () => {
     expect(finalized?.kind).toBe("latest");
     expect(new Set([latest?.key, safe?.key, finalized?.key]).size).toBe(3);
     expect(evmCachePlan("eth_call", [TX, "pending"])).toBeUndefined();
-    expect(evmCachePlan("eth_call", [TX, "earliest"])).toMatchObject({ kind: "number", block: 0 });
+    const earliest = evmCachePlan("eth_call", [TX, "earliest"]);
+    expect(earliest).toMatchObject({ kind: "latest", params: [TX, "earliest"] });
+    expect(earliest?.key).not.toBe(evmCachePlan("eth_call", [TX, "0x0"])?.key);
     expect(evmCachePlan("eth_getTransactionCount", [ADDRESS])).toBeUndefined();
     expect(evmCachePlan("eth_getTransactionCount", [ADDRESS, "latest"])).toBeUndefined();
     expect(evmCachePlan("eth_getLogs", [{ fromBlock: "latest" }])).toMatchObject({ kind: "logs" });
@@ -142,15 +144,19 @@ describe("cache configuration and canonical plans", () => {
     expect(evmCachePlan("eth_call", [PRECOMPILE, "pending"], options)?.key).toBe(
       evmCachePlan("eth_call", [PRECOMPILE, "0x64"], options)?.key,
     );
+    expect(evmCachePlan("eth_call", [PRECOMPILE, "pending"])).toBeUndefined();
+    expect(evmCachePlan("eth_call", [PRECOMPILE, "0x64"])).toMatchObject({ kind: "number", block: 100 });
     expect(evmCachePlan("eth_getTransactionReceipt", [HASH])?.kind).toBe("latest");
-    expect(evmCachePlan("eth_getTransactionReceipt", [HASH], options)?.kind).toBe("immutable");
+    expect(evmCachePlan("eth_getTransactionReceipt", [HASH], options)?.kind).toBe("latest");
     expect(evmCachePlan("eth_call", [TX, { blockHash: HASH }])?.kind).toBe("latest");
     expect(evmCachePlan("eth_call", [TX, { blockHash: HASH }], options)?.kind).toBe("immutable");
     expect(evmCachePlan("eth_getBalance", [ADDRESS, "0x10"], options)).toMatchObject({
       kind: "number",
       block: 16,
-      immutable: true,
+      immutable: false,
     });
+    expect(evmCachePlan("eth_call", [TX, "finalized"], options)?.kind).toBe("immutable");
+    expect(evmCachePlan("eth_call", [TX, "finalized"])?.kind).toBe("latest");
   });
 
   test("memoizes plans by params-array and method identity only when enabled", () => {
@@ -238,12 +244,12 @@ describe("fresh and immutable entries", () => {
     if (!miss || miss.hit) throw new Error("expected a miss");
     miss.fill({ number: "0x64", hash: HASH }, undefined);
     expect(cache.lookup("eth_getBlockByNumber", ["0x64", false], true, {
-      now: 100_000,
+      now: 100,
       head: { block: 100, ageMs: 0 },
     })).toMatchObject({ hit: true, result: { number: "0x64", hash: HASH } });
   });
 
-  test("keeps default numbered results fresh, but HyperEVM-style results immutable", () => {
+  test("keeps numbered results fresh and a finalized tag immutable when the policy opts in", () => {
     const params = [ADDRESS, "0xa"];
     const fresh = new ReadCache(resolveCache({ refreshInterval: false }), evmCachePolicy());
     const first = fresh.lookup("eth_getBalance", params, true, { now: 0, head: { block: 10, ageMs: 0 } });
@@ -271,10 +277,20 @@ describe("fresh and immutable entries", () => {
       resolveCache({ refreshInterval: false }),
       evmCachePolicy({ immutable: true }),
     );
-    const miss = immutable.lookup("eth_getBalance", params, true, { now: 0, head: { block: 10, ageMs: 0 } });
-    if (!miss || miss.hit) throw new Error("expected a miss");
-    miss.fill("0x1", undefined);
+    const numbered = immutable.lookup("eth_getBalance", params, true, { now: 0, head: { block: 10, ageMs: 0 } });
+    if (!numbered || numbered.hit) throw new Error("expected a miss");
+    numbered.fill("0x1", undefined);
     expect(immutable.lookup("eth_getBalance", params, true, {
+      now: 100_000,
+      head: { block: 1_000, ageMs: 0 },
+    })?.hit).toBe(false);
+    const finalized = immutable.lookup("eth_getBalance", [ADDRESS, "finalized"], true, {
+      now: 0,
+      head: { block: 10, ageMs: 0 },
+    });
+    if (!finalized || finalized.hit) throw new Error("expected a miss");
+    finalized.fill("0x1", undefined);
+    expect(immutable.lookup("eth_getBalance", [ADDRESS, "finalized"], true, {
       now: 100_000,
       head: { block: 1_000, ageMs: 0 },
     })).toMatchObject({ hit: true, stale: 0 });

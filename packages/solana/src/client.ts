@@ -7,12 +7,13 @@ let nextId = 1;
 /** JSON-RPC over HTTP. Solana does not use viem. */
 export function jsonRpcCaller(url: string, fetchFn: FetchLike = fetch): EndpointCall {
   return async (request, options) => {
+    const id = nextId++;
     const response = await fetchFn(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         jsonrpc: "2.0",
-        id: nextId++,
+        id,
         method: request.method,
         params: request.params ?? [],
       }),
@@ -28,6 +29,12 @@ export function jsonRpcCaller(url: string, fetchFn: FetchLike = fetch): Endpoint
       }
     }
     const envelope = isRecord(body) ? body : undefined;
+    const jsonRpc = envelope !== undefined && (
+      Object.hasOwn(envelope, "result") || Object.hasOwn(envelope, "error") || envelope.jsonrpc !== undefined || envelope.id !== undefined
+    );
+    if (jsonRpc && (envelope?.jsonrpc !== "2.0" || !sameRpcId(envelope?.id, id))) {
+      throw responseError("Solana RPC returned an invalid JSON-RPC response: mismatched id.", response);
+    }
     if (!response.ok || (envelope && Object.hasOwn(envelope, "error"))) {
       const rpcError = isRecord(envelope?.error) ? envelope.error : undefined;
       const message = typeof rpcError?.message === "string"
@@ -51,6 +58,10 @@ export function jsonRpcCaller(url: string, fetchFn: FetchLike = fetch): Endpoint
     }
     return envelope.result;
   };
+}
+
+function sameRpcId(received: unknown, sent: number): boolean {
+  return received === sent;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

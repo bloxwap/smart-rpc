@@ -32,22 +32,33 @@ export interface SolanaOptions extends Omit<PoolOptions, "endpoints" | "policy">
   fetchFn?: FetchLike | undefined;
   /** Extra methods that must not be raced or retried. */
   nonSafeMethods?: readonly string[] | undefined;
+  /**
+   * Extra reads that are safe to race and retry. Names that send, sign, submit, or airdrop are ignored.
+   * Unknown methods are not safe unless listed here.
+   */
+  safeMethods?: readonly string[] | undefined;
 }
 
 /** Solana transport for `createSmartRpc({ transports })`. */
 export function solana(options: SolanaOptions = {}): RpcPool {
   const cluster = options.cluster ?? "mainnet";
+  const genesis = options.genesisHash ?? defaultGenesisHash(cluster);
+  const chainIds = options.chainIds ?? defaultChainIds(cluster);
+  assertSolanaChainIds(cluster, chainIds, genesis, options.endpoints !== undefined, options.genesisHash !== undefined);
   const endpoints = options.endpoints ?? defaultEndpoints(cluster);
   const {
     cluster: _cluster,
-    chainIds,
+    chainIds: _chainIds,
     endpoints: _endpoints,
-    genesisHash,
+    genesisHash: _genesisHash,
     commitment,
     fetchFn,
     nonSafeMethods,
+    safeMethods,
     ...poolOptions
   } = options;
+  void _chainIds;
+  void _genesisHash;
   void _cluster;
   void _endpoints;
   return createPool({
@@ -66,19 +77,62 @@ export function solana(options: SolanaOptions = {}): RpcPool {
       };
     }),
     policy: {
-      chainIds: chainIds ?? defaultChainIds(cluster),
+      chainIds,
       probeMethod: "getSlot",
       probeParams: [{ commitment: commitment ?? "processed" }],
       parseHead: parseSlot,
       identityMethod: "getGenesisHash",
       identityParams: [],
-      expectedIdentity: genesisHash ?? defaultGenesisHash(cluster),
+      expectedIdentity: genesis,
       parseIdentity: (result: unknown): string | null =>
         typeof result === "string" && result.length > 0 ? result : null,
-      isSafeMethod: (method: string): boolean => isSafeSolanaMethod(method, nonSafeMethods ?? []),
+      isSafeMethod: (method: string): boolean => isSafeSolanaMethod(method, nonSafeMethods ?? [], safeMethods ?? []),
+      shareId: JSON.stringify({
+        cluster,
+        commitment: commitment ?? "processed",
+        genesis,
+        nonSafeMethods: nonSafeMethods ?? [],
+        safeMethods: safeMethods ?? [],
+        fetch: functionId(fetchFn),
+      }),
       isRebroadcastMethod: isSolanaRebroadcast,
       cachePolicy: solanaCachePolicy(),
       pin: false,
     },
   });
+}
+
+function assertSolanaChainIds(
+  cluster: SolanaCluster,
+  chainIds: readonly string[],
+  genesis: string,
+  endpointsExplicit: boolean,
+  genesisExplicit: boolean,
+): void {
+  const alias = `solana:${cluster}`;
+  const genesisId = `solana:${genesis}`;
+  const expected = new Set([alias, genesisId]);
+  const actual = new Set(chainIds);
+  const matches = actual.size === expected.size && [...expected].every((id) => actual.has(id));
+  if (matches) return;
+  const explicit = endpointsExplicit && genesisExplicit && chainIds.includes(genesisId) &&
+    chainIds.every((id) => id.startsWith("solana:") && id.length > "solana:".length);
+  if (explicit) return;
+  throw new Error(
+    `solana() chainIds must be ${alias} and ${genesisId} unless endpoints and genesisHash are both set and the genesis id is included. Got ${chainIds.join(", ")}.`,
+  );
+}
+
+const functionIds = new WeakMap<object, number>();
+let nextFunctionId = 1;
+
+function functionId(value: object | undefined): string {
+  if (!value) return "";
+  let id = functionIds.get(value);
+  if (id === undefined) {
+    id = nextFunctionId;
+    nextFunctionId += 1;
+    functionIds.set(value, id);
+  }
+  return String(id);
 }

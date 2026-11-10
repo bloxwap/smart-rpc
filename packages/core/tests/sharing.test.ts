@@ -16,6 +16,7 @@ function sharing(scope: PoolShareScope, key: string, budgetKey = key): PoolShari
 describe("factory-scoped pools", () => {
   test("equivalent leases share coalescing, cache, and learned endpoint state", async () => {
     const scope = createPoolScope();
+    const now = (): number => 0;
     let calls = 0;
     let release: (value: string) => void = () => undefined;
     const response = new Promise<string>((resolve) => { release = resolve; });
@@ -30,7 +31,7 @@ describe("factory-scoped pools", () => {
       }], {
         coalesce: true,
         cache: true,
-        now: () => 0,
+        now,
         sharing: sharing(scope, "chain-1"),
       });
     };
@@ -52,11 +53,12 @@ describe("factory-scoped pools", () => {
 
   test("closed leases cannot restore scores into a pool used by peers", () => {
     const scope = createPoolScope();
+    const now = (): number => 0;
     const acquire = () => pool([{
       id: "endpoint",
       url: "https://endpoint.example",
       call: async () => "0x1",
-    }], { now: () => 0, sharing: sharing(scope, "equivalent") });
+    }], { now, sharing: sharing(scope, "equivalent") });
     const first = acquire();
     const second = acquire();
     const snapshot = (method: string) => ({
@@ -81,6 +83,7 @@ describe("factory-scoped pools", () => {
   test("different keys and different scopes never share pool state", async () => {
     const firstScope = createPoolScope();
     const secondScope = createPoolScope();
+    const now = (): number => 0;
     const calls: string[] = [];
     const acquire = (scope: PoolShareScope, key: string, id: string, chainId: number) => pool([{
       id,
@@ -92,7 +95,7 @@ describe("factory-scoped pools", () => {
     }], {
       policy: evmPolicy(chainId),
       cache: true,
-      now: () => 0,
+      now,
       sharing: sharing(scope, key),
     });
     const first = acquire(firstScope, "chain-1", "credential-a", 1);
@@ -112,6 +115,7 @@ describe("factory-scoped pools", () => {
 
   test("timeout variants spend the same endpoint bucket", async () => {
     const scope = createPoolScope();
+    const now = (): number => 0;
     const acquire = (key: string) => pool([{
       id: "limited",
       url: "https://limited.example",
@@ -119,7 +123,7 @@ describe("factory-scoped pools", () => {
       burst: 2,
       call: async () => "0x1",
     }], {
-      now: () => 0,
+      now,
       sharing: sharing(scope, key, "chain-1-endpoint"),
     });
     const first = acquire("timeout-1000");
@@ -135,6 +139,7 @@ describe("factory-scoped pools", () => {
 
   test("provider-group buckets coordinate different endpoints across pools", async () => {
     const scope = createPoolScope();
+    const now = (): number => 0;
     const acquire = (key: string, id: string) => pool([{
       id,
       url: `https://${id}.example`,
@@ -142,7 +147,7 @@ describe("factory-scoped pools", () => {
       providerBudget: { rps: 1, burst: 2 },
       call: async () => "0x1",
     }], {
-      now: () => 0,
+      now,
       sharing: sharing(scope, key, "chain-1-provider"),
     });
     const first = acquire("first", "a");
@@ -159,6 +164,7 @@ describe("factory-scoped pools", () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
     const scope = createPoolScope();
+    const now = (): number => Date.now();
     let probes = 0;
     let acquisitions = 0;
     const closeEndpoints = [vi.fn(), vi.fn(), vi.fn()];
@@ -173,7 +179,7 @@ describe("factory-scoped pools", () => {
           return "0x10";
         },
       }], {
-        now: () => Date.now(),
+        now,
         headLag: { probeInterval: 4_000, probeIdleTimeout: false },
         sharing: sharing(scope, "equivalent"),
       });

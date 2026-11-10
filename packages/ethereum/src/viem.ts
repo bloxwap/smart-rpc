@@ -77,10 +77,32 @@ export function connectViem(url: string, options: ViemConnectionOptions): ViemCo
       const value = instance.value;
       if (!websocket || !value || !("subscribe" in value)) throw new Error("Subscriptions require a documented WebSocket endpoint.");
       if (options.expectedChainId === undefined) throw new Error("Subscriptions require expectedChainId for connection identity verification.");
-      const identity = await request({ method: "eth_chainId" });
-      if (parseQuantity(identity) !== options.expectedChainId) throw new Error("Subscription endpoint returned a different chain identity.");
+      let identityVerified = false;
+      const ensureIdentity = async (): Promise<void> => {
+        const identity = await request({ method: "eth_chainId" });
+        if (parseQuantity(identity) !== options.expectedChainId) {
+          throw new Error("Subscription endpoint returned a different chain identity.");
+        }
+        identityVerified = true;
+      };
+      await ensureIdentity();
       if (closed) throw new Error("Connection is closed.");
-      const upstream = await value.subscribe(args);
+      const watched = watchSocket(value, () => { identityVerified = false; });
+      watched();
+      const upstream = await value.subscribe({
+        ...args,
+        onData: (...params: Parameters<EthereumSubscriptionOptions["onData"]>) => {
+          watched();
+          if (!identityVerified) {
+            void ensureIdentity().then(
+              () => { if (!closed) args.onData(...params); },
+              () => undefined,
+            );
+            return;
+          }
+          args.onData(...params);
+        },
+      });
       let released = false;
       const owned: EthereumSubscription = {
         get subscriptionId() { return upstream.subscriptionId; },
@@ -199,6 +221,23 @@ class BatchCancellation {
       );
     });
   }
+}
+
+function watchSocket(value: object, onReplace: () => void): () => void {
+  let current: WebSocket | undefined;
+  return () => {
+    if (!("getSocket" in value) || typeof value.getSocket !== "function") return;
+    let socket: WebSocket | undefined;
+    try {
+      socket = value.getSocket() as WebSocket;
+    } catch {
+      return;
+    }
+    if (!socket || socket === current) return;
+    if (current) onReplace();
+    current = socket;
+    socket.addEventListener("close", () => onReplace());
+  };
 }
 
 function retryHint(): { record: (response: Response) => void; take: () => number } {

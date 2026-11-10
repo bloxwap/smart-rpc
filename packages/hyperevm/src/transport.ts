@@ -4,6 +4,9 @@
  * A factory around {@link ethereum} with HyperEVM defaults: chain `eip155:999` and
  * `eip155:998`, source-backed public endpoint registries, HyperCore precompile pin-skip, and
  * the official RPC's 1.5 rps / burst 3 budget from smart-hyperevm at 092b8f9.
+ * Probes request `eth_getBlockByNumber("latest", false)` and drop cached state when a block hash
+ * or its parent changes. Numbered results stay fresh; only a `finalized` tag is kept without an age check.
+ * Official URLs match after host case and a trailing slash are normalized.
  * @module
  */
 
@@ -29,6 +32,10 @@ import {
   HYPEREVM_TESTNET_REGISTRY,
   HYPEREVM_TESTNET_RPC_URL,
 } from "./registry.js";
+import { endpointKey } from "./registry/policy.js";
+
+/** One policy object so repeated acquires of the same sharing key compare equal. */
+const HYPEREVM_CACHE_POLICY = evmCachePolicy({ immutable: true, isTimedCall: isPrecompileCall });
 
 export { HYPEREVM_RPC_URL, HYPEREVM_TESTNET_RPC_URL } from "./registry.js";
 
@@ -87,7 +94,8 @@ export function hyperevm(options: HyperEvmOptions = {}): HyperEvmTransport {
       chainIds: [`eip155:${chainId}`],
       endpoints: endpointsFor(options, chainId),
       skipPrecompiles: options.skipPrecompiles ?? true,
-      cachePolicy: evmCachePolicy({ immutable: true, isTimedCall: isPrecompileCall }),
+      blockHashProbe: true,
+      cachePolicy: HYPEREVM_CACHE_POLICY,
       safeMethods: [...HYPEREVM_SAFE_METHODS, ...(options.safeMethods ?? [])],
     }),
   );
@@ -122,7 +130,8 @@ function endpointsFor(options: HyperEvmOptions, chainId: 999 | 998): readonly Et
 /** Keep documented official restrictions and the reference budget for both networks. */
 function tagOfficial(endpoint: EthereumEndpoint): EthereumEndpoint {
   const config = typeof endpoint === "string" ? { url: endpoint } : endpoint;
-  if (config.url !== HYPEREVM_RPC_URL && config.url !== HYPEREVM_TESTNET_RPC_URL) return endpoint;
+  const key = endpointKey(config.url);
+  if (key !== endpointKey(HYPEREVM_RPC_URL) && key !== endpointKey(HYPEREVM_TESTNET_RPC_URL)) return endpoint;
   return {
     ...config,
     ...(config.rps === undefined && config.burst === undefined ? { rps: 1.5, burst: 3 } : {}),

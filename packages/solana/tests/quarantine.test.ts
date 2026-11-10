@@ -15,7 +15,7 @@ describe("solana quarantine", () => {
         result = host.startsWith("wrong") ? "not-the-genesis" : MAINNET_GENESIS_HASH;
       }
       if (body.method === "getSlot") result = 10;
-      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), {
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result }), {
         status: 200,
         headers: { "content-type": "application/json" },
       });

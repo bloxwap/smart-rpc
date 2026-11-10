@@ -35,6 +35,7 @@ export const ETHEREUM_MAINNET_CAIP = "eip155:1";
 
 // Explicit read extensions cannot turn transaction submission or wallet/admin calls into reads.
 const WRITE_PREFIX = /^(?:eth_(?:send|sign|submit|new|uninstall|subscribe|unsubscribe)|personal_|wallet_|engine_|mev_|builder_|flashbots_)/;
+const UNSAFE_EXTENSION = /send|sign|submit|subscribe|unsubscribe|^personal_|^wallet_|^engine_|^mev_|^builder_|^flashbots_/i;
 
 /** A URL, or a URL plus label, weight, and budget. `wss:` URLs use viem `webSocket()`. */
 export interface EthereumEndpointConfig {
@@ -82,6 +83,11 @@ export interface EthereumOptions
   /** Chain-specific head growth bound used for peer outlier rejection. */
   maxUnitsPerSecond?: number | undefined;
   /**
+   * Probe with `eth_getBlockByNumber("latest", false)` and invalidate cached state when a block hash is replaced
+   * or the next block names a different parent. HyperEVM sets this. Default: false.
+   */
+  blockHashProbe?: boolean | undefined;
+  /**
    * Fail over `eth_sendRawTransaction` and `eth_sendRawTransactionSync` on endpoint errors.
    * Default: true.
    */
@@ -95,6 +101,7 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
     throw new Error(`ethereum() chainId must be a positive integer, got ${String(chainId)}.`);
   }
   const chainIds = options.chainIds ?? [`eip155:${chainId}`];
+  assertEthereumChainIds(chainId, chainIds, options.endpoints !== undefined);
   const endpoints = options.endpoints ?? defaultEndpoints(chainId);
   const timeout = options.timeout ?? 10_000;
   const skipPrecompiles = options.skipPrecompiles ?? false;
@@ -109,6 +116,7 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
     safeMethods,
     maxUnitsPerSecond,
     rebroadcastRawTransactions,
+    blockHashProbe,
     batch,
     fetchFn,
     ...poolOptions
@@ -138,6 +146,7 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
         weight: config.weight,
         rps: config.rps,
         burst: config.burst,
+        credentials: credentialKey(config.headers),
         providerGroup: config.providerGroup,
         providerBudget: config.providerBudget,
         pinning: caps?.pinning ?? caps?.archive !== false,
@@ -164,8 +173,21 @@ export function ethereum(options: EthereumOptions = {}): RpcPool {
         !WRITE_PREFIX.test(method) &&
         !NON_IDEMPOTENT_METHODS.includes(method) &&
         !(nonIdempotentMethods ?? []).includes(method) &&
-        (isIdempotentMethod(method) || (safeMethods ?? []).includes(method)),
+        (isIdempotentMethod(method) || ((safeMethods ?? []).includes(method) && acceptedSafeMethod(method))),
       maxUnitsPerSecond,
+      blockHashProbe,
+      shareId: ethereumShareId({
+        safeMethods: safeMethods ?? [],
+        nonIdempotentMethods: nonIdempotentMethods ?? [],
+        rebroadcast: rebroadcastRawTransactions ?? true,
+        skipPrecompiles,
+        pinLatest: pinLatest ?? null,
+        maxUnitsPerSecond: maxUnitsPerSecond ?? null,
+        fetchFn,
+        batch: batch ?? null,
+        blockHashProbe: blockHashProbe === true,
+        cachePolicy,
+      }),
       statefulMethods: {
         create: ["eth_newFilter", "eth_newBlockFilter", "eth_newPendingTransactionFilter", "eth_newFinalizedHeaderFilter"],
         use: ["eth_getFilterChanges", "eth_getFilterLogs"],
@@ -231,6 +253,75 @@ function resolveEvmPin(
   if (value === false) return false;
   const options = typeof value === "object" ? value : {};
   return { ...options, skipPrecompiles: options.skipPrecompiles ?? skipPrecompiles };
+}
+
+function assertEthereumChainIds(chainId: number, chainIds: readonly string[], endpointsExplicit: boolean): void {
+  if (chainIds.length === 0) throw new Error("ethereum() chainIds must include at least one CAIP-2 id.");
+  const canonical = `eip155:${chainId}`;
+  if (new Set(chainIds).size !== chainIds.length) throw new Error("ethereum() chainIds must be unique.");
+  if (chainIds.length === 1 && chainIds[0] === canonical) return;
+  if (!endpointsExplicit || !chainIds.includes(canonical)) {
+    throw new Error(
+      `ethereum() chainIds must be ${canonical}, the chain eth_chainId proves, unless endpoints are explicit and that id is included. Got ${chainIds.join(", ")}.`,
+    );
+  }
+  for (const id of chainIds) {
+    if (!/^[a-z0-9]{3,8}:[a-zA-Z0-9]{1,128}$/.test(id)) {
+      throw new Error(`ethereum() chainIds entry "${id}" is not a CAIP-2 id.`);
+    }
+  }
+}
+
+function acceptedSafeMethod(method: string): boolean {
+  return !UNSAFE_EXTENSION.test(method) && !WRITE_PREFIX.test(method) && !NON_IDEMPOTENT_METHODS.includes(method);
+}
+
+function credentialKey(headers: Readonly<Record<string, string>> | undefined): string | undefined {
+  if (!headers) return undefined;
+  const entries = Object.entries(headers)
+    .map(([name, value]) => [name.toLowerCase(), value] as const)
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+  return entries.length === 0 ? undefined : JSON.stringify(entries);
+}
+
+const functionIds = new WeakMap<object, number>();
+let nextFunctionId = 1;
+
+function functionId(value: object | undefined): string {
+  if (!value) return "";
+  let id = functionIds.get(value);
+  if (id === undefined) {
+    id = nextFunctionId;
+    nextFunctionId += 1;
+    functionIds.set(value, id);
+  }
+  return String(id);
+}
+
+function ethereumShareId(input: {
+  safeMethods: readonly string[];
+  nonIdempotentMethods: readonly string[];
+  rebroadcast: boolean;
+  skipPrecompiles: boolean;
+  pinLatest: EthereumOptions["pinLatest"] | null;
+  maxUnitsPerSecond: number | null;
+  fetchFn: EthereumOptions["fetchFn"];
+  batch: EthereumOptions["batch"] | null;
+  blockHashProbe: boolean;
+  cachePolicy: EthereumOptions["cachePolicy"];
+}): string {
+  return JSON.stringify({
+    safeMethods: input.safeMethods,
+    nonIdempotentMethods: input.nonIdempotentMethods,
+    rebroadcast: input.rebroadcast,
+    skipPrecompiles: input.skipPrecompiles,
+    pinLatest: input.pinLatest,
+    maxUnitsPerSecond: input.maxUnitsPerSecond,
+    fetch: functionId(input.fetchFn),
+    batch: input.batch,
+    blockHashProbe: input.blockHashProbe,
+    cachePolicy: functionId(input.cachePolicy),
+  });
 }
 
 /** `keccak256` of the signed bytes, which is the hash `eth_sendRawTransaction` returns. */

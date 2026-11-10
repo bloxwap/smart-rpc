@@ -275,7 +275,7 @@ export class LogIndex {
         to: range.to,
         params: [fetchFilter],
         fill: (result: unknown, at: number = Date.now()): boolean =>
-          this.#merge(plan.key, from, range.to, result, entry, generation, at),
+          this.#merge(plan.key, from, range.to, result, entry, generation, at, filter),
       },
     };
   }
@@ -318,12 +318,13 @@ export class LogIndex {
     expected: Entry | undefined,
     generation: number,
     updatedAt: number,
+    filter: LogFilter,
   ): boolean {
     if (generation !== this.#generation) return false;
     const base = this.#entries.get(key);
     // A replaced base makes a tail stale. Concurrent first seeds may still merge into the base created by a sibling.
     if (expected !== undefined && base !== expected) return false;
-    const incoming = parseLogs(result, from, to, this.#config.copyResults);
+    const incoming = parseLogs(result, from, to, this.#config.copyResults, filter);
     if (!incoming) return false;
 
     let low = from;
@@ -365,7 +366,8 @@ export class LogIndex {
 
 function readBound(bound: unknown): LogBlockBound | undefined {
   if (bound === undefined || bound === null || bound === "latest") return "latest";
-  if (bound === "earliest") return 0;
+  // `earliest` is not genesis on a pruned node. Leave the tag unindexed so the request is sent unchanged.
+  if (bound === "earliest") return undefined;
   const parsed = parseQuantity(bound);
   return parsed === null ? undefined : parsed;
 }
@@ -401,11 +403,52 @@ export function completeLogResult(result: unknown, from: number, to: number, cop
   return logs ? selectLogs(logs, from, to, copyResults) : undefined;
 }
 
-function parseLogs(result: unknown, from: number, to: number, copyResults: boolean): StoredLog[] | undefined {
+function logMatchesFilter(log: Record<string, unknown>, filter: LogFilter): boolean {
+  return addressMatches(log.address, filter.address) && topicsMatch(log.topics, filter.topics);
+}
+
+function addressMatches(actual: unknown, expected: unknown): boolean {
+  if (expected === undefined || expected === null) return true;
+  const allowed = Array.isArray(expected) ? expected : [expected];
+  if (allowed.length === 0) return false;
+  if (typeof actual !== "string") return false;
+  const found = actual.toLowerCase();
+  return allowed.some((item) => typeof item === "string" && item.toLowerCase() === found);
+}
+
+function topicsMatch(actual: unknown, expected: unknown): boolean {
+  if (expected === undefined || expected === null) return true;
+  if (!Array.isArray(expected)) return false;
+  if (!Array.isArray(actual)) return false;
+  for (let index = 0; index < expected.length; index += 1) {
+    const want = expected[index];
+    if (want === null || want === undefined) continue;
+    const got = actual[index];
+    if (typeof got !== "string") return false;
+    const found = got.toLowerCase();
+    if (typeof want === "string") {
+      if (found !== want.toLowerCase()) return false;
+      continue;
+    }
+    if (!Array.isArray(want) || !want.some((item) => typeof item === "string" && item.toLowerCase() === found)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function parseLogs(
+  result: unknown,
+  from: number,
+  to: number,
+  copyResults: boolean,
+  filter?: LogFilter,
+): StoredLog[] | undefined {
   if (!Array.isArray(result)) return undefined;
   const unique = new Map<string, ParsedLog>();
   for (const item of result) {
     if (!isRecord(item)) return undefined;
+    if (filter && !logMatchesFilter(item, filter)) return undefined;
     const blockNumber = parseQuantity(item.blockNumber);
     const logIndex = parseQuantity(item.logIndex);
     if (blockNumber === null || logIndex === null || blockNumber < from || blockNumber > to) return undefined;

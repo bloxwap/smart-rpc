@@ -23,6 +23,8 @@ const block = await rpc.request({
 });
 ```
 
+Solana unknown methods are single-shot. `earliest` is not rewritten to `0x0`. Solana `getTransaction` is cached without an age limit only at `finalized`. HyperEVM probes `eth_getBlockByNumber("latest", false)` and drops cached state when a block hash or its parent changes. See the migration notes for the full list.
+
 The package root exports the core and does not import a transport. Each chain is a subpath of this package, so a bundler includes only the chains the app imports. Importing the root does not register every transport. Pass the transports you want to `createSmartRpc`.
 
 `viem` is installed with this package. The Ethereum and HyperEVM subpaths use it for `http()` and `webSocket()` child connections. You do not install a second smart-rpc package for a chain.

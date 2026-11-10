@@ -140,7 +140,12 @@ describe("Etherlink EVM transport", () => {
     const mock = mockRpc(({ method, params }) => method === "eth_chainId"
       ? chain
       : method === "eth_getLogs"
-        ? [{ blockNumber: (params[0] as { fromBlock: string }).fromBlock, logIndex: "0x0" }]
+        ? [{
+          address: (params[0] as { address?: string }).address,
+          topics: (params[0] as { topics?: unknown }).topics ?? [],
+          blockNumber: (params[0] as { fromBlock: string }).fromBlock,
+          logIndex: "0x0",
+        }]
         : "0x64");
     const pool = etherlink({ endpoints: [ETHERLINK_RPC_URL], fetchFn: mock.fetchFn, headLag: idle, race: false });
     const filter = { address: account, fromBlock: "0x1", toBlock: "0x1f5", topics: ["0x1234"] };
