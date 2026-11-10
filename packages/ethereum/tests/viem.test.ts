@@ -63,7 +63,8 @@ describe("ethereum child transports", () => {
     const onData = vi.fn();
     const subscription = await connection.subscribe({ params: ["newHeads"], onData });
     expect(request).toHaveBeenCalledWith({ method: "eth_chainId" });
-    expect(subscribe).toHaveBeenCalledWith({ params: ["newHeads"], onData });
+    expect(subscribe).toHaveBeenCalledWith(expect.objectContaining({ params: ["newHeads"] }));
+    expect(subscribe.mock.calls[0]?.[0]).toEqual(expect.objectContaining({ onData: expect.any(Function) }));
     expect(webSocket).toHaveBeenCalledWith("wss://subscriptions.example", expect.objectContaining({ reconnect: { attempts: 3, delay: 100 }, retryCount: 0 }));
     expect(subscription.subscriptionId).toBe("0x1");
     id = "0x2"; // viem replaces the ID after it reconnects and resubscribes.
@@ -82,5 +83,30 @@ describe("ethereum child transports", () => {
     expect(subscribe).not.toHaveBeenCalled();
     connection.close();
     expect(() => connectViem("wss://header.example", { timeout: 500, headers: { authorization: "test" } })).toThrow("WebSocket headers");
+  });
+
+  test("a socket close makes the next subscription event recheck eth_chainId", async () => {
+    const identities = ["0x1", "0x2"];
+    const request = vi.fn(async () => identities.shift() ?? "0x2");
+    const socket = new EventTarget();
+    const subscribe = vi.fn(async () => ({
+      get subscriptionId() { return "0x1"; },
+      unsubscribe: vi.fn(async () => ({ result: true })),
+    }));
+    webSocket.mockImplementation(() => () => ({
+      request,
+      value: { subscribe, getSocket: () => socket },
+    }));
+    const connection = connectViem("wss://recheck.example", { timeout: 500, expectedChainId: 1 });
+    const onData = vi.fn();
+    await connection.subscribe({ params: ["newHeads"], onData });
+    expect(request).toHaveBeenCalledTimes(1);
+    socket.dispatchEvent(new Event("close"));
+    const wrapped = (subscribe.mock.calls as unknown as [[{ onData: (data: unknown) => void }]])[0]?.[0];
+    wrapped?.onData({ number: "0x2" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(onData).not.toHaveBeenCalled();
+    connection.close();
   });
 });

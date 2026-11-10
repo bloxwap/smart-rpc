@@ -49,6 +49,22 @@ Core defaults are the HyperEVM transport at `092b8f9`, for every chain:
 - Stale heads (30s) and outlier heads (`maxAhead` 1000, and no reference when only two heads disagree) match `_scoreboard.ts`.
 - Block-tag pinning matches `_pin.ts`, including the 1s freshness window. HyperEVM keeps the precompile exception (`0x…0800`–`0x…08ff`). Ethereum leaves that skip off: those addresses are not special on Ethereum. The reference always skips them because it only speaks HyperEVM.
 
+## Caller-visible behavior
+
+These checks used to be assumptions. They are now enforced, and a few of them change results callers can observe:
+
+- Solana methods that are not on the known-read allowlist are sent once. They are not raced, retried, or coalesced. `sendTransaction` and `sendRawTransaction` still fail over as rebroadcasts. Pass `safeMethods` for a custom read. Names that send, sign, submit, or airdrop are ignored.
+- `getTransaction` stays in the cache without an age limit only when the request commitment is `finalized` (including the omitted default). `processed` and `confirmed` expire with the normal fresh window.
+- The block tag `earliest` is no longer treated as block `0` or rewritten to `0x0`. It keeps its own cache key and is sent through unchanged. `eth_getLogs` ranges that use `earliest` are not filled from the rolling index.
+- HyperEVM probes call `eth_getBlockByNumber("latest", false)`. A replaced block hash, or a new block whose parent hash is not the hash last seen at the parent height, drops the read cache and the pin. Numbered balances, calls, and receipts stay fresh for the normal age window. A `finalized` tag is the result kept without that age check. Hash-identified block reads stay cached.
+- An endpoint's chain identity is checked again on the probe interval (4s by default) and after a viem WebSocket reconnect. A different `eth_chainId` or `getGenesisHash` quarantines the endpoint.
+- A repeated sharing key with different endpoints, headers, or policy throws. A repeated `budgetKey` with a different `rps` or `burst` throws. Every acquire in one scope must pass the same `now` function.
+- Official HyperEVM URLs match after host case is folded and a trailing slash is removed, including the 1.5 rps / burst 3 budget and the official log caps.
+- `retryCount`, breaker thresholds and cooldowns, score coefficients, head-lag and pin numbers, and timer delays are rejected when they are outside the documented range. `retryCount` must be a non-negative safe integer. Breaker cooldown must be positive and no larger than `maxCooldown`. Configured timeouts, hedge delays, and the derived operation timeout must be from 1 to 2147483647 milliseconds.
+- A Solana HTTP 200 body is accepted only when `jsonrpc` is `"2.0"` and `id` is the id that was sent.
+
+Scoring constants, the breaker schedule (3 failures, 5s doubling to 60s), 2 retries, the 10s attempt timeout, 100ms–2s jittered backoff, 4s probes, and the 60s idle stop are unchanged.
+
 ## What changes, and why
 
 The brief says to follow the HyperEVM reference when it disagrees with smart-solana. These smart-solana behaviors are not copied:

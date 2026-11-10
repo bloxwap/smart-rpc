@@ -2,8 +2,13 @@
 export function parseQuantity(value: unknown): number | null {
   if (typeof value !== "string" || !/^0x[0-9a-f]+$/i.test(value)) return null;
   const parsed = Number.parseInt(value, 16);
-  if (!Number.isSafeInteger(parsed)) return null;
-  return parsed;
+  return nonNegativeHead(parsed);
+}
+
+/** A block or slot the pool will store. Fractions, negatives, and values above 2^53-1 are not heads. */
+export function nonNegativeHead(value: number | null): number | null {
+  if (value === null || !Number.isSafeInteger(value) || value < 0) return null;
+  return value;
 }
 
 /**
@@ -19,5 +24,8 @@ export function blockNumberFromResult(method: string, result: unknown, params?: 
 }
 
 export function toHexQuantity(block: number): string {
+  if (!Number.isSafeInteger(block) || block < 0) {
+    throw new Error(`Block number must be a non-negative safe integer, got ${String(block)}.`);
+  }
   return `0x${block.toString(16)}`;
 }

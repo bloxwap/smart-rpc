@@ -8,9 +8,67 @@
 
 import type { CacheKind, CachePolicy } from "@smart-rpc/core";
 
-const NON_SAFE = new Set(["requestAirdrop", "sendTransaction", "sendRawTransaction"]);
-
 const REBROADCAST = new Set(["sendTransaction", "sendRawTransaction"]);
+
+/**
+ * Known idempotent Solana reads. Anything else, including `sendBundle` and `requestAirdrop`,
+ * is sent once: not raced, retried, or coalesced.
+ */
+const SAFE_SOLANA_METHODS = new Set([
+  "getAccountInfo",
+  "getBalance",
+  "getBlock",
+  "getBlockCommitment",
+  "getBlockHeight",
+  "getBlockProduction",
+  "getBlockTime",
+  "getBlocks",
+  "getBlocksWithLimit",
+  "getClusterNodes",
+  "getEpochInfo",
+  "getEpochSchedule",
+  "getFeeForMessage",
+  "getFirstAvailableBlock",
+  "getGenesisHash",
+  "getHealth",
+  "getHighestSnapshotSlot",
+  "getIdentity",
+  "getInflationGovernor",
+  "getInflationRate",
+  "getInflationReward",
+  "getLargestAccounts",
+  "getLatestBlockhash",
+  "getLeaderSchedule",
+  "getMaxRetransmitSlot",
+  "getMaxShredInsertSlot",
+  "getMinimumBalanceForRentExemption",
+  "getMultipleAccounts",
+  "getProgramAccounts",
+  "getRecentPerformanceSamples",
+  "getRecentPrioritizationFees",
+  "getSignatureStatuses",
+  "getSignaturesForAddress",
+  "getSlot",
+  "getSlotLeader",
+  "getSlotLeaders",
+  "getStakeActivation",
+  "getStakeMinimumDelegation",
+  "getSupply",
+  "getTokenAccountBalance",
+  "getTokenAccountsByDelegate",
+  "getTokenAccountsByOwner",
+  "getTokenLargestAccounts",
+  "getTokenSupply",
+  "getTransaction",
+  "getTransactionCount",
+  "getVersion",
+  "getVoteAccounts",
+  "isBlockhashValid",
+  "minimumLedgerSlot",
+  "simulateTransaction",
+]);
+
+const UNSAFE_SOLANA = /send|sign|submit|airdrop/i;
 
 /** Methods worth caching. TTLs in the Solana reference are not applied. */
 const CACHEABLE = new Set([
@@ -46,11 +104,16 @@ const CACHEABLE = new Set([
   "isBlockhashValid",
 ]);
 
-const IMMUTABLE = new Set(["getGenesisHash", "getEpochSchedule", "getIdentity", "getVersion", "getTransaction"]);
+const IMMUTABLE = new Set(["getGenesisHash", "getEpochSchedule", "getIdentity", "getVersion"]);
 
 /** True when the method may be raced and retried. Sends fail over only as rebroadcasts. */
-export function isSafeSolanaMethod(method: string, extra: readonly string[] = []): boolean {
-  return !NON_SAFE.has(method) && !extra.includes(method);
+export function isSafeSolanaMethod(
+  method: string,
+  blocked: readonly string[] = [],
+  allowed: readonly string[] = [],
+): boolean {
+  if (blocked.includes(method) || UNSAFE_SOLANA.test(method)) return false;
+  return SAFE_SOLANA_METHODS.has(method) || allowed.includes(method);
 }
 
 export function isSolanaRebroadcast(method: string): boolean {
@@ -59,18 +122,28 @@ export function isSolanaRebroadcast(method: string): boolean {
 
 export function solanaCachePolicy(): CachePolicy {
   return {
-    classify(method: string): CacheKind | false {
+    classify(method: string, params: unknown): CacheKind | false {
       if (!CACHEABLE.has(method)) return false;
+      if (method === "getTransaction") return solanaCommitment(params) === "finalized" ? "immutable" : "fresh";
       return IMMUTABLE.has(method) ? "immutable" : "fresh";
     },
   };
 }
 
 export function parseSlot(result: unknown): number | null {
-  if (typeof result === "number" && Number.isFinite(result)) return result;
-  if (typeof result === "string" && /^\d+$/.test(result)) {
-    const parsed = Number(result);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
+  if (typeof result === "number") return nonNegativeSlot(result);
+  if (typeof result === "string" && /^\d+$/.test(result)) return nonNegativeSlot(Number(result));
   return null;
+}
+
+function nonNegativeSlot(value: number): number | null {
+  if (!Number.isSafeInteger(value) || value < 0) return null;
+  return value;
+}
+
+/** Omitted commitment is Solana's default, finalized. processed and confirmed stay fresh. */
+function solanaCommitment(params: unknown): string {
+  if (!Array.isArray(params) || params.length < 2 || typeof params[1] !== "object" || params[1] === null) return "finalized";
+  const commitment = "commitment" in params[1] ? params[1].commitment : undefined;
+  return typeof commitment === "string" ? commitment : "finalized";
 }

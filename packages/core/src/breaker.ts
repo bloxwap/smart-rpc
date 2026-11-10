@@ -72,7 +72,9 @@ export class Breaker {
     if (!this.#config.enabled) return 0;
     const circuit = this.#circuits.get(id);
     if (!circuit) return 0;
-    return Math.max(0, circuit.openUntil - this.#now());
+    const now = this.#now();
+    if (!Number.isFinite(now)) return circuit.openUntil > 0 ? circuit.openUntil : 0;
+    return Math.max(0, circuit.openUntil - now);
   }
 
   /**
@@ -123,11 +125,28 @@ export class Breaker {
 
 export function resolveBreaker(value: boolean | BreakerOptions | undefined): BreakerConfig {
   const options = typeof value === "object" ? value : {};
+  const threshold = options.threshold ?? DEFAULT_BREAKER_THRESHOLD;
+  const cooldownMs = options.cooldown ?? DEFAULT_BREAKER_COOLDOWN_MS;
+  const maxCooldownMs = options.maxCooldown ?? DEFAULT_BREAKER_MAX_COOLDOWN_MS;
+  if (!Number.isSafeInteger(threshold) || threshold < 1) {
+    throw new Error(`smart-rpc breaker.threshold must be a positive safe integer, got ${String(threshold)}.`);
+  }
+  if (!Number.isFinite(cooldownMs) || cooldownMs <= 0) {
+    throw new Error(`smart-rpc breaker.cooldown must be a finite number above 0, got ${String(cooldownMs)}.`);
+  }
+  if (!Number.isFinite(maxCooldownMs) || maxCooldownMs <= 0) {
+    throw new Error(`smart-rpc breaker.maxCooldown must be a finite number above 0, got ${String(maxCooldownMs)}.`);
+  }
+  if (cooldownMs > maxCooldownMs) {
+    throw new Error(
+      `smart-rpc breaker.cooldown (${cooldownMs}) must be less than or equal to breaker.maxCooldown (${maxCooldownMs}).`,
+    );
+  }
   return {
     enabled: value !== false,
-    threshold: options.threshold ?? DEFAULT_BREAKER_THRESHOLD,
-    cooldownMs: options.cooldown ?? DEFAULT_BREAKER_COOLDOWN_MS,
-    maxCooldownMs: options.maxCooldown ?? DEFAULT_BREAKER_MAX_COOLDOWN_MS,
+    threshold,
+    cooldownMs,
+    maxCooldownMs,
   };
 }
 

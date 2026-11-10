@@ -16,15 +16,20 @@ describe("CAIP-2 routing", () => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
       const host = new URL(url).host;
       let method = "unknown";
+      let id: unknown = 1;
       const raw = typeof init?.body === "string" ? init.body : "";
-      if (raw) method = (JSON.parse(raw) as { method?: string }).method ?? method;
+      if (raw) {
+        const parsed = JSON.parse(raw) as { id?: unknown; method?: string };
+        method = parsed.method ?? method;
+        if (parsed.id !== undefined) id = parsed.id;
+      }
       hits.push(`${host} ${method}`);
       let result: unknown = "0x1";
       if (method === "eth_chainId") result = host.startsWith("hyper") ? "0x3e7" : "0x1";
-      if (method === "eth_blockNumber") result = "0x10";
+      if (method === "eth_blockNumber" || method === "eth_getBlockByNumber") result = "0x10";
       if (method === "getGenesisHash") result = MAINNET_GENESIS_HASH;
       if (method === "getSlot" || method === "getHealth") result = method === "getSlot" ? 1 : "ok";
-      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), {
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id, result }), {
         status: 200,
         headers: { "content-type": "application/json" },
       });

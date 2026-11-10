@@ -154,6 +154,9 @@ export class Coalescer {
     signal: AbortSignal | undefined,
     retry: (() => Promise<unknown>) | undefined,
   ): Promise<unknown> {
+    // An abort inside the coalesce notification lands before this listener exists.
+    // That caller is not a waiter, so the shared request can still be cancelled.
+    if (signal?.aborted) return Promise.reject(abortReason(signal));
     entry.waiting += 1;
     if (!signal && !retry) return entry.promise;
     return new Promise((resolve, reject) => {

@@ -31,6 +31,8 @@ const block = await rpc.request({
 
 Every chain uses a subpath of `@bloxwap/smart-rpc`, so application bundles include only imported transports. The release package contains no private workspace dependencies.
 
+Caller-visible enforcement is listed in the [migration guide](apps/docs/content/docs/migration.md). Solana unknown methods are single-shot, `earliest` is not an alias of block 0, Solana `getTransaction` is immutable only at `finalized`, and HyperEVM probes block hashes so a forward reorg drops cached state.
+
 ## Documentation
 
 The Next.js and Fumadocs application lives in [`apps/docs`](apps/docs). It includes the complete performance-feature table, installation, configuration, transport notes, public RPC registries, migration guidance, benchmarks, and research.

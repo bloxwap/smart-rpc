@@ -52,6 +52,11 @@ export interface PoolEndpointConfig {
   /** URLs sharing a provider quota use the same group inside this pool. */
   providerGroup?: string | undefined;
   providerBudget?: BudgetOptions | undefined;
+  /**
+   * Canonical credential material, such as sorted request headers.
+   * A repeated sharing key must present the same value.
+   */
+  credentials?: string | undefined;
   /** Release owned resources on pool close, or immediately when a shared acquisition discards this duplicate. */
   close?: (() => void) | undefined;
   /**
@@ -107,6 +112,16 @@ export interface ChainPolicy {
   pin?: boolean | PinLatestOptions | undefined;
   /** Freshness units per second for outlier comparison. Default: 2. */
   maxUnitsPerSecond?: number | undefined;
+  /**
+   * Stable identity of the options closed over by this policy's functions.
+   * Built-in transports set it. A repeated sharing key must present the same value.
+   */
+  shareId?: string | undefined;
+  /**
+   * Probe with `eth_getBlockByNumber("latest", false)` so a forward reorg carries a block hash.
+   * HyperEVM turns this on. The head number still comes from that block.
+   */
+  blockHashProbe?: boolean | undefined;
 }
 
 export interface HeadLagOptions {
@@ -147,6 +162,10 @@ export interface PoolShareScope {
     key: string,
     budgetKey: string,
     now: () => number,
+    /** `options.now`, or undefined when both sides use `Date.now`. A different function is rejected. */
+    clock: (() => number) | undefined,
+    /** Routing identity. A repeated key with a different fingerprint is rejected. */
+    fingerprint: string,
     build: (budgets: Budgets) => RpcPool,
   ): RpcPool;
   /** Close every pool in this scope. Existing and future leases cannot make requests. */
@@ -159,6 +178,8 @@ export interface PoolSharingOptions {
   /**
    * Identity of every routing-relevant input. Dedicate a scope to fixed endpoints, credentials,
    * and policy, then include per-consumer chain, timeout, and retry settings in this key.
+   * A repeated key whose endpoints, credentials, policy, or routing options differ is rejected.
+   * Every acquire in the scope must pass the same `now` function.
    */
   key: string;
   /**

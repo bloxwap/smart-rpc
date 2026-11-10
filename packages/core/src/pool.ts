@@ -27,6 +27,7 @@ import {
   DEFAULT_TIMEOUT_MS,
   INFLIGHT_GRACE_MS,
   MAX_RETRY_BACKOFF_MS,
+  MAX_TIMER_MS,
 } from "./constants.js";
 import { abortError, isAbortError, toError } from "./error-util.js";
 import {
@@ -41,11 +42,12 @@ import {
 } from "./errors.js";
 import type { EndpointSnapshot, RpcEvent } from "./events.js";
 import { isAlreadyKnownError, isBlockNotHeldError, shouldFailover } from "./evm-methods.js";
-import { Operation } from "./operation.js";
+import { assertTimerMs, Operation } from "./operation.js";
 import { LatestPin, resolvePin } from "./pin.js";
+import { nonNegativeHead } from "./quantity.js";
 import { pickRacers, raceCalls, resolveRace } from "./race.js";
 import { backoffMs } from "./retry.js";
-import { defaultScoreConfig } from "./score.js";
+import { resolveScoreConfig } from "./score.js";
 import { type RankedEndpoint, Scoreboard } from "./scoreboard.js";
 import type {
   ChainPolicy,
@@ -82,6 +84,8 @@ interface Inflight {
 
 interface ChainGate {
   verified: boolean;
+  /** `now()` when the identity last matched. A later disagreement quarantines the endpoint. */
+  verifiedAt: number;
   mismatch: ChainMismatchError | undefined;
   pending: Promise<Error | undefined> | undefined;
 }
@@ -106,26 +110,32 @@ const noProgress = (): void => undefined;
 
 /** Build a pool. Registration with {@link createSmartRpc} is separate and explicit. */
 export function createPool(options: PoolOptions): RpcPool {
-  const now = options.now ?? ((): number => Date.now());
+  const rawNow = options.now ?? ((): number => Date.now());
+  const now = monotonicClock(rawNow);
   const sharing = options.sharing;
   if (sharing) {
     const chainKey = JSON.stringify(options.policy.chainIds);
     const key = JSON.stringify([sharing.key, chainKey]);
     const budgetKey = JSON.stringify([sharing.budgetKey ?? sharing.key, chainKey]);
+    const fingerprint = poolFingerprint(options);
     let built = false;
-    const lease = sharing.scope.acquire(key, budgetKey, now, (budgets) => {
-      built = true;
-      return buildPool(options, budgets, budgetKey);
-    });
-    if (!built) for (const endpoint of options.endpoints) endpoint.close?.();
-    return lease;
+    try {
+      const lease = sharing.scope.acquire(key, budgetKey, now, options.now, fingerprint, (budgets) => {
+        built = true;
+        return buildPool(options, budgets, budgetKey, now);
+      });
+      if (!built) for (const endpoint of options.endpoints) endpoint.close?.();
+      return lease;
+    } catch (error) {
+      if (!built) for (const endpoint of options.endpoints) endpoint.close?.();
+      throw error;
+    }
   }
-  return buildPool(options, new Budgets(now), "");
+  return buildPool(options, new Budgets(now), "", now);
 }
 
-function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: string): RpcPool {
+function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: string, now: () => number): RpcPool {
   const policy = options.policy;
-  const now = options.now ?? ((): number => Date.now());
   const random = options.random ?? Math.random;
   const headLag = resolveHeadLag(options.headLag);
   const hedge = resolveHedge(options.hedge);
@@ -133,10 +143,19 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
   const routing = options.routing ?? "p2c";
   const perMethod = options.perMethod ?? true;
   const retryCount = options.retryCount ?? DEFAULT_RETRY_COUNT;
+  if (!Number.isSafeInteger(retryCount) || retryCount < 0) {
+    throw new Error(`smart-rpc retryCount must be a non-negative safe integer, got ${String(retryCount)}.`);
+  }
   const retryDelay = options.retryDelay ?? 0;
+  if (retryDelay !== 0) assertTimerMs(retryDelay, "smart-rpc retryDelay");
   const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS;
-  if (!Number.isFinite(timeout) || timeout <= 0) {
-    throw new Error(`smart-rpc timeout must be a positive number of milliseconds, got ${String(timeout)}.`);
+  assertTimerMs(timeout, "smart-rpc timeout");
+  const operationTimeout = options.operationBudget?.timeout ?? timeout * 4;
+  if (!Number.isFinite(operationTimeout) || operationTimeout < 1 || operationTimeout > MAX_TIMER_MS) {
+    throw new Error(
+      `smart-rpc operationBudget.timeout must be from 1 to ${MAX_TIMER_MS} milliseconds. ` +
+      `Four attempt timeouts is ${String(operationTimeout)}; set operationBudget.timeout explicitly when the attempt timeout is large.`,
+    );
   }
   const retryBackoff = retryDelay > 0 ? retryDelay : DEFAULT_RETRY_BACKOFF_MS;
   const verifyIdentity = options.verifyIdentity ?? true;
@@ -162,7 +181,10 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     endpoint.supports(method) && !learnedUnsupported.get(endpoint.id)?.has(method);
   const isStateful = (method: string): boolean =>
     stateful !== undefined && [...stateful.create, ...stateful.use, ...stateful.release].includes(method);
-  const scoreConfig = { ...defaultScoreConfig, ...options.score };
+  const scoreConfig = resolveScoreConfig(options.score);
+  if (policy.maxUnitsPerSecond !== undefined) {
+    assertNonNegative(policy.maxUnitsPerSecond, "smart-rpc policy.maxUnitsPerSecond");
+  }
   const failoverOf = policy.shouldFailover ?? shouldFailover;
   const benignMiss = policy.isBenignMiss ?? isBlockNotHeldError;
   const alreadyKnown = policy.isAlreadyKnown ?? isAlreadyKnownError;
@@ -187,6 +209,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       endpoint.id,
       {
         verified: !verifyIdentity,
+        verifiedAt: 0,
         mismatch: undefined,
         pending: undefined,
       },
@@ -308,10 +331,13 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     });
   };
 
-  const checkChain = (endpoint: BuiltEndpoint, operation?: Operation): Promise<Error | undefined> => {
+  const checkChain = (endpoint: BuiltEndpoint, operation?: Operation, allowRefresh = false): Promise<Error | undefined> => {
+    if (!verifyIdentity) return Promise.resolve(undefined);
     const gate = gates.get(endpoint.id);
-    if (!gate || gate.verified) return Promise.resolve(undefined);
+    if (!gate) return Promise.resolve(undefined);
     if (gate.mismatch) return Promise.resolve(gate.mismatch);
+    // Probes re-check on the probe interval. A user call keeps the last match so a low quota is not spent twice.
+    if (gate.verified && (now() - gate.verifiedAt < DEFAULT_PROBE_MS || !allowRefresh)) return Promise.resolve(undefined);
     if (!endpoint.supports(policy.identityMethod)) return Promise.resolve(new EndpointCapabilityError(policy.identityMethod));
     let pending: Promise<Error | undefined>;
     try { pending = gate.pending ?? startCheck(endpoint, gate, operation); }
@@ -340,14 +366,20 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
         const reported = policy.parseIdentity(result);
         const equals = policy.identityEquals ?? Object.is;
         if (reported !== null && reported !== undefined && equals(reported, policy.expectedIdentity)) {
+          const first = !gate.verified;
           gate.verified = true;
-          closeCircuit(endpoint, false);
+          gate.verifiedAt = now();
+          if (first) closeCircuit(endpoint, false);
           return undefined;
         }
         if (reported === null || reported === undefined) {
+          if (gate.verified) return undefined;
           return new Error(`${endpoint.url} returned no chain identity.`);
         }
+        gate.verified = false;
         gate.mismatch = new ChainMismatchError(endpoint.url, policy.expectedIdentity, reported);
+        cache?.invalidate();
+        pin?.reset();
         emit({
           type: "quarantine",
           endpoint: endpoint.url,
@@ -357,7 +389,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
         return gate.mismatch;
       },
     ).catch(
-      (error: unknown): Error => {
+      (error: unknown): Error | undefined => {
         const wrapped = toError(error);
         const latencyMs = Math.max(0, now() - started);
         const terminal = !failoverOf(wrapped);
@@ -371,7 +403,9 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
           terminal,
         });
         if (!terminal) openCircuit(endpoint, wrapped, false);
-        return wrapped;
+        // A refresh that cannot reach the endpoint keeps the last matching identity.
+        // Only a reported disagreement quarantines it.
+        return gate.verified ? undefined : wrapped;
       },
     ).finally(() => controller.abort());
     gate.pending = pending;
@@ -409,21 +443,32 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
 
   const observedHeads = new Map<string, number>();
   const observedHashes = new Map<number, string>();
-  const noteHead = (endpoint: BuiltEndpoint, method: string, result: unknown, params: unknown): void => {
-    if (result && typeof result === "object" && "number" in result && "hash" in result && typeof result.hash === "string") {
-      const height = policy.parseHead(result.number);
-      if (height !== null) {
-        const previousHash = observedHashes.get(height);
-        if (previousHash !== undefined && previousHash !== result.hash) { cache?.invalidate(); pin?.reset(); }
-        observedHashes.set(height, result.hash);
-        if (observedHashes.size > 128) observedHashes.delete(observedHashes.keys().next().value as number);
-      }
+  const noteBlockIdentity = (result: unknown): void => {
+    if (!result || typeof result !== "object" || !("number" in result) || !("hash" in result)) return;
+    if (typeof result.hash !== "string" || result.hash.length === 0) return;
+    const height = nonNegativeHead(policy.parseHead(result.number));
+    if (height === null) return;
+    const previousHash = observedHashes.get(height);
+    const parent = "parentHash" in result && typeof result.parentHash === "string" ? result.parentHash : undefined;
+    const parentHash = height > 0 ? observedHashes.get(height - 1) : undefined;
+    const replaced = previousHash !== undefined && previousHash !== result.hash;
+    const forwardReorg = parent !== undefined && parentHash !== undefined && parent !== parentHash;
+    if (replaced || forwardReorg) {
+      cache?.invalidate();
+      pin?.reset();
+      observedHashes.clear();
     }
+    observedHashes.set(height, result.hash);
+    if (observedHashes.size > 128) observedHashes.delete(observedHashes.keys().next().value as number);
+  };
+  const noteHead = (endpoint: BuiltEndpoint, method: string, result: unknown, params: unknown): void => {
+    noteBlockIdentity(result);
     if (!headLag.enabled) return;
-    const head =
+    const head = nonNegativeHead(
       method === policy.probeMethod
         ? policy.parseHead(result)
-        : (policy.headFromResult?.(method, result, params) ?? null);
+        : (policy.headFromResult?.(method, result, params) ?? null),
+    );
     if (head === null) return;
     const previousHead = observedHeads.get(endpoint.id);
     if (previousHead !== undefined && head < previousHead) { cache?.invalidate(); pin?.reset(); }
@@ -784,6 +829,11 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     );
   };
 
+  const probeCall = (): { method: string; params: unknown } =>
+    policy.blockHashProbe
+      ? { method: "eth_getBlockByNumber", params: ["latest", false] }
+      : { method: policy.probeMethod, params: policy.probeParams };
+
   let closed = false;
   let probing: Promise<void> | undefined;
   let lastProbeAt = Number.NEGATIVE_INFINITY;
@@ -797,18 +847,18 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
       const remaining = budgets.remaining(id);
       return remaining === null || remaining >= (reserveToken ? 2 : 1);
     };
-    const pending = built.map(async (endpoint) =>
-      breaker.isOpen(endpoint.id) || !endpoint.supports(policy.probeMethod) || !funded(endpoint.id)
-        ? Promise.resolve()
-        : checkChain(endpoint).then((reason) =>
-            reason || !funded(endpoint.id)
-              ? undefined
-              : start(endpoint, policy.probeMethod, policy.probeParams, undefined, false, false).promise.then(
-                  () => undefined,
-                  () => undefined,
-                ),
-          ),
-    );
+    const pending = built.map(async (endpoint) => {
+      const probe = probeCall();
+      if (breaker.isOpen(endpoint.id) || !endpoint.supports(probe.method) || !funded(endpoint.id)) return;
+      const remaining = budgets.remaining(endpoint.id);
+      const refreshBudget = remaining === null || remaining >= (reserveToken ? 3 : 2);
+      const reason = await checkChain(endpoint, undefined, refreshBudget);
+      if (reason || !funded(endpoint.id)) return;
+      await start(endpoint, probe.method, probe.params, undefined, false, false).promise.then(
+        () => undefined,
+        () => undefined,
+      );
+    });
     const done = Promise.allSettled(pending).then(() => undefined);
     probing = done;
     void done.finally(() => {
@@ -821,13 +871,15 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
   /** One head sample from the best verified, closed, funded endpoint for cache ticks. */
   const probeBest = async (): Promise<void> => {
     if (closed) return;
-    const picked = board.pick(policy.probeMethod, NO_BAR, "best", random);
+    const probe = probeCall();
+    const picked = board.pick(probe.method, NO_BAR, "best", random);
     if (!picked || breaker.isOpen(picked.id) || !budgets.has(picked.id)) return;
     const target = byId.get(picked.id);
-    if (target?.supports(policy.probeMethod) !== true) return;
-    const reason = await checkChain(target);
+    if (target?.supports(probe.method) !== true) return;
+    const remaining = budgets.remaining(picked.id);
+    const reason = await checkChain(target, undefined, remaining === null || remaining >= 2);
     if (reason || closed || breaker.isOpen(picked.id) || !budgets.has(picked.id)) return;
-    await start(picked, policy.probeMethod, policy.probeParams, undefined, false, false).promise.then(
+    await start(picked, probe.method, probe.params, undefined, false, false).promise.then(
       () => undefined,
       () => undefined,
     );
@@ -1018,24 +1070,120 @@ function resolveHeadLag(value: boolean | HeadLagOptions | undefined): ResolvedHe
     };
   }
   const options = value === true || value === undefined ? {} : value;
+  const maxLag = options.maxLag ?? DEFAULT_MAX_LAG;
+  const staleMs = options.staleMs ?? DEFAULT_STALE_MS;
+  const maxAhead = options.maxAhead ?? DEFAULT_MAX_AHEAD;
+  const probeInterval = options.probeInterval === undefined ? DEFAULT_PROBE_MS : options.probeInterval;
+  const probeIdleTimeout = options.probeIdleTimeout === undefined ? DEFAULT_PROBE_IDLE_MS : options.probeIdleTimeout;
+  assertNonNegative(maxLag, "smart-rpc headLag.maxLag");
+  assertNonNegative(staleMs, "smart-rpc headLag.staleMs");
+  assertNonNegative(maxAhead, "smart-rpc headLag.maxAhead");
+  if (probeInterval !== false) {
+    if (!Number.isFinite(probeInterval) || probeInterval < 0 || probeInterval > MAX_TIMER_MS) {
+      throw new Error(`smart-rpc headLag.probeInterval must be a finite delay from 0 to ${MAX_TIMER_MS} milliseconds, or false, got ${String(probeInterval)}.`);
+    }
+  }
+  if (probeIdleTimeout !== false) assertNonNegative(probeIdleTimeout, "smart-rpc headLag.probeIdleTimeout");
   return {
     enabled: true,
-    maxLag: options.maxLag ?? DEFAULT_MAX_LAG,
-    probeInterval: options.probeInterval === undefined ? DEFAULT_PROBE_MS : options.probeInterval,
-    probeIdleTimeout: options.probeIdleTimeout === undefined ? DEFAULT_PROBE_IDLE_MS : options.probeIdleTimeout,
-    staleMs: options.staleMs ?? DEFAULT_STALE_MS,
-    maxAhead: options.maxAhead ?? DEFAULT_MAX_AHEAD,
+    maxLag,
+    probeInterval,
+    probeIdleTimeout,
+    staleMs,
+    maxAhead,
   };
 }
 
 function resolveHedge(value: boolean | HedgeOptions | undefined): ResolvedHedge {
   if (!value) return { enabled: false, minDelay: 250, multiplier: 2 };
   const options = value === true ? {} : value;
-  return {
-    enabled: true,
-    minDelay: options.minDelay ?? 250,
-    multiplier: options.multiplier ?? 2,
+  const minDelay = options.minDelay ?? 250;
+  const multiplier = options.multiplier ?? 2;
+  assertTimerMs(minDelay, "smart-rpc hedge.minDelay", true);
+  if (!Number.isFinite(multiplier) || multiplier < 0) {
+    throw new Error(`smart-rpc hedge.multiplier must be a finite number, 0 or more, got ${String(multiplier)}.`);
+  }
+  return { enabled: true, minDelay, multiplier };
+}
+
+function assertNonNegative(value: number, where: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${where} must be a finite number, 0 or more, got ${String(value)}.`);
+  }
+}
+
+/** Ignore a non-finite sample and a step backwards. Later finite time still refills budgets and ages heads. */
+function monotonicClock(now: () => number): () => number {
+  let last = 0;
+  let seen = false;
+  return () => {
+    const sample = now();
+    if (!Number.isFinite(sample)) return seen ? last : 0;
+    if (!seen || sample >= last) {
+      last = sample;
+      seen = true;
+    }
+    return last;
   };
+}
+
+function poolFingerprint(options: PoolOptions): string {
+  return stableStringify({
+    endpoints: options.endpoints.map((endpoint) => ({
+      id: endpoint.id ?? null,
+      url: endpoint.url,
+      weight: endpoint.weight ?? 1,
+      rps: endpoint.rps ?? null,
+      burst: endpoint.burst ?? null,
+      pinning: endpoint.pinning !== false,
+      providerGroup: endpoint.providerGroup ?? null,
+      providerBudget: endpoint.providerBudget ?? null,
+      budget: endpoint.budget ?? null,
+      credentials: endpoint.credentials ?? null,
+    })),
+    policy: {
+      chainIds: options.policy.chainIds,
+      probeMethod: options.policy.probeMethod,
+      probeParams: options.policy.probeParams ?? null,
+      identityMethod: options.policy.identityMethod,
+      identityParams: options.policy.identityParams ?? null,
+      expectedIdentity: options.policy.expectedIdentity ?? null,
+      maxUnitsPerSecond: options.policy.maxUnitsPerSecond ?? null,
+      pin: options.policy.pin ?? null,
+      shareId: options.policy.shareId ?? null,
+      blockHashProbe: options.policy.blockHashProbe === true,
+    },
+    retryCount: options.retryCount ?? null,
+    retryDelay: options.retryDelay ?? null,
+    timeout: options.timeout ?? null,
+    perMethod: options.perMethod ?? null,
+    headLag: options.headLag ?? null,
+    hedge: options.hedge ?? null,
+    race: options.race ?? null,
+    routing: options.routing ?? null,
+    breaker: options.breaker ?? null,
+    budget: options.budget ?? null,
+    operationBudget: options.operationBudget ?? null,
+    coalesce: options.coalesce ?? null,
+    cache: options.cache ?? null,
+    verifyIdentity: options.verifyIdentity ?? null,
+    score: options.score ?? null,
+  });
+}
+
+function stableStringify(value: unknown): string {
+  return JSON.stringify(sortFingerprint(value));
+}
+
+function sortFingerprint(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortFingerprint);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(value).sort()) out[key] = sortFingerprint((value as Record<string, unknown>)[key]);
+    return out;
+  }
+  if (typeof value === "number" && !Number.isFinite(value)) return String(value);
+  return value ?? null;
 }
 
 function buildEndpoints(options: PoolOptions): BuiltEndpoint[] {
@@ -1129,7 +1277,7 @@ function raceHedge(
       } else {
         track(started);
       }
-    }, waitMs);
+    }, boundedTimer(waitMs));
     unrefTimer(timer);
     const finish = (result: unknown, loser: Inflight | undefined): void => {
       if (settled) return;
@@ -1159,6 +1307,11 @@ function raceHedge(
   });
 }
 
+function boundedTimer(ms: number): number {
+  if (!Number.isFinite(ms) || ms <= 0) return 0;
+  return ms > MAX_TIMER_MS ? MAX_TIMER_MS : ms;
+}
+
 function delay(ms: number, signal: AbortSignal | undefined): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -1172,14 +1325,14 @@ function delay(ms: number, signal: AbortSignal | undefined): Promise<void> {
     const timer = setTimeout(() => {
       signal?.removeEventListener("abort", onAbort);
       resolve();
-    }, ms);
+    }, boundedTimer(ms));
     signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
 
 function withDeadline<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new TimeoutError(ms)), ms);
+    const timer = setTimeout(() => reject(new TimeoutError(ms)), boundedTimer(ms));
     unrefTimer(timer);
     promise.then(resolve, reject).finally(() => clearTimeout(timer));
   });

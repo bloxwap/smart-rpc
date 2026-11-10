@@ -794,8 +794,9 @@ export interface EvmCachePolicyOptions {
   /** Allow rolling and block-hash log plans. Disable for chains with nonstandard empty-log finality. Default: true. */
   logs?: boolean | undefined;
   /**
-   * Keep confirmed numbered, EIP-1898 hash, transaction, and receipt results until eviction. Enable only for a chain
-   * without reorganizations. Default: false.
+   * Keep finalized-tag results, EIP-1898 hash results, and block-hash logs until eviction.
+   * Numbered state, receipts, and transactions stay fresh: a height can be replaced without repeating its block object.
+   * Default: false.
    */
   immutable?: boolean | undefined;
   /** Return true for `eth_call` targets whose block tag is ignored and whose entries are bounded only by age. */
@@ -833,7 +834,8 @@ export function evmCachePlan(
   if (BY_HASH.has(method)) {
     const key = coalesceKey(method, normalized);
     if (key === undefined) return undefined;
-    const immutable = options.immutable === true || ALWAYS_IMMUTABLE.has(method);
+    // A transaction hash can leave the canonical chain. Only hash-identified block reads are permanent.
+    const immutable = ALWAYS_IMMUTABLE.has(method);
     return { kind: immutable ? "immutable" : "latest", method, key, params: normalized };
   }
   const slot = BLOCK_SLOTS.get(method);
@@ -844,11 +846,13 @@ export function evmCachePlan(
   }
   const tag = readTag(normalized[slot.index], slot.implied);
   if (tag === undefined) return undefined;
-  if (tag === "hash" || tag === "fresh") {
+  if (tag === "hash" || tag === "fresh" || tag === "finalized" || tag === "earliest") {
     const key = coalesceKey(method, normalized);
     if (key === undefined) return undefined;
-    const kind = tag === "hash" && options.immutable ? "immutable" : "latest";
-    return { kind, method, key, params: normalized };
+    // `earliest` stays on its own key. It is not block 0 until a node says so, and a later prune can move it.
+    const immutable =
+      options.immutable === true && (tag === "finalized" || tag === "hash");
+    return { kind: immutable ? "immutable" : "latest", method, key, params: normalized };
   }
   const key = coalesceKey(method, withTag(normalized, slot.index, "latest"));
   if (key === undefined) return undefined;
@@ -865,7 +869,7 @@ export function evmCachePlan(
     block: tag,
     exact,
     guard: slot.state,
-    immutable: options.immutable === true,
+    immutable: false,
   };
 }
 
@@ -883,11 +887,12 @@ export function evmCachePolicy(options: EvmCachePolicyOptions = {}): CachePolicy
 }
 
 /** A finality tag, latest, a block number, EIP-1898 hash, or undefined for a tag that is never cached. */
-function readTag(tag: unknown, implied: boolean): "latest" | "fresh" | "hash" | number | undefined {
+function readTag(tag: unknown, implied: boolean): "latest" | "fresh" | "finalized" | "earliest" | "hash" | number | undefined {
   if (tag === undefined) return implied ? "latest" : undefined;
   if (tag === "latest") return "latest";
-  if (tag === "safe" || tag === "finalized") return "fresh";
-  if (tag === "earliest") return 0;
+  if (tag === "safe") return "fresh";
+  if (tag === "finalized") return "finalized";
+  if (tag === "earliest") return "earliest";
   if (typeof tag === "string") return parseQuantity(tag) ?? undefined;
   if (!isRecord(tag)) return undefined;
   if (typeof tag.blockHash === "string") return "hash";

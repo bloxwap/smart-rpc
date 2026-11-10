@@ -270,7 +270,13 @@ describe("hyperevm configuration", () => {
   });
 
   test("keeps HyperCore precompile calls unpinned while pinning ordinary reads", async () => {
-    const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x3e7" : method === "eth_blockNumber" ? "0x10" : "0x");
+    const mock = mockRpc(({ method }) => {
+      if (method === "eth_chainId") return "0x3e7";
+      if (method === "eth_blockNumber" || method === "eth_getBlockByNumber") {
+        return method === "eth_blockNumber" ? "0x10" : { number: "0x10", hash: `0x${"ab".repeat(32)}`, parentHash: `0x${"cd".repeat(32)}` };
+      }
+      return "0x";
+    });
     const client = hyperevm({
       chainId: 999,
       endpoints: ["https://custom.example/rpc"],
@@ -293,7 +299,7 @@ describe("hyperevm configuration", () => {
     }
   });
 
-  test("uses timed precompile entries and immutable confirmed results through chain policy", async () => {
+  test("keeps precompile calls timed and caches a finalized tag without keeping numbered state forever", async () => {
     let now = 0;
     let head = 100;
     const hash = `0x${"ab".repeat(32)}`;
@@ -301,6 +307,9 @@ describe("hyperevm configuration", () => {
     const mock = mockRpc(({ method }) => {
       if (method === "eth_chainId") return "0x3e7";
       if (method === "eth_blockNumber") return `0x${head.toString(16)}`;
+      if (method === "eth_getBlockByNumber") {
+        return { number: `0x${head.toString(16)}`, hash, parentHash: `0x${"cd".repeat(32)}` };
+      }
       if (method === "eth_getTransactionByHash") return { hash, blockNumber: null };
       return "0x1";
     });
@@ -326,7 +335,11 @@ describe("hyperevm configuration", () => {
       head = 200;
       await client.probe();
       await client.request({ method: "eth_getBalance", params: [hash, "0x10"] });
-      expect(mock.calls.filter((call) => call.method === "eth_getBalance")).toHaveLength(1);
+      expect(mock.calls.filter((call) => call.method === "eth_getBalance" && JSON.stringify(call.params).includes("0x10"))).toHaveLength(2);
+      await client.request({ method: "eth_getBalance", params: [hash, "finalized"] });
+      now = 200_000;
+      await client.request({ method: "eth_getBalance", params: [hash, "finalized"] });
+      expect(mock.calls.filter((call) => call.method === "eth_getBalance" && JSON.stringify(call.params).includes("finalized"))).toHaveLength(1);
 
       await client.request({ method: "eth_getTransactionByHash", params: [hash] });
       await client.request({ method: "eth_getTransactionByHash", params: [hash] });
@@ -372,6 +385,27 @@ describe("hyperevm configuration", () => {
   });
 });
 
+
+describe("official HyperEVM url", () => {
+  test("a trailing slash and different host case keep the official budget and log caps", async () => {
+    const client = hyperevm({
+      chainId: 999,
+      endpoints: ["https://RPC.hyperliquid.xyz/evm/"],
+      headLag: false,
+      verifyIdentity: false,
+      fetchFn: async () => { throw new Error("the capped query must not be sent"); },
+    });
+    try {
+      expect(client.snapshot?.()[0]?.tokens).toBe(3);
+      await expect(client.request({
+        method: "eth_getLogs",
+        params: [{ topics: ["0x1", "0x2", "0x3", "0x4", "0x5"] }],
+      })).rejects.toThrow(/capability|support/i);
+    } finally {
+      client.close?.();
+    }
+  });
+});
 
 describe("hyperevm scoped sharing", () => {
   test("one key remains isolated between mainnet and testnet", async () => {

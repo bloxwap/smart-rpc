@@ -9,6 +9,7 @@
  */
 
 import { DEFAULT_MAX_AHEAD, DEFAULT_MAX_UNITS_PER_SECOND } from "./constants.js";
+import { unitRandom } from "./retry.js";
 import type { EndpointSnapshot } from "./events.js";
 import {
   type MethodStat,
@@ -391,7 +392,7 @@ function copyStat(stat: MethodStat): MethodStat {
 }
 
 function draw(random: () => number, length: number): number {
-  const scaled = Math.floor(random() * length);
+  const scaled = Math.floor(unitRandom(random) * length);
   if (scaled < 0) return 0;
   if (scaled >= length) return length - 1;
   return scaled;

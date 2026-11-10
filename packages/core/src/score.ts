@@ -51,6 +51,44 @@ export interface ScoreConfig {
   queueWeight: number;
 }
 
+const UNIT_INTERVAL: readonly (keyof ScoreConfig)[] = [
+  "latencyMix",
+  "ewmaAlphaUp",
+  "ewmaAlphaDown",
+  "tailAlphaUp",
+  "tailAlphaDown",
+  "errorAlpha",
+  "livenessAlpha",
+];
+
+const NON_NEGATIVE: readonly (keyof ScoreConfig)[] = ["errorWeight", "lagWeight", "priorMs", "queueWeight"];
+
+const POSITIVE: readonly (keyof ScoreConfig)[] = ["confidenceSamples", "methodBlendSamples"];
+
+/** Merge a partial score config over the defaults and reject coefficients that invert a penalty. */
+export function resolveScoreConfig(partial: Partial<ScoreConfig> | undefined): ScoreConfig {
+  const config = { ...defaultScoreConfig, ...partial };
+  for (const name of UNIT_INTERVAL) {
+    const value = config[name];
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
+      throw new Error(`smart-rpc score.${name} must be a finite number from 0 to 1, got ${String(value)}.`);
+    }
+  }
+  for (const name of NON_NEGATIVE) {
+    const value = config[name];
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+      throw new Error(`smart-rpc score.${name} must be a finite number, 0 or more, got ${String(value)}.`);
+    }
+  }
+  for (const name of POSITIVE) {
+    const value = config[name];
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+      throw new Error(`smart-rpc score.${name} must be a finite number above 0, got ${String(value)}.`);
+    }
+  }
+  return config;
+}
+
 export const defaultScoreConfig: ScoreConfig = {
   latencyMix: 0.6,
   ewmaAlphaUp: 0.4,
@@ -74,6 +112,12 @@ export function emptyStat(): MethodStat {
 
 function mix(previous: number, sample: number, alpha: number): number {
   return alpha * sample + (1 - alpha) * previous;
+}
+
+function clamp01(value: number): number {
+  if (!(value > 0)) return 0;
+  if (value > 1) return 1;
+  return value;
 }
 
 /**
@@ -100,7 +144,7 @@ export function observe(
   }
   const tailAlpha = latency > stat.tail ? config.tailAlphaUp : config.tailAlphaDown;
   stat.tail = mix(stat.tail, latency, tailAlpha);
-  stat.error = mix(stat.error, ok ? 0 : 1, config.errorAlpha);
+  stat.error = clamp01(mix(stat.error, ok ? 0 : 1, config.errorAlpha));
   stat.n += 1;
 }
 
@@ -116,7 +160,7 @@ export function observeLiveness(
 ): void {
   if (ok) {
     if (stat.n === 0) return;
-    stat.error = mix(stat.error, 0, config.livenessAlpha);
+    stat.error = clamp01(mix(stat.error, 0, config.livenessAlpha));
     return;
   }
   const penalty = penaltyMs < 0 ? 0 : penaltyMs;
@@ -128,7 +172,7 @@ export function observeLiveness(
   }
   const tailAlpha = penalty > stat.tail ? config.tailAlphaUp : config.tailAlphaDown;
   stat.tail = mix(stat.tail, penalty, tailAlpha);
-  stat.error = mix(stat.error, 1, config.errorAlpha);
+  stat.error = clamp01(mix(stat.error, 1, config.errorAlpha));
 }
 
 /** Estimated service time in milliseconds, pulled toward `priorMs` while the sample count is low. */

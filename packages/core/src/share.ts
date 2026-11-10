@@ -7,24 +7,35 @@ interface Entry {
   pool: RpcPool;
   references: number;
   closed: boolean;
+  fingerprint: string;
 }
 
 /** Create an isolated owner for shared pools and their token buckets. */
 export function createPoolScope(): PoolShareScope {
   const entries = new Map<string, Entry>();
   let budgets: Budgets | undefined;
+  let clock: (() => number) | undefined;
+  let clockReady = false;
   let closed = false;
 
   return {
-    acquire(key, budgetKey, now, build): RpcPool {
+    acquire(key, budgetKey, now, clockIdentity, fingerprint, build): RpcPool {
       if (closed) throw new TransportClosedError();
       if (key.trim() === "") throw new Error("smart-rpc sharing.key must not be empty.");
       if (budgetKey.trim() === "") throw new Error("smart-rpc sharing.budgetKey must not be empty.");
+      if (!clockReady) {
+        clock = clockIdentity;
+        clockReady = true;
+      } else if (clock !== clockIdentity) {
+        throw new Error("smart-rpc sharing scope already uses a different now(). Every acquire in a scope must pass the same clock.");
+      }
       let entry = entries.get(key);
       if (!entry) {
         budgets ??= new Budgets(now);
-        entry = { pool: build(budgets), references: 0, closed: false };
+        entry = { pool: build(budgets), references: 0, closed: false, fingerprint };
         entries.set(key, entry);
+      } else if (entry.fingerprint !== fingerprint) {
+        throw new Error("smart-rpc sharing key is already used by a pool with different endpoints, credentials, or policy.");
       }
       entry.references += 1;
       return lease(entry, () => {
