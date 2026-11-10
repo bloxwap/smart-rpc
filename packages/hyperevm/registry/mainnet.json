@@ -1,7 +1,7 @@
 {
   "version": 1,
   "chainId": 999,
-  "updatedAt": "2026-10-31T16:46:51.848Z",
+  "updatedAt": "2026-11-10T00:15:38.887Z",
   "policy": {
     "windowMs": 2419200000,
     "minObservations": 3,
@@ -13,49 +13,33 @@
   },
   "endpoints": [
     {
-      "url": "https://rpc.hypurrscan.io",
+      "url": "https://hyperliquid-rpc.publicnode.com",
       "eligible": true,
       "weight": 0.15,
       "rank": 1,
       "stats": {
-        "observations": 2,
-        "successes": 2,
+        "observations": 1,
+        "successes": 1,
         "uptime": 1,
-        "latencyMs": 505.4,
-        "tailMs": 586.9,
-        "medianLag": 0.5,
+        "latencyMs": 76,
+        "tailMs": 76,
+        "medianLag": 1,
         "established": false,
         "precompileOk": true
       }
     },
     {
-      "url": "https://rpc.hyperliquid.xyz/evm",
+      "url": "https://rpc.hypurrscan.io",
       "eligible": true,
       "weight": 0.15,
       "rank": 2,
       "stats": {
-        "observations": 2,
-        "successes": 1,
-        "uptime": 0.5,
-        "latencyMs": 181,
-        "tailMs": 238.4,
-        "medianLag": 0.5,
-        "established": false,
-        "precompileOk": true
-      }
-    },
-    {
-      "url": "https://hyperliquid.drpc.org",
-      "eligible": true,
-      "weight": 0.15,
-      "rank": 3,
-      "stats": {
-        "observations": 2,
-        "successes": 1,
-        "uptime": 0.5,
-        "latencyMs": 260.4,
-        "tailMs": 267.3,
-        "medianLag": 0.5,
+        "observations": 3,
+        "successes": 3,
+        "uptime": 1,
+        "latencyMs": 586.9,
+        "tailMs": 853.6,
+        "medianLag": 1,
         "established": false,
         "precompileOk": true
       }
@@ -64,12 +48,12 @@
       "url": "https://hyperliquid-json-rpc.stakely.io",
       "eligible": true,
       "weight": 0.15,
-      "rank": 4,
+      "rank": 3,
       "stats": {
-        "observations": 2,
-        "successes": 2,
+        "observations": 3,
+        "successes": 3,
         "uptime": 1,
-        "latencyMs": 1156.9,
+        "latencyMs": 822.5,
         "tailMs": 1701.4,
         "medianLag": 10,
         "established": false,
@@ -77,19 +61,35 @@
       }
     },
     {
-      "url": "https://hyperliquid-rpc.publicnode.com",
+      "url": "https://hyperliquid.drpc.org",
       "eligible": false,
       "weight": 0,
       "rank": null,
       "stats": {
-        "observations": 0,
-        "successes": 0,
-        "uptime": 0,
-        "latencyMs": null,
-        "tailMs": null,
-        "medianLag": null,
+        "observations": 3,
+        "successes": 1,
+        "uptime": 0.3333,
+        "latencyMs": 267.3,
+        "tailMs": 275.8,
+        "medianLag": 0,
         "established": false,
-        "precompileOk": null
+        "precompileOk": true
+      }
+    },
+    {
+      "url": "https://rpc.hyperliquid.xyz/evm",
+      "eligible": false,
+      "weight": 0,
+      "rank": null,
+      "stats": {
+        "observations": 3,
+        "successes": 1,
+        "uptime": 0.3333,
+        "latencyMs": 176.8,
+        "tailMs": 238.4,
+        "medianLag": 0,
+        "established": false,
+        "precompileOk": true
       }
     }
   ]
