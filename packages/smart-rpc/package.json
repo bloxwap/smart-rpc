@@ -127,7 +127,7 @@
     "@smart-rpc/solana": "workspace:*",
     "tsup": "^8.5.0",
     "typescript": "5.9.3",
-    "vitest": "^3.2.4",
+    "vitest": "^4.1.12",
     "@smart-rpc/bsc": "workspace:*",
     "@smart-rpc/polygon": "workspace:*",
     "@smart-rpc/base": "workspace:*",
@@ -146,6 +146,6 @@
     "@smart-rpc/gnosis": "workspace:*",
     "@smart-rpc/mantle": "workspace:*",
     "@smart-rpc/flare": "workspace:*",
-    "esbuild": "^0.27.7"
+    "esbuild": "^0.28.2"
   }
 }

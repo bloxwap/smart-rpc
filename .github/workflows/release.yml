@@ -4,10 +4,7 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
+permissions: {}
 
 concurrency:
   group: release-${{ github.ref }}
@@ -16,19 +13,27 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment: npm-release
     timeout-minutes: 20
+    permissions:
+      contents: write # version commits, tags, and GitHub releases
+      pull-requests: write # changesets version pull request
+      id-token: write # npm provenance and trusted publishing
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           version: 10.18.2
 
-      - uses: actions/setup-node@v4
+      # No registry-url here. setup-node would write an auth line that
+      # changesets/action treats as already configured, which blocks the
+      # OIDC path when NPM_TOKEN is empty.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-          cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -37,7 +42,7 @@ jobs:
         run: pnpm build
 
       - name: Create release pull request or publish
-        uses: changesets/action@v1
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           publish: pnpm changeset publish
           version: pnpm changeset version
@@ -45,4 +50,11 @@ jobs:
           title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Transitional fallback, same as bloxwap/chart. changesets/action writes
+          # this into ~/.npmrc only when it is non-empty. Delete the secret after
+          # npm Trusted Publisher is configured for @bloxwap/smart-rpc; an empty
+          # token leaves the OIDC trusted-publishing path in place.
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # changesets/cli 2.31 does not forward --provenance. pnpm publish reads
+          # this rc option, which is the same switch as --provenance.
+          NPM_CONFIG_PROVENANCE: "true"
