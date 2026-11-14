@@ -50,7 +50,10 @@ describe("Plasma transport", () => {
       expect(PLASMA_MAINNET.blockTime).toBe(1_000);
       expect(PLASMA_MAINNET_REGISTRY[0].capabilities).toMatchObject({ archive: true, pinning: false, batch: false, subscriptions: false });
       expect(PLASMA_MAINNET_REGISTRY.map(({ provider }) => provider)).toEqual(["Plasma", "Tenderly", "thirdweb"]);
-      expect(PLASMA_MAINNET_ENDPOINTS.some((url) => url.includes("tatum.io"))).toBe(false);
+      expect(PLASMA_MAINNET_ENDPOINTS.some((url) => {
+        const host = new URL(url).hostname;
+        return host === "tatum.io" || host.endsWith(".tatum.io");
+      })).toBe(false);
       expect(client.snapshot()[0]?.tokens).toBeNull();
       expect(mock.calls).toHaveLength(0);
     } finally { client.close(); }

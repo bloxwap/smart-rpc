@@ -20,6 +20,7 @@ import {
   resolveDefaultBudget,
   resolveEndpointBudget,
 } from "./budget.js";
+import { blockCadence } from "./cadence.js";
 import { type CacheStats, ReadCache, resolveCache } from "./cache.js";
 import { Coalescer, coalesceKey, isCoalescableMethod } from "./coalesce.js";
 import {
@@ -54,7 +55,6 @@ import {
   isRateLimitError,
   shouldFailover,
 } from "./evm-methods.js";
-import { blockCadence } from "./cadence.js";
 import { assertTimerMs, Operation } from "./operation.js";
 import { isHeadSensitiveRead, LatestPin, resolvePin } from "./pin.js";
 import { nonNegativeHead } from "./quantity.js";

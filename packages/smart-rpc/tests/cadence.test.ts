@@ -78,10 +78,18 @@ async function leader(chain: (typeof chains)[number], behind: number): Promise<s
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const host = new URL(url).host;
     const body = JSON.parse(String(init?.body)) as { id: number; method: string };
-    const probe = body.method === "eth_blockNumber" || body.method === "getSlot";
-    const value = probe ? (host === "behind.example" ? head - behind : head) : "0x0";
+    // HyperEVM probes with eth_getBlockByNumber("latest", false) so a reorg carries a block hash.
+    const probe = body.method === "eth_blockNumber" || body.method === "eth_getBlockByNumber" || body.method === "getSlot";
+    const height = host === "behind.example" ? head - behind : head;
     if (!probe) reads.push(host);
-    const result = probe && !chain.solana ? `0x${Number(value).toString(16)}` : value;
+    const quantity = `0x${height.toString(16)}`;
+    const result = body.method === "eth_getBlockByNumber"
+      ? { number: quantity, hash: `0x${"11".repeat(32)}`, parentHash: `0x${"22".repeat(32)}` }
+      : probe && !chain.solana
+        ? quantity
+        : probe
+          ? height
+          : "0x0";
     return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result }), { headers: { "content-type": "application/json" } });
   };
   const pool = chain.create({

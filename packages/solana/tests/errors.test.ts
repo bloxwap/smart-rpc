@@ -5,7 +5,15 @@ import { isProviderRestriction, isRateLimitError, type RpcEvent } from "@smart-r
 import { jsonRpcCaller, solana } from "../src/index.js";
 import { isHeadSensitiveSolanaMethod, isSolanaRateLimit } from "../src/methods.js";
 
-const result = (value: unknown): Response => new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: value }));
+/** Echo the id the caller sent. The client rejects a response whose id does not match. */
+function rpcId(init: RequestInit | undefined): number {
+  if (typeof init?.body !== "string") return 1;
+  const body = JSON.parse(init.body) as { id?: unknown };
+  return typeof body.id === "number" ? body.id : 1;
+}
+
+const result = (value: unknown, init?: RequestInit): Response =>
+  new Response(JSON.stringify({ jsonrpc: "2.0", id: rpcId(init), result: value }));
 async function rejection(promise: Promise<unknown>): Promise<Error> {
   try {
     await promise;
@@ -15,8 +23,8 @@ async function rejection(promise: Promise<unknown>): Promise<Error> {
   throw new Error("Expected the call to reject with an Error.");
 }
 
-const failure = (code: number, message: string, status = 200): Response =>
-  new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code, message } }), { status });
+const failure = (code: number, message: string, status = 200, init?: RequestInit): Response =>
+  new Response(JSON.stringify({ jsonrpc: "2.0", id: rpcId(init), error: { code, message } }), { status });
 
 describe("Solana error bodies", () => {
   test("a gateway body without the JSON-RPC envelope keeps its reason in details", async () => {
@@ -33,7 +41,7 @@ describe("Solana error bodies", () => {
     );
     expect(isSolanaRateLimit(limited)).toBe(true);
     const unhealthy = await rejection(
-      jsonRpcCaller("https://rpc.example", async () => failure(-32005, "Node is unhealthy"))({ method: "getSlot" }),
+      jsonRpcCaller("https://rpc.example", async (_input, init) => failure(-32005, "Node is unhealthy", 200, init))({ method: "getSlot" }),
     );
     expect(isRateLimitError(unhealthy)).toBe(true);
     expect(isSolanaRateLimit(unhealthy)).toBe(false);
@@ -59,10 +67,12 @@ describe("Solana pool", () => {
       ...deterministic,
       onEvent: (event) => events.push(event),
       endpoints: ["https://publicnode.example", "https://other.example"],
-      fetchFn: async (input) => {
+      fetchFn: async (input, init) => {
         const host = new URL(String(input)).host;
         seen.push(host);
-        return host === "publicnode.example" ? failure(-32602, "Indexed requests require a personal token") : result({ value: [] });
+        return host === "publicnode.example"
+          ? failure(-32602, "Indexed requests require a personal token", 200, init)
+          : result({ value: [] }, init);
       },
     });
     try {
@@ -80,9 +90,9 @@ describe("Solana pool", () => {
     const client = solana({
       ...deterministic,
       endpoints: ["https://a.example", "https://b.example"],
-      fetchFn: async (input) => {
+      fetchFn: async (input, init) => {
         seen.push(new URL(String(input)).host);
-        return failure(-32602, "Invalid param: WrongSize");
+        return failure(-32602, "Invalid param: WrongSize", 200, init);
       },
     });
     try {
@@ -102,9 +112,9 @@ describe("Solana pool", () => {
         fetchFn: async (input, init) => {
           const host = new URL(String(input)).host;
           const method = (JSON.parse(String(init?.body)) as { method: string }).method;
-          if (method === "getSlot") return result(host === "behind.example" ? 1_000 - behind : 1_000);
+          if (method === "getSlot") return result(host === "behind.example" ? 1_000 - behind : 1_000, init);
           reads.push(host);
-          return result({ value: 1 });
+          return result({ value: 1 }, init);
         },
       });
       try {

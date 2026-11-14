@@ -32,6 +32,9 @@ describe("provider restrictions fail over without counting against the endpoint"
     ["thirdweb -32005 log size", rpcError(-32005, "Log response size exceeded. Maximum allowed number of requested blocks is 112")],
     ["dRPC free-plan range", rpcError(35, "ranges over 10000 blocks are not supported on free plan")],
     ["block range limit", rpcError(-32000, "block range is too wide, maximum is 1000")],
+    ["more than logs", rpcError(-32602, "more than 20,000 logs")],
+    ["narrow the query", rpcError(-32602, "please narrow the query")],
+    ["maximum block range", rpcError(-32000, "maximum block range is 1000")],
   ])("%s", (_name, error) => {
     expect(classifyRpcError(error)).toBe("restriction");
     expect(isProviderRestriction(error)).toBe(true);
@@ -63,6 +66,11 @@ describe("rate limits", () => {
     ["HyperEVM official", rpcError(-32000, "Request exceeds defined limit")],
     ["QuickNode", rpcError(-32007, "15/second request limit reached - reduce calls per second or upgrade your account")],
     ["requests per second", rpcError(-32000, "you are limited to 10 requests per second")],
+    ["numeric rps", rpcError(-32000, "15 rps")],
+    ["req/s", rpcError(-32000, "allowed 3 req/s")],
+    ["throttle wording", rpcError(-32000, "Request throttled")],
+    ["compute units", rpcError(-32000, "compute units exceeded")],
+    ["exceeded your quota", rpcError(-32000, "exceeded your quota")],
   ])("%s", (_name, error) => {
     expect(classifyRpcError(error)).toBe("rate-limit");
     expect(isRateLimitError(error)).toBe(true);
@@ -78,6 +86,15 @@ describe("rate limits", () => {
     const abort = new Error("aborted");
     abort.name = "AbortError";
     expect(classifyRpcError(abort)).toBe("abort");
+  });
+
+  test("a long provider message does not polynomial-match into a rate limit or a span limit", () => {
+    const digits = "9".repeat(200_000);
+    const zeros = "0".repeat(200_000);
+    expect(classifyRpcError(new Error(digits))).toBe("failure");
+    expect(classifyRpcError(new Error(`max${zeros}`))).toBe("failure");
+    expect(classifyRpcError(new Error(`15 rps ${digits}`))).toBe("rate-limit");
+    expect(classifyRpcError(new Error(`maximum ${"0".repeat(4_000)} block range`))).toBe("restriction");
   });
 });
 

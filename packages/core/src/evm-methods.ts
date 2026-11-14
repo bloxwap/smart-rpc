@@ -82,13 +82,6 @@ const REJECTED_TRANSACTION_MESSAGE =
 const ALREADY_KNOWN_MESSAGE = /duplicate transaction hash|already known|\bknown transaction|already imported|already in (?:the )?(?:mem)?pool/i;
 
 /**
- * Provider limits on a request's span or size. Nodes report them as invalid params (`-32602`), as server errors,
- * as `-32005`, even with HTTP 429. Another endpoint may have a larger limit, so these fail over.
- */
-const SPAN_LIMIT_MESSAGE =
-  /(?:max(?:imum)?|exceed\w*|too (?:large|wide|big|many)|limit\w*)[^.\n]*block range|block range[^.\n]*(?:too|exceed\w*|limit\w*|max)|ranges? over \d|too many (?:results|logs|blocks)|more than \d[\d,]* (?:results|logs|blocks)|exceeds? max(?:imum)? results|retry with the range|response size|size (?:limit|exceeded)|deliverable ceiling|narrow the query|reduce the block range|limited to \d[\d,]* blocks|requested blocks/i;
-
-/**
  * Generic limit wording. A restriction under any code except a rate-limit one: `-32005 limit exceeded` is the
  * EIP-1474 rate-limit error.
  */
@@ -101,13 +94,6 @@ const GENERIC_LIMIT_MESSAGE = /limit exceeded|limited to|query timeout|query tim
  */
 const PROVIDER_RESTRICTION_MESSAGE =
   /personal token|requires? an? (?:api )?(?:key|token)\b|request blocked|(?:not served|will not serve)[^.\n]*endpoint|this endpoint will not|specify an address|missing required field '?address'? for log filter|requires? an? \w+ filter|paid (?:plan|tier)s? only|not (?:available|supported) on (?:the )?(?:free|public) (?:plan|tier)|upgrade your (?:plan|account)/i;
-
-/**
- * Explicit rate-limit wording. It wins over the limit patterns: "limited to 10 requests per second" is a rate
- * limit, "limited to 1000 blocks" is a request-shape limit.
- */
-const RATE_LIMIT_MESSAGE =
-  /rate[- ]?limit|too many requests|requests? per (?:second|sec|minute|min)\b|\d+\s*(?:rps|req\/s)\b|request limit reached|exceeds defined limit|throttl|(?:quota|capacity|compute units?|credits?) (?:exceeded|exhausted|reached)|exceeded (?:the |your )?(?:quota|capacity|request limit|compute)/i;
 
 /** Codes that report a request rate, not the call: HTTP 429 and EIP-1474 "limit exceeded". */
 const RATE_LIMIT_CODES: ReadonlySet<number> = new Set([429, -32005]);
@@ -142,21 +128,28 @@ export function isIdempotentMethod(method: string, extra: readonly string[] = []
 /**
  * Every human-readable part of an error and its causes: the message, viem's `details`, and JSON-RPC `data` (Pocket
  * puts the reason for a declined request there). viem's `shortMessage` stands in for `message` when present, so
- * the request body viem prints into `message` is never matched.
+ * the request body viem prints into `message` is never matched. Each part is capped: a provider controls this
+ * text, and classification only needs the reason.
  */
+const ERROR_TEXT_LIMIT = 8_000;
+
 function errorText(error: Error): string {
   const parts: string[] = [];
   let current: unknown = error;
   for (let depth = 0; depth < 4 && typeof current === "object" && current !== null; depth += 1) {
     const record = current as { message?: unknown; shortMessage?: unknown; details?: unknown; data?: unknown; cause?: unknown };
     const head = typeof record.shortMessage === "string" ? record.shortMessage : record.message;
-    if (typeof head === "string") parts.push(head);
-    if (typeof record.details === "string") parts.push(record.details);
-    if (typeof record.data === "string") parts.push(record.data);
+    if (typeof head === "string") parts.push(clip(head));
+    if (typeof record.details === "string") parts.push(clip(record.details));
+    if (typeof record.data === "string") parts.push(clip(record.data));
     else if (typeof record.data === "object" && record.data !== null) parts.push(jsonText(record.data));
     current = record.cause;
   }
   return parts.join("\n");
+}
+
+function clip(value: string): string {
+  return value.length > ERROR_TEXT_LIMIT ? value.slice(0, ERROR_TEXT_LIMIT) : value;
 }
 
 function jsonText(value: object): string {
@@ -194,9 +187,9 @@ export function classifyRpcError(error: Error): RpcErrorClass {
   if (isAbortError(error)) return "abort";
   const text = errorText(error);
   if (TERMINAL_MESSAGE.test(text) || REJECTED_TRANSACTION_MESSAGE.test(text)) return "terminal";
-  if (RATE_LIMIT_MESSAGE.test(text)) return "rate-limit";
+  if (hasRateLimitWording(text)) return "rate-limit";
   if (BLOCK_NOT_HELD_MESSAGE.test(text)) return "not-held";
-  if (PROVIDER_RESTRICTION_MESSAGE.test(text) || SPAN_LIMIT_MESSAGE.test(text)) return "restriction";
+  if (PROVIDER_RESTRICTION_MESSAGE.test(text) || hasSpanLimitWording(text)) return "restriction";
   const code = errorCode(error);
   if (errorStatus(error) === 429 || (code !== undefined && RATE_LIMIT_CODES.has(code))) return "rate-limit";
   if (GENERIC_LIMIT_MESSAGE.test(text)) return "restriction";
@@ -243,5 +236,257 @@ export function isBlockNotHeldError(error: Error): boolean {
 export function shouldFailover(error: Error): boolean {
   const kind = classifyRpcError(error);
   return kind !== "abort" && kind !== "terminal";
+}
+
+/**
+ * Rate-limit phrases. Matched by scanning, not a regular expression: the text comes from the endpoint, and the
+ * old pattern (`\d+` before a unit that is not there) retried every split of a long digit run.
+ *
+ * Same phrases as before, case-insensitive: `rate limit` / `rate-limit` / `ratelimit`, `too many requests`,
+ * `request(s) per second|sec|minute|min`, a number then `rps` or `req/s`, `request limit reached`,
+ * `exceeds defined limit`, `throttl…`, and quota / capacity / compute-unit / credit wording.
+ */
+function hasRateLimitWording(text: string): boolean {
+  const lower = text.toLowerCase();
+  if (
+    lower.includes("ratelimit") || lower.includes("rate-limit") || lower.includes("rate limit") ||
+    lower.includes("too many requests") || lower.includes("request limit reached") ||
+    lower.includes("exceeds defined limit") || lower.includes("throttl")
+  ) return true;
+  return hasRequestsPer(lower) || hasRateFigure(lower) || hasQuotaClause(lower) || hasExceededQuota(lower);
+}
+
+/** `requests? per (second|sec|minute|min)` with a word boundary after the unit. */
+function hasRequestsPer(lower: string): boolean {
+  let from = 0;
+  while (from < lower.length) {
+    const at = lower.indexOf("request", from);
+    if (at < 0) return false;
+    let index = at + "request".length;
+    if (lower.charCodeAt(index) === 115) index += 1; // "requests"
+    if (lower.startsWith(" per ", index)) {
+      index += " per ".length;
+      for (const unit of ["second", "minute", "sec", "min"]) {
+        if (lower.startsWith(unit, index) && wordBoundary(lower, index + unit.length)) return true;
+      }
+    }
+    from = at + 1;
+  }
+  return false;
+}
+
+/** `\d+\s*(?:rps|req/s)\b`. */
+function hasRateFigure(lower: string): boolean {
+  return unitAfterDigits(lower, "rps") || unitAfterDigits(lower, "req/s");
+}
+
+function unitAfterDigits(text: string, unit: string): boolean {
+  let from = 0;
+  while (from < text.length) {
+    const at = text.indexOf(unit, from);
+    if (at < 0) return false;
+    if (wordBoundary(text, at + unit.length)) {
+      let index = at - 1;
+      while (index >= 0 && isSpace(text.charCodeAt(index))) index -= 1;
+      if (index >= 0 && isDigit(text.charCodeAt(index))) return true;
+    }
+    from = at + 1;
+  }
+  return false;
+}
+
+const QUOTA_SUBJECTS = ["compute units", "compute unit", "credits", "credit", "capacity", "quota"] as const;
+const QUOTA_STATES = ["exceeded", "exhausted", "reached"] as const;
+
+/** `quota|capacity|compute units?|credits?` followed by one space and `exceeded|exhausted|reached`. */
+function hasQuotaClause(lower: string): boolean {
+  for (const subject of QUOTA_SUBJECTS) {
+    let from = 0;
+    while (from < lower.length) {
+      const at = lower.indexOf(subject, from);
+      if (at < 0) break;
+      const tail = at + subject.length;
+      if (lower.charCodeAt(tail) === 32) {
+        for (const state of QUOTA_STATES) {
+          if (lower.startsWith(state, tail + 1)) return true;
+        }
+      }
+      from = at + 1;
+    }
+  }
+  return false;
+}
+
+/** `exceeded` then an optional `the` or `your`, then `quota|capacity|request limit|compute`. */
+function hasExceededQuota(lower: string): boolean {
+  let from = 0;
+  while (from < lower.length) {
+    const at = lower.indexOf("exceeded", from);
+    if (at < 0) return false;
+    let index = at + "exceeded".length;
+    if (lower.startsWith(" the ", index)) index += " the ".length;
+    else if (lower.startsWith(" your ", index)) index += " your ".length;
+    else if (lower.charCodeAt(index) === 32) index += 1;
+    else {
+      from = at + 1;
+      continue;
+    }
+    if (
+      lower.startsWith("quota", index) || lower.startsWith("capacity", index) ||
+      lower.startsWith("request limit", index) || lower.startsWith("compute", index)
+    ) return true;
+    from = at + 1;
+  }
+  return false;
+}
+
+/**
+ * Span and size limits. Same phrases as the previous regular expression, scanned in linear time: that pattern
+ * put an open-ended run (`[^.\n]*`, `\d+`, `\w*`) in front of a literal, so a long string of zeros after `max`
+ * made the matcher try every split.
+ */
+function hasSpanLimitWording(text: string): boolean {
+  const lower = text.toLowerCase();
+  if (
+    lower.includes("retry with the range") || lower.includes("response size") || lower.includes("size limit") ||
+    lower.includes("size exceeded") || lower.includes("deliverable ceiling") || lower.includes("narrow the query") ||
+    lower.includes("reduce the block range") || lower.includes("requested blocks") || lower.includes("too many results") ||
+    lower.includes("too many logs") || lower.includes("too many blocks")
+  ) return true;
+  return hasBlockRangeLimit(lower) || hasRangeOver(lower) || hasMoreThanCount(lower) ||
+    hasExceedMaxResults(lower) || hasLimitedToBlocks(lower);
+}
+
+/** A limit word and `block range` in the same sentence (no `.` or newline between them), in either order. */
+function hasBlockRangeLimit(lower: string): boolean {
+  let from = 0;
+  while (from < lower.length) {
+    const at = lower.indexOf("block range", from);
+    if (at < 0) return false;
+    const start = boundaryBefore(lower, at);
+    const end = boundaryAfter(lower, at + "block range".length);
+    const before = lower.slice(start, at);
+    const after = lower.slice(at + "block range".length, end);
+    if (
+      before.includes("max") || before.includes("exceed") || before.includes("limit") || hasTooSize(before) ||
+      after.includes("too") || after.includes("exceed") || after.includes("limit") || after.includes("max")
+    ) return true;
+    from = at + 1;
+  }
+  return false;
+}
+
+function hasTooSize(text: string): boolean {
+  return text.includes("too large") || text.includes("too wide") || text.includes("too big") || text.includes("too many");
+}
+
+/** `range over <digit>` or `ranges over <digit>`. */
+function hasRangeOver(lower: string): boolean {
+  let from = 0;
+  while (from < lower.length) {
+    const at = lower.indexOf("range", from);
+    if (at < 0) return false;
+    let index = at + "range".length;
+    if (lower.charCodeAt(index) === 115) index += 1;
+    if (lower.startsWith(" over ", index) && isDigit(lower.charCodeAt(index + " over ".length))) return true;
+    from = at + 1;
+  }
+  return false;
+}
+
+/** `more than <digits-or-commas> results|logs|blocks`. */
+function hasMoreThanCount(lower: string): boolean {
+  return countThenNoun(lower, "more than ");
+}
+
+/** `limited to <digits-or-commas> blocks`. */
+function hasLimitedToBlocks(lower: string): boolean {
+  let from = 0;
+  while (from < lower.length) {
+    const at = lower.indexOf("limited to ", from);
+    if (at < 0) return false;
+    const noun = skipNumber(lower, at + "limited to ".length);
+    if (noun !== undefined && lower.startsWith(" blocks", noun)) return true;
+    from = at + 1;
+  }
+  return false;
+}
+
+function countThenNoun(lower: string, prefix: string): boolean {
+  let from = 0;
+  while (from < lower.length) {
+    const at = lower.indexOf(prefix, from);
+    if (at < 0) return false;
+    const noun = skipNumber(lower, at + prefix.length);
+    if (
+      noun !== undefined && lower.charCodeAt(noun) === 32 && (
+        lower.startsWith("results", noun + 1) || lower.startsWith("logs", noun + 1) || lower.startsWith("blocks", noun + 1)
+      )
+    ) return true;
+    from = at + 1;
+  }
+  return false;
+}
+
+/** Index just after a number (`\d[\d,]*`), or undefined when the index is not a digit. */
+function skipNumber(text: string, index: number): number | undefined {
+  if (!isDigit(text.charCodeAt(index))) return undefined;
+  let cursor = index + 1;
+  while (cursor < text.length && (isDigit(text.charCodeAt(cursor)) || text.charCodeAt(cursor) === 44)) cursor += 1;
+  return cursor;
+}
+
+/** `exceed(s) max(imum) results`. */
+function hasExceedMaxResults(lower: string): boolean {
+  let from = 0;
+  while (from < lower.length) {
+    const at = lower.indexOf("exceed", from);
+    if (at < 0) return false;
+    let index = at + "exceed".length;
+    if (lower.charCodeAt(index) === 115) index += 1;
+    if (lower.startsWith(" max", index)) {
+      index += " max".length;
+      if (lower.startsWith("imum", index)) index += "imum".length;
+      if (lower.startsWith(" results", index)) return true;
+    }
+    from = at + 1;
+  }
+  return false;
+}
+
+function boundaryBefore(text: string, index: number): number {
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    const code = text.charCodeAt(cursor);
+    if (code === 46 || code === 10) return cursor + 1;
+  }
+  return 0;
+}
+
+function boundaryAfter(text: string, index: number): number {
+  for (let cursor = index; cursor < text.length; cursor += 1) {
+    const code = text.charCodeAt(cursor);
+    if (code === 46 || code === 10) return cursor;
+  }
+  return text.length;
+}
+
+function wordBoundary(text: string, index: number): boolean {
+  return index >= text.length || !isWord(text.charCodeAt(index));
+}
+
+function isDigit(code: number): boolean {
+  return code >= 48 && code <= 57;
+}
+
+function isWord(code: number): boolean {
+  return isDigit(code) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95;
+}
+
+/** JavaScript `\s` without the unicode flag. */
+function isSpace(code: number): boolean {
+  return code === 9 || code === 10 || code === 11 || code === 12 || code === 13 || code === 32 ||
+    code === 0x00a0 || code === 0x1680 || (code >= 0x2000 && code <= 0x200a) ||
+    code === 0x2028 || code === 0x2029 || code === 0x202f || code === 0x205f ||
+    code === 0x3000 || code === 0xfeff;
 }
 

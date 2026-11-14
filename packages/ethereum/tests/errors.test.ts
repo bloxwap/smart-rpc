@@ -28,7 +28,7 @@ describe("provider error bodies", () => {
     const events: RpcEvent[] = [];
     const { fetchFn, calls } = wire((url, method) => {
       if (method === "eth_chainId") return "0x1";
-      if (url.startsWith("https://sentio.example")) {
+      if (new URL(url).hostname === "sentio.example") {
         return new Response(JSON.stringify({ code: 8, message: "public eth_getLogs is limited to 1000 blocks" }), {
           status: 429, headers: { "content-type": contentType, "content-length": "77" },
         });
@@ -57,7 +57,7 @@ describe("provider error bodies", () => {
     const events: RpcEvent[] = [];
     const { fetchFn } = wire((url, method) => {
       if (method === "eth_chainId") return "0x1";
-      if (url.startsWith("https://busy.example")) {
+      if (new URL(url).hostname === "busy.example") {
         return new Response(JSON.stringify({ message: "You reached Public endpoint rate limit" }), {
           status: 429, headers: { "content-type": "application/json", "retry-after": "7" },
         });
@@ -88,7 +88,7 @@ describe("blockTimeMs", () => {
       const reads: string[] = [];
       const { fetchFn } = wire((url, method) => {
         if (method === "eth_chainId") return "0x1";
-        if (method === "eth_blockNumber") return url.startsWith("https://behind.example") ? "0x60" : "0x64";
+        if (method === "eth_blockNumber") return new URL(url).hostname === "behind.example" ? "0x60" : "0x64";
         if (method === "eth_getBalance") reads.push(new URL(url).host);
         return "0x0";
       });
