@@ -118,7 +118,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "viem": "^2.38.0"
+    "viem": "^2.57.20"
   },
   "devDependencies": {
     "@smart-rpc/core": "workspace:*",
