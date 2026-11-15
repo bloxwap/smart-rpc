@@ -1,0 +1,5 @@
+# Findings reviewed and accepted. Format: commit:file:rule:line (gitleaks fingerprint).
+
+# Public Celo USDC adapter contract address used as an eth_call target in a test fixture.
+# It is an on-chain address, not a credential.
+a5c4630b2b77292633aadc49d20f89cc6a09d58e:packages/celo/tests/transport.test.ts:generic-api-key:42

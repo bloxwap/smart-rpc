@@ -84,9 +84,44 @@ const ALREADY_KNOWN_MESSAGE = /duplicate transaction hash|already known|\bknown 
 /**
  * Provider limits that some nodes report as invalid params (`-32602`).
  * Another endpoint may have a larger limit, so these fail over.
+ *
+ * Error text comes from the remote endpoint, so every pattern here must match in linear time.
+ * None of them pairs an unbounded gap with a later literal; the block-range wording that
+ * needs a gap is handled by {@link isBlockRangeLimit}.
  */
 const PROVIDER_LIMIT_MESSAGE =
-  /(?:max(?:imum)?|exceed\w*|too (?:large|wide|big|many)|limit\w*)[^.\n]*block range|block range[^.\n]*(?:too|exceed\w*|limit\w*|max)|ranges? over \d|too many (?:results|logs|blocks)|more than \d[\d,]* (?:results|logs|blocks)|response size|size (?:limit|exceeded)|limit exceeded|limited to|query timeout|query timed out/i;
+  /ranges? over \d|too many (?:results|logs|blocks)|more than \d[\d,]* (?:results|logs|blocks)|response size|size (?:limit|exceeded)|limit exceeded|limited to|query timeout|query timed out/i;
+
+const BLOCK_RANGE = "block range";
+/** A limit word before "block range" in the same sentence, as in "exceeds max block range". */
+const LIMIT_BEFORE_RANGE = /max|exceed|too (?:large|wide|big|many)|limit/;
+/** A limit word after "block range" in the same sentence, as in "block range is too wide". */
+const LIMIT_AFTER_RANGE = /too|exceed|limit|max/;
+
+/**
+ * True when one sentence names both "block range" and a limit. Each sentence is scanned a
+ * constant number of times, so a hostile error message cannot make this quadratic.
+ */
+function isBlockRangeLimit(text: string): boolean {
+  const lower = text.toLowerCase();
+  let from = 0;
+  while (from <= lower.length) {
+    let to = from;
+    while (to < lower.length && lower[to] !== "." && lower[to] !== "\n") to += 1;
+    const sentence = lower.slice(from, to);
+    const first = sentence.indexOf(BLOCK_RANGE);
+    if (first !== -1) {
+      if (LIMIT_AFTER_RANGE.test(sentence.slice(first + BLOCK_RANGE.length))) return true;
+      if (LIMIT_BEFORE_RANGE.test(sentence.slice(0, sentence.lastIndexOf(BLOCK_RANGE)))) return true;
+    }
+    from = to + 1;
+  }
+  return false;
+}
+
+function isProviderLimit(text: string): boolean {
+  return PROVIDER_LIMIT_MESSAGE.test(text) || isBlockRangeLimit(text);
+}
 
 /**
  * A node that has not reached the block a call names. Another endpoint may hold it.
@@ -143,7 +178,7 @@ export function shouldFailover(error: Error): boolean {
   if (REJECTED_TRANSACTION_MESSAGE.test(text)) return false;
   if (BLOCK_NOT_HELD_MESSAGE.test(text)) return true;
   const code = errorCode(error);
-  if (code === INVALID_PARAMS_CODE && PROVIDER_LIMIT_MESSAGE.test(text)) return true;
+  if (code === INVALID_PARAMS_CODE && isProviderLimit(text)) return true;
   if (code !== undefined && TERMINAL_CODES.has(code)) return false;
   return true;
 }
