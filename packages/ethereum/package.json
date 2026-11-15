@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@smart-rpc/core": "workspace:*",
-    "viem": "^2.38.0"
+    "viem": "^2.57.20"
   },
   "devDependencies": {
     "tsup": "^8.5.0",
