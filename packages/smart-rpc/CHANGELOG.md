@@ -1,5 +1,11 @@
 # @bloxwap/smart-rpc
 
+## 0.2.1
+
+### Patch Changes
+
+- e4cd714: Publish with npm trusted publishing (OIDC) and provenance instead of an automation token.
+
 ## 0.2.0
 
 ### Minor Changes
