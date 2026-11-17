@@ -30,10 +30,14 @@ jobs:
 
       # No registry-url here. setup-node would write an auth line that
       # changesets/action treats as already configured, which blocks the
-      # OIDC path when NPM_TOKEN is empty.
+      # OIDC trusted-publishing path.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
+
+      # npm trusted publishing requires npm 11.5.1 or newer on the runner.
+      - name: Use npm 11.6.1
+        run: npm install --global npm@11.6.1
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -50,11 +54,9 @@ jobs:
           title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Transitional fallback, same as bloxwap/chart. changesets/action writes
-          # this into ~/.npmrc only when it is non-empty. Delete the secret after
-          # npm Trusted Publisher is configured for @bloxwap/smart-rpc; an empty
-          # token leaves the OIDC trusted-publishing path in place.
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Do not pass NPM_TOKEN or NODE_AUTH_TOKEN. changesets/action writes a
+          # token into ~/.npmrc when either is set, which skips OIDC trusted
+          # publishing. npm 11.6.1 plus id-token: write is the publish path.
           # changesets/cli 2.31 does not forward --provenance. pnpm publish reads
           # this rc option, which is the same switch as --provenance.
           NPM_CONFIG_PROVENANCE: "true"
