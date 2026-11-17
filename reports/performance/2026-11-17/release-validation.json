@@ -1,0 +1,30 @@
+{
+  "sourceCommit": "5739168b7f478a111debab22e7802caf11a352f6",
+  "plannedVersion": "0.3.0",
+  "validation": {
+    "unitTestsPassed": 1353,
+    "liveTestsSkipped": 131,
+    "auditToolTestsPassed": 9,
+    "coverage": {
+      "statements": "4454/4454",
+      "branches": "3938/3938",
+      "functions": "787/787",
+      "lines": "3682/3682"
+    },
+    "typecheck": "47 tasks passed",
+    "build": "passed",
+    "docsCheck": "passed",
+    "docsBuild": "passed",
+    "liveEndpoints": {
+      "passed": 105,
+      "failed": 0,
+      "networks": 25,
+      "samplesPerReadMethod": 3
+    }
+  },
+  "notes": [
+    "Release integration includes PR 63 and the complete rebased routing audit from PR 35.",
+    "Live endpoint measurements are single-location observations, not an uptime or global latency guarantee.",
+    "Historical pre-integration benchmark results remain unchanged; release endpoint results are recorded separately."
+  ]
+}
