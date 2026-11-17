@@ -1,0 +1,29 @@
+{
+  "protocol": "polygon",
+  "url": "https://api.zan.top/polygon-mainnet",
+  "scope": "summary of independent retest, 10000 ms request deadline",
+  "checks": [
+    {
+      "method": "eth_chainId",
+      "status": "passed",
+      "durationMs": 881
+    },
+    {
+      "method": "eth_blockNumber",
+      "status": "passed",
+      "durationMs": 199
+    },
+    {
+      "method": "eth_getBalance",
+      "status": "passed",
+      "durationMs": 200
+    },
+    {
+      "method": "eth_call",
+      "status": "failed",
+      "category": "access_denied",
+      "httpStatus": 403,
+      "durationMs": 193
+    }
+  ]
+}

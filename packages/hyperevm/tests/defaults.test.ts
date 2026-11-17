@@ -20,6 +20,13 @@ interface Call {
   params: unknown[];
 }
 
+// Ask the pool for its current startup preference instead of assuming a weight or registry order.
+function coldPrimary(chainId: 999 | 998): string {
+  const pool = hyperevm({ chainId, headLag: false });
+  try { return pool.snapshot().slice().sort((a, b) => a.score - b.score)[0]!.url; }
+  finally { pool.close(); }
+}
+
 function mockRpc(answer: (call: Call) => unknown | Response): {
   calls: Call[];
   fetchFn: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
@@ -43,6 +50,37 @@ function mockRpc(answer: (call: Call) => unknown | Response): {
 }
 
 describe("hyperevm public defaults", () => {
+  test("a fresh default pool starts with the first eligible registry entry and verifies it", async () => {
+    const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x3e7" : "0x10");
+    const client = hyperevm({ chainId: 999, fetchFn: mock.fetchFn, headLag: false, race: false, cache: false });
+    try {
+      expect(mock.calls).toEqual([]);
+      await client.request({ method: "eth_getBalance", params: ["0x1", "latest"] });
+      const first = HYPEREVM_MAINNET_REGISTRY.find((entry) => entry.eligible && entry.weight > 0)!;
+      expect(mock.calls.map(({ url, method }) => [url, method])).toEqual([
+        [new URL(first.url).href, "eth_chainId"], [new URL(first.url).href, "eth_getBalance"],
+      ]);
+      expect(client.endpoints.map(({ weight }) => weight)).toEqual(
+        HYPEREVM_MAINNET_REGISTRY.filter((entry) => entry.eligible && entry.weight > 0).map(({ weight }) => weight),
+      );
+    } finally { client.close(); }
+  });
+
+  test.each([
+    { coldStart: undefined, expected: "https://heavy.example/" },
+    { coldStart: "ordered" as const, expected: "https://first.example/" },
+  ])("explicit endpoint weights remain authoritative unless coldStart is $coldStart", async ({ coldStart, expected }) => {
+    const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0x3e7" : "0x10");
+    const client = hyperevm({
+      chainId: 999, coldStart, fetchFn: mock.fetchFn, headLag: false, race: false, cache: false, routing: "best",
+      endpoints: [{ url: "https://first.example", weight: 0.1 }, { url: "https://heavy.example", weight: 1 }],
+    });
+    try {
+      await client.request({ method: "eth_getBalance", params: ["0x1", "latest"] });
+      expect(mock.calls[0]?.url).toBe(expected);
+    } finally { client.close(); }
+  });
+
   test("loads separate source-backed mainnet and testnet pools without making requests", () => {
     const mock = mockRpc(() => "0x1");
     const client = hyperevm({ fetchFn: mock.fetchFn, headLag: { probeInterval: false } });
@@ -76,8 +114,8 @@ describe("hyperevm public defaults", () => {
   });
 
   test.each([
-    { chainId: 999 as const, primary: HYPEREVM_MAINNET_ENDPOINTS[0]!, identity: "0x3e7" },
-    { chainId: 998 as const, primary: HYPEREVM_TESTNET_ENDPOINTS[0]!, identity: "0x3e6" },
+    { chainId: 999 as const, primary: coldPrimary(999), identity: "0x3e7" },
+    { chainId: 998 as const, primary: coldPrimary(998), identity: "0x3e6" },
   ])("fails over a default RPC's rate limit on chain $chainId and verifies its replacement", async ({ chainId, primary, identity }) => {
     const events: RpcEvent[] = [];
     const mock = mockRpc(({ url, method }) => {
@@ -103,7 +141,11 @@ describe("hyperevm public defaults", () => {
       expect(reads[0]?.url).toBe(new URL(primary).href);
       expect(reads[1]?.url).not.toBe(new URL(primary).href);
       expect(mock.calls.some((call) => call.url === reads[1]?.url && call.method === "eth_chainId")).toBe(true);
-      expect(client.snapshot?.().find((row) => new URL(row.url).href === new URL(primary).href)?.ejected).toBe(true);
+      // Rate limited is not unhealthy: the endpoint cools down for its Retry-After instead of being ejected.
+      const limited = client.snapshot?.().find((row) => new URL(row.url).href === new URL(primary).href);
+      expect(limited?.ejected).toBe(false);
+      expect(limited?.throttledMs).toBeGreaterThan(4_000);
+      expect(events).toContainEqual(expect.objectContaining({ type: "throttle", endpoint: primary, cooldownMs: 5_000 }));
       expect(events).toContainEqual(expect.objectContaining({ type: "failover", from: primary }));
     } finally {
       client.close?.();
@@ -111,7 +153,7 @@ describe("hyperevm public defaults", () => {
   });
 
   test("quarantines a wrong-network default before sending it a user read", async () => {
-    const primary = HYPEREVM_MAINNET_ENDPOINTS[0]!;
+    const primary = coldPrimary(999);
     const mock = mockRpc(({ url, method }) => {
       if (method === "eth_chainId") return new URL(url).href === new URL(primary).href ? "0x3e6" : "0x3e7";
       return "0x10";

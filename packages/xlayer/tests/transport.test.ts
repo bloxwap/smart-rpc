@@ -95,7 +95,7 @@ describe("X Layer defaults", () => {
     { method: "debug_traceTransaction", params: ["0xabc"] },
     { method: "trace_block", params: ["latest"] },
     { method: "eth_getBalance", params: ["0x0000000000000000000000000000000000000001", "finalized"] },
-    { method: "eth_getBalance", params: ["0x0000000000000000000000000000000000000001", "0x1"] },
+    { method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x65" }] },
     { method: "eth_subscribe", params: ["newHeads"] },
     { method: "xlayer_undocumentedMethod", params: [] },
   ])("rejects unconfigured public capability $method without a network call", async ({ method, params }) => {
@@ -105,6 +105,17 @@ describe("X Layer defaults", () => {
       await expect(client.request({ method, params })).rejects.toThrow();
       expect(mock.calls).toEqual([]);
       expect(client.snapshot().every(({ ejected }) => !ejected)).toBe(true);
+    } finally { client.close(); }
+  });
+
+  test("routes probe-verified historical state to official URLs without a pinning rewrite", async () => {
+    const mock = mockRpc();
+    const client = xlayer({ endpoints: XLAYER_OFFICIAL_ENDPOINTS, fetchFn: mock.fetchFn, headLag: noTimer, budget: false, race: false });
+    try {
+      await client.request({ method: "eth_getBalance", params: ["0x0000000000000000000000000000000000000001", "0x1"] });
+      await client.request({ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x64" }] });
+      expect(mock.calls.find(({ method }) => method === "eth_getBalance")?.params[1]).toBe("0x1");
+      expect(XLAYER_MAINNET_REGISTRY.every(({ capabilities }) => capabilities?.maxLogBlockRange !== undefined)).toBe(true);
     } finally { client.close(); }
   });
 

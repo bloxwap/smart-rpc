@@ -5,13 +5,13 @@ import { isMainThread, parentPort, Worker, workerData } from "node:worker_thread
 import { evmCachePlan, evmCachePolicy, LogIndex, planLogQuery, ReadCache, resolveCache } from "../src/index.ts";
 import type { RollingLogQueryPlan } from "../src/index.ts";
 
-const HELP = `Usage: pnpm benchmark:core [--scenario cache|logs|plan] [--threads 1,2,4] [options]
+const HELP = `Usage: pnpm benchmark:core [--scenario cache|cache-mixed|logs|logs-cache|plan] [--threads 1,2,4] [options]
 
 Measure independent core operations in Node worker threads. Worker startup,
 state construction, and warmup are excluded from the measured interval.
 
 Options:
-  --scenario <name>   cache, logs, or plan (default: cache)
+  --scenario <name>   cache, cache-mixed, logs, logs-cache, or plan (default: cache)
   --threads <list>    Comma-separated worker counts (default: 1,2,4)
   --iterations <n>    Measured operations per worker (default: 200000; logs: 2000)
   --warmup <n>        Warmup operations per worker (default: 5% of iterations)
@@ -19,7 +19,7 @@ Options:
   --help              Show this help
 `;
 
-type Scenario = "cache" | "logs" | "plan";
+type Scenario = "cache" | "cache-mixed" | "logs" | "logs-cache" | "plan";
 
 interface Options {
   scenario: Scenario;
@@ -88,8 +88,8 @@ function parseOptions(args: readonly string[]): Options {
     const value = args[++index];
     if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value.`);
     if (flag === "--scenario") {
-      if (value !== "cache" && value !== "logs" && value !== "plan") {
-        throw new Error("--scenario must be cache, logs, or plan.");
+      if (value !== "cache" && value !== "cache-mixed" && value !== "logs" && value !== "logs-cache" && value !== "plan") {
+        throw new Error("--scenario must be cache, cache-mixed, logs, logs-cache, or plan.");
       }
       options.scenario = value;
     } else if (flag === "--threads") {
@@ -102,22 +102,26 @@ function parseOptions(args: readonly string[]): Options {
     else if (flag === "--warmup") options.warmup = positiveInteger(value, flag, true);
     else throw new Error(`Unknown argument: ${flag}`);
   }
-  if (options.iterations === 0) options.iterations = options.scenario === "logs" ? 2_000 : 200_000;
+  if (options.iterations === 0) options.iterations = options.scenario.startsWith("logs") ? 2_000 : 200_000;
   if (options.warmup < 0) options.warmup = Math.floor(options.iterations * 0.05);
   return options;
 }
 
-function cacheWorkload(): (iterations: number) => number {
+function cacheWorkload(keys = 1): (iterations: number) => number {
   const cache = new ReadCache(resolveCache({ refreshInterval: false }), evmCachePolicy());
-  const params = [{ to: "0x000000000000000000000000000000000000dead", data: "0x" }, "latest"];
+  const requests = Array.from({ length: keys }, (_, index) => [
+    { to: "0x000000000000000000000000000000000000dead", data: index === 0 ? "0x" : `0x${index.toString(16).padStart(2, "0")}` }, "latest",
+  ]);
   const context = { now: 1_000, head: { block: 100, ageMs: 0 } };
-  const initial = cache.lookup("eth_call", params, true, context);
-  if (!initial || initial.hit) throw new Error("Expected the initial cache lookup to miss.");
-  initial.fill(`0x${"11".repeat(32)}`, 100);
+  for (const params of requests) {
+    const initial = cache.lookup("eth_call", params, true, context);
+    if (!initial || initial.hit) throw new Error("Expected the initial cache lookup to miss.");
+    initial.fill(`0x${"11".repeat(32)}`, 100);
+  }
   return (iterations) => {
     let checksum = 0;
     for (let index = 0; index < iterations; index += 1) {
-      const lookup = cache.lookup("eth_call", params, true, context);
+      const lookup = cache.lookup("eth_call", requests[index % keys], true, context);
       if (!lookup?.hit || typeof lookup.result !== "string") throw new Error("Expected a cache hit.");
       checksum += lookup.result.length;
     }
@@ -125,7 +129,7 @@ function cacheWorkload(): (iterations: number) => number {
   };
 }
 
-function logsWorkload(): (iterations: number) => number {
+function logsWorkload(throughCache = false): (iterations: number) => number {
   const index = new LogIndex();
   const params = [{
     address: "0x000000000000000000000000000000000000dead",
@@ -144,11 +148,19 @@ function logsWorkload(): (iterations: number) => number {
     data: "0x",
   }));
   if (!initial.fetch.fill(logs, 0)) throw new Error("Expected the log seed to fill.");
+  const cache = new ReadCache(resolveCache({ refreshInterval: false }), evmCachePolicy());
+  const context = { now: 0, head: { block: 999, ageMs: 0 } };
+  if (throughCache) {
+    const miss = cache.lookup("eth_getLogs", params, true, context);
+    if (!miss || miss.hit) throw new Error("Expected the log cache seed to miss.");
+    miss.fill(logs, 999);
+  }
   return (iterations) => {
     let checksum = 0;
     for (let iteration = 0; iteration < iterations; iteration += 1) {
-      const lookup = index.lookup(plan as RollingLogQueryPlan, { head: 999, now: 0 });
-      if (!lookup?.hit) throw new Error("Expected a log index hit.");
+      const lookup = throughCache ? cache.lookup("eth_getLogs", params, true, context)
+        : index.lookup(plan as RollingLogQueryPlan, { head: 999, now: 0 });
+      if (!lookup?.hit || !Array.isArray(lookup.result)) throw new Error("Expected a log index hit.");
       checksum += lookup.result.length;
     }
     return checksum;
@@ -169,7 +181,10 @@ function planWorkload(): (iterations: number) => number {
 }
 
 function prepare(work: Work): () => WorkerResult {
-  const workload = work.scenario === "cache" ? cacheWorkload() : work.scenario === "logs" ? logsWorkload() : planWorkload();
+  const workload = work.scenario === "cache" ? cacheWorkload()
+    : work.scenario === "cache-mixed" ? cacheWorkload(64)
+      : work.scenario === "logs" ? logsWorkload()
+        : work.scenario === "logs-cache" ? logsWorkload(true) : planWorkload();
   workload(work.warmup);
   return () => {
     const started = performance.now();

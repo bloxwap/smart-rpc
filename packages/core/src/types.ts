@@ -94,6 +94,22 @@ export interface ChainPolicy {
   shouldFailover?: ((error: Error) => boolean) | undefined;
   /** A miss that should fail over without counting as a sick endpoint. EVM: block not held yet. */
   isBenignMiss?: ((error: Error) => boolean) | undefined;
+  /**
+   * The endpoint is over its request rate. It cools down and its budget adapts; its score is untouched.
+   * Default: HTTP 429, `-32005`, or rate-limit wording.
+   */
+  isRateLimited?: ((error: Error) => boolean) | undefined;
+  /**
+   * The endpoint's own policy refused this request (span, size, filter shape, token-gated method). The call fails
+   * over, the endpoint is not counted as failing, and it is not sent the same request shape first for a minute.
+   * Default: provider-restriction wording, including in JSON-RPC `data`.
+   */
+  isRestriction?: ((error: Error) => boolean) | undefined;
+  /**
+   * True when a read answers from the head (`"latest"`, `"pending"`, a head method). An endpoint lagging past
+   * `maxLag` does not lead these while a fresh one can. Default: the EVM tag rules of `isHeadSensitiveRead`.
+   */
+  isHeadSensitive?: ((method: string, params: unknown) => boolean) | undefined;
   isAlreadyKnown?: ((error: Error) => boolean) | undefined;
   /** Hash to return when a rebroadcast is answered "already known". */
   rebroadcastResult?: ((method: string, params: unknown) => unknown) | undefined;
@@ -110,7 +126,7 @@ export interface ChainPolicy {
    * Needs head tracking.
    */
   pin?: boolean | PinLatestOptions | undefined;
-  /** Freshness units per second for outlier comparison. Default: 2. */
+  /** Freshness units per second for outlier comparison. Default: from `blockTimeMs`, else 2. */
   maxUnitsPerSecond?: number | undefined;
   /**
    * Stable identity of the options closed over by this policy's functions.
@@ -122,10 +138,19 @@ export interface ChainPolicy {
    * HyperEVM turns this on. The head number still comes from that block.
    */
   blockHashProbe?: boolean | undefined;
+  /**
+   * Typical milliseconds between heads. When set, the default `maxLag` is about one second of blocks (at least
+   * one) and the default `maxUnitsPerSecond` is the production rate plus 25%. Default: unset, so `maxLag` is 2.
+   */
+  blockTimeMs?: number | undefined;
 }
 
 export interface HeadLagOptions {
-  /** Freshness units of lag that do not change the score. Default: 2. */
+  /**
+   * Freshness units of lag that do not change the score. Past it, an endpoint is not raced or hedged and does not
+   * lead head reads while a fresh endpoint can. Default: about one second of blocks when the chain declares
+   * `blockTimeMs`, else 2.
+   */
   maxLag?: number | undefined;
   /** Milliseconds between health probes. `false` disables the timer. Default: 4000. */
   probeInterval?: number | false | undefined;
@@ -216,6 +241,11 @@ export interface PoolOptions {
   race?: boolean | RaceOptions | undefined;
   /** `"best"` always uses the lowest score. `"p2c"` draws two and keeps the better one. Default: `"p2c"`. */
   routing?: "best" | "p2c" | undefined;
+  /**
+   * Before any request-latency sample or restored score, use endpoint order with neutral weights.
+   * Health, capabilities, budgets, and identity checks still apply. Default: "weighted".
+   */
+  coldStart?: "weighted" | "ordered" | undefined;
   /** Eject an endpoint after consecutive failures, or for a `Retry-After`. Default: enabled. */
   breaker?: boolean | BreakerOptions | undefined;
   /**

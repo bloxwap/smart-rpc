@@ -3,8 +3,11 @@
  *
  * Head rejection matches `@bloxwap/smart-hyperevm` `transport/_scoreboard.ts` at 092b8f9.
  * A fresh head further than `maxAhead` ahead of the median of the other fresh heads is ignored.
- * Heads older than `staleMs` stop affecting the score. Power-of-two-choices draws two candidates
- * and keeps the lower score, with the in-flight penalty applied inside {@link endpointScore}.
+ * Heads older than `staleMs` stop affecting the score. Lag is time-aligned: an endpoint is compared with
+ * the heads its peers had already reported when its own head arrived, never with blocks produced after it
+ * was last sampled. On a fast chain a head sampled a few seconds earlier is otherwise mistaken for lag.
+ * Power-of-two-choices draws two candidates and keeps the lower score, with the in-flight penalty applied
+ * inside {@link endpointScore}.
  * @module
  */
 
@@ -39,12 +42,16 @@ interface EndpointState extends ScoreboardEndpoint {
   inflight: Set<{ readonly until: number }>;
   head: number | null;
   headAt: number;
+  /** Recent head samples, oldest first, used as time-aligned lag references for peers. */
+  history: HeadSample[];
   global: MethodStat;
   methods: Map<string, MethodStat>;
 }
 
 export interface ScoreboardOptions {
   perMethod: boolean;
+  /** Prefer curated order with neutral weights until a latency sample or restored book exists. */
+  coldStart?: "weighted" | "ordered" | undefined;
   headLag: boolean;
   maxLag: number;
   staleMs: number;
@@ -66,6 +73,7 @@ export class Scoreboard {
   readonly #byId: ReadonlyMap<string, EndpointState>;
   readonly #options: ScoreboardOptions;
   #headRevision = 0;
+  #hasSamples = false;
   #headView: { revision: number; at: number; value: HeadView } | undefined;
   /** Books seeded from a stored snapshot, with when they were measured. The first live sample replaces one. */
   readonly #priors = new WeakMap<MethodStat, number>();
@@ -76,6 +84,7 @@ export class Scoreboard {
       inflight: new Set(),
       head: null,
       headAt: 0,
+      history: [],
       global: emptyStat(),
       methods: new Map(),
     }));
@@ -103,11 +112,24 @@ export class Scoreboard {
     const chosen =
       candidates.length === 0
         ? undefined
-        : candidates.length === 1 || mode === "best"
+        : candidates.length === 1 || mode === "best" || this.#orderedStart()
           ? this.#best(candidates, method)
           : this.#p2c(candidates, method, random);
     if (!chosen) return undefined;
     return { id: chosen.id, url: chosen.url };
+  }
+
+  /**
+   * The first funded, closed endpoint, in list order, that has never produced a latency sample.
+   * Used to explore with a race rival. Undefined when every candidate has been measured.
+   */
+  pickUnsampled(method: string, exclude: ReadonlySet<string>): RankedEndpoint | undefined {
+    const ejected = this.#options.ejected;
+    const spent = this.#options.spent;
+    const chosen = this.#endpoints.find((endpoint) =>
+      endpoint.global.n === 0 && !exclude.has(endpoint.id) && endpoint.supports(method) &&
+      !ejected?.(endpoint.id) && !spent?.(endpoint.id));
+    return chosen ? { id: chosen.id, url: chosen.url } : undefined;
   }
 
   /**
@@ -131,6 +153,7 @@ export class Scoreboard {
       observeLiveness(endpoint.global, true, 0, config);
       return;
     }
+    this.#hasSamples = true;
     observe(this.#live(endpoint.global), latencyMs, true, config);
     observe(this.#live(this.#method(endpoint, method)), latencyMs, true, config);
   }
@@ -143,6 +166,7 @@ export class Scoreboard {
       observeLiveness(this.#method(endpoint, method), false, penaltyMs, config);
       return;
     }
+    this.#hasSamples = true;
     observe(this.#live(endpoint.global), latencyMs, false, config);
     observe(this.#live(this.#method(endpoint, method)), latencyMs, false, config);
   }
@@ -157,6 +181,7 @@ export class Scoreboard {
     const book = method === "*" ? endpoint.global : this.#method(endpoint, method);
     if (book.n > 0) return false;
     Object.assign(book, copyStat(stat));
+    if (stat.n > 0) this.#hasSamples = true;
     this.#priors.set(book, at);
     return true;
   }
@@ -179,10 +204,13 @@ export class Scoreboard {
     const now = this.#options.now();
     endpoint.head = head;
     endpoint.headAt = now;
+    const history = endpoint.history.filter((sample) => now - sample.at <= this.#options.staleMs);
+    history.push({ endpoint, head, at: now });
+    endpoint.history = history.length > HEAD_HISTORY ? history.slice(-HEAD_HISTORY) : history;
     this.#headRevision += 1;
     const view = this.#heads(now);
     const best = view.best ?? head;
-    return { best, lag: Math.max(0, best - head), trusted: view.best !== null && !view.liars.has(endpoint) };
+    return { best, lag: this.#lag(endpoint, view) ?? Math.max(0, best - head), trusted: view.best !== null && !view.liars.has(endpoint) };
   }
 
   /**
@@ -219,7 +247,7 @@ export class Scoreboard {
     return scaled > minDelay ? scaled : minDelay;
   }
 
-  snapshot(method: string): Omit<EndpointSnapshot, "quarantined" | "tokens" | "ejected">[] {
+  snapshot(method: string): Omit<EndpointSnapshot, "quarantined" | "tokens" | "ejected" | "throttledMs">[] {
     const view = this.#heads(this.#options.now());
     return this.#endpoints.map((endpoint) => ({
       id: endpoint.id,
@@ -256,6 +284,10 @@ export class Scoreboard {
     return stat;
   }
 
+  #orderedStart(): boolean {
+    return this.#options.coldStart === "ordered" && !this.#hasSamples;
+  }
+
   #score(endpoint: EndpointState, method: string): number {
     return endpointScore({
       global: endpoint.global,
@@ -263,7 +295,7 @@ export class Scoreboard {
       perMethod: this.#options.perMethod,
       inflight: this.#inflight(endpoint),
       lagPenalty: this.#lagPenalty(endpoint),
-      weight: endpoint.weight,
+      weight: this.#orderedStart() ? 1 : endpoint.weight,
       config: this.#options.config ?? defaultScoreConfig,
     });
   }
@@ -275,14 +307,44 @@ export class Scoreboard {
     return endpoint.inflight.size;
   }
 
-  /** Null when there is no head, no believed reference, or this endpoint's head is ignored. */
+  /**
+   * Blocks behind the highest believed head any endpoint had reported by the time this endpoint's head arrived,
+   * or reported within {@link ALIGN_AFTER_MS} after it, carried back at `maxUnitsPerSecond`.
+   * Null when there is no head, no believed reference, or this endpoint's head is ignored.
+   */
   #lag(endpoint: EndpointState, view: HeadView): number | null {
     if (endpoint.head === null || view.best === null || view.liars.has(endpoint)) return null;
-    return Math.max(0, view.best - endpoint.head);
+    const cached = view.lags.get(endpoint);
+    if (cached !== undefined) return cached;
+    const now = this.#options.now();
+    const unitsPerSecond = this.#options.maxUnitsPerSecond ?? DEFAULT_MAX_UNITS_PER_SECOND;
+    let reference = endpoint.head;
+    for (const peer of this.#endpoints) {
+      if (view.liars.has(peer)) continue;
+      for (const sample of peer.history) {
+        // A peer's sample counts when it is still fresh and not above the believed best. One that arrived
+        // shortly after ours (a race rival answering second) is carried back at the maximum production rate,
+        // so a fast but lagging endpoint that always answers first is still caught.
+        if (now - sample.at > this.#options.staleMs || sample.head > view.best) continue;
+        const after = sample.at - endpoint.headAt;
+        if (after > ALIGN_AFTER_MS) continue;
+        const aligned = after > 0 ? sample.head - Math.ceil((after / 1_000) * unitsPerSecond) : sample.head;
+        if (aligned > reference) reference = aligned;
+      }
+    }
+    const lag = reference - endpoint.head;
+    view.lags.set(endpoint, lag);
+    return lag;
   }
 
   #config(): ScoreConfig {
     return this.#options.config ?? defaultScoreConfig;
+  }
+
+  /** True when the endpoint's head is known to trail the reference by more than `maxLag`, or is implausible. */
+  lagging(id: string): boolean {
+    const endpoint = this.#byId.get(id);
+    return endpoint !== undefined && this.#lagPenalty(endpoint) > 1;
   }
 
   #lagPenalty(endpoint: EndpointState): number {
@@ -322,7 +384,7 @@ export class Scoreboard {
       if (anchor !== null && sample.head > anchor + maxAhead) liars.add(sample.endpoint);
     }
     if (fresh.length === 2 && liars.size > 0) {
-      const value = { best: null, liars: new Set<EndpointState>() };
+      const value = { best: null, liars: new Set<EndpointState>(), lags: new Map<EndpointState, number>() };
       this.#headView = { revision: this.#headRevision, at: now, value };
       return value;
     }
@@ -331,7 +393,7 @@ export class Scoreboard {
       if (liars.has(sample.endpoint)) continue;
       if (best === null || sample.head > best) best = sample.head;
     }
-    const value = { best, liars };
+    const value = { best, liars, lags: new Map<EndpointState, number>() };
     this.#headView = { revision: this.#headRevision, at: now, value };
     return value;
   }
@@ -359,10 +421,11 @@ export class Scoreboard {
 
   #p2c(candidates: readonly EndpointState[], method: string, random: () => number): EndpointState | undefined {
     const first = candidates[draw(random, candidates.length)];
+    /* v8 ignore next -- @preserve p2c is only called with two or more candidates */
     if (!first) return undefined;
     let secondIndex = draw(random, candidates.length);
     if (candidates[secondIndex] === first) secondIndex = (candidates.indexOf(first) + 1) % candidates.length;
-    const second = candidates[secondIndex] ?? first;
+    const second = /* v8 ignore next -- @preserve the second index is always in range */ candidates[secondIndex] ?? first;
     return this.#better(first, second, method);
   }
 }
@@ -376,7 +439,18 @@ interface HeadSample {
 interface HeadView {
   readonly best: number | null;
   readonly liars: ReadonlySet<EndpointState>;
+  /** Time-aligned lag per endpoint, filled lazily for this view. */
+  readonly lags: Map<EndpointState, number>;
 }
+
+/** Head samples kept per endpoint for time-aligned lag. Older ones also age out after `staleMs`. */
+const HEAD_HISTORY = 16;
+
+/**
+ * How long after an endpoint's head a peer's head may arrive and still be a lag reference, carried back at
+ * `maxUnitsPerSecond`. Short, so a chain producing faster than that bound gains at most about one unit of error.
+ */
+const ALIGN_AFTER_MS = 500;
 
 /** Median of the other fresh heads, each carried forward to when `sample` was taken. Upper middle on an even count. */
 function peerMedian(sample: HeadSample, fresh: readonly HeadSample[], unitsPerSecond: number): number | null {
@@ -393,6 +467,7 @@ function copyStat(stat: MethodStat): MethodStat {
 
 function draw(random: () => number, length: number): number {
   const scaled = Math.floor(unitRandom(random) * length);
+  /* v8 ignore next -- @preserve the sample is never negative */
   if (scaled < 0) return 0;
   if (scaled >= length) return length - 1;
   return scaled;

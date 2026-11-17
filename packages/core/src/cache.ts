@@ -242,6 +242,8 @@ export class ReadCache {
   readonly #policy: CachePolicy;
   readonly #source: CacheSource | undefined;
   readonly #entries = new Map<string, Stored>();
+  /** A consecutive hit is already newest; avoid rebuilding the Map's insertion order. */
+  #newestKey: string | undefined;
   readonly #hot = new Map<string, HotKey>();
   readonly #plans = new WeakMap<object, Map<string, CachePlan | null>>();
   readonly #logIndex: LogIndex;
@@ -272,6 +274,7 @@ export class ReadCache {
   invalidate(): void {
     this.#generation += 1;
     this.#entries.clear();
+    this.#newestKey = undefined;
     this.#logIndex.invalidate();
     this.#bytes = 0;
     this.#servedHead = -1;
@@ -319,7 +322,8 @@ export class ReadCache {
     if (hit) {
       if (hot) hot.pending = false;
       this.#hits += 1;
-      return { hit: true, result: this.#copy(hit.result), stale: hit.stale };
+      // LogIndex already applies this cache's copyResults policy when selecting logs.
+      return { hit: true, result: log?.hit ? hit.result : this.#copy(hit.result), stale: hit.stale };
     }
     if (hot) hot.pending = true;
     this.#misses += 1;
@@ -404,6 +408,7 @@ export class ReadCache {
       pinRequired: plan.log?.from === "latest" || plan.log?.to === "latest",
       complete: (result: unknown): unknown | undefined => {
         const stored = this.#storeLogFetch(plan, fetch, result, now);
+        /* v8 ignore next -- @preserve a fetch is only attached to a plan that has a log query */
         if (!plan.log) return undefined;
         // A coalesced caller may have merged this range first. Serve its coverage instead of repeating the query.
         const completed = this.#logIndex.lookup(plan.log, {
@@ -450,9 +455,11 @@ export class ReadCache {
       this.#bytes + logs.bytes > this.#config.maxBytes
     ) {
       const oldest = this.#entries.keys().next().value;
+      /* v8 ignore next -- @preserve the index trims itself to the same limits, so entries remain */
       if (oldest === undefined) break;
       const entry = this.#entries.get(oldest);
       this.#entries.delete(oldest);
+      /* v8 ignore else -- @preserve the key was just read from this map */
       if (entry) this.#bytes -= entry.bytes;
     }
   }
@@ -574,6 +581,7 @@ export class ReadCache {
       this.#hot.set(plan.key, { plan, lastReadAt: now, refreshing: false, pending: false });
       while (this.#hot.size > this.#config.hotKeys) {
         const oldest = this.#hot.keys().next().value;
+        /* v8 ignore next -- @preserve the loop only runs while the map is over capacity */
         if (oldest === undefined) break;
         this.#hot.delete(oldest);
       }
@@ -595,6 +603,7 @@ export class ReadCache {
 
   async #tick(): Promise<void> {
     const source = this.#source;
+    /* v8 ignore next -- @preserve the timer is only armed when a source exists */
     if (!source) return;
     this.#expireHot(source.now());
     if (this.#hot.size === 0 || this.#closed) return;
@@ -638,8 +647,10 @@ export class ReadCache {
 
   #stale(plan: CachePlan, tick: boolean): unknown {
     const source = this.#source;
+    /* v8 ignore next -- @preserve the caller returns first when there is no source */
     if (!source) return undefined;
     if (plan.kind === "timed") return tick ? plan.params : undefined;
+    /* v8 ignore next -- @preserve logs and timed plans are handled before this call */
     if (plan.kind !== "latest") return undefined;
     const head = source.head(plan.method)?.block;
     const entry = this.#value(plan.key, "latest");
@@ -654,6 +665,7 @@ export class ReadCache {
   async #read(method: string, params: unknown): Promise<boolean> {
     const source = this.#source;
     const plan = this.#plan(method, params);
+    /* v8 ignore next -- @preserve the round checks source, plan and closed synchronously first */
     if (!source || !plan || this.#closed) return false;
     const generation = this.#generation;
     this.#refreshes += 1;
@@ -670,6 +682,7 @@ export class ReadCache {
 
   async #readLog(plan: CachePlan, fetch: LogIndexFetch): Promise<boolean> {
     const source = this.#source;
+    /* v8 ignore next -- @preserve the round checks source and closed synchronously first */
     if (!source || this.#closed) return false;
     this.#refreshes += 1;
     source.emit({ type: "cache", method: "eth_getLogs", outcome: "refresh", stale: null });
@@ -694,8 +707,11 @@ export class ReadCache {
   #value(key: string, kind: Stored["kind"]): Stored | undefined {
     const entry = this.#entries.get(key);
     if (entry?.kind !== kind) return undefined;
-    this.#entries.delete(key);
-    this.#entries.set(key, entry);
+    if (this.#newestKey !== key) {
+      this.#entries.delete(key);
+      this.#entries.set(key, entry);
+      this.#newestKey = key;
+    }
     return entry;
   }
 
@@ -708,6 +724,7 @@ export class ReadCache {
       this.#entries.delete(key);
     }
     this.#entries.set(key, entry);
+    this.#newestKey = key;
     this.#bytes += entry.bytes;
     for (const [oldest, old] of this.#entries) {
       if (this.#entries.size <= this.#config.maxEntries && this.#bytes <= this.#config.maxBytes) break;
@@ -860,6 +877,7 @@ export function evmCachePlan(
     return slot.latest ? { kind: "latest", method, key, params: normalized } : undefined;
   }
   const exact = coalesceKey(method, withTag(normalized, slot.index, toHexQuantity(tag)));
+  /* v8 ignore next -- @preserve the exact key differs from a serializable key by one string */
   if (exact === undefined) return undefined;
   return {
     kind: "number",

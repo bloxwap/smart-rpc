@@ -14,6 +14,12 @@ export const ETHERLINK_PRECOMPILES = {
   nativeAtomicGateway: "0xff00000000000000000000000000000000000007",
 } as const;
 
+/**
+ * About 1.2s blocks (measured 2026-11-08: 1,000 blocks in 1,186-1,192s, 100 in 125-132s). Lag tolerance is one
+ * block, so a frozen head is caught within a couple of seconds.
+ */
+const ETHERLINK_BLOCK_TIME_MS = 1_200;
+
 export interface EtherlinkOptions extends Omit<EthereumOptions, "chainId" | "chainIds"> {}
 
 /** Etherlink's EVM interface. All routing, budgets and retries remain in the shared core. */
@@ -23,6 +29,7 @@ export function etherlink(options: EtherlinkOptions = {}): RpcPool {
     chainId: ETHERLINK_CHAIN_ID,
     chainIds: [ETHERLINK_MAINNET_CAIP],
     endpoints: (options.endpoints ?? ETHERLINK_MAINNET_REGISTRY).map(configureEndpoint),
+    blockTimeMs: options.blockTimeMs ?? ETHERLINK_BLOCK_TIME_MS,
   });
 }
 

@@ -18,11 +18,10 @@ const clusters = [
     endpoints: MAINNET_ENDPOINTS,
     registry: MAINNET_REGISTRY,
     urls: [
-      "https://solana-rpc.publicnode.com",
-      "https://solana.api.pocket.network",
       "https://api.mainnet.solana.com",
+      "https://solana-rpc.publicnode.com",
       "https://public.rpc.solanavibestation.com",
-      "https://solana-mainnet.gateway.tatum.io",
+      "https://solana.api.pocket.network",
     ],
   },
   {
@@ -31,7 +30,6 @@ const clusters = [
     registry: DEVNET_REGISTRY,
     urls: [
       "https://api.devnet.solana.com",
-      "https://solana-devnet.gateway.tatum.io",
     ],
   },
   {
@@ -41,7 +39,6 @@ const clusters = [
     urls: [
       "https://api.testnet.solana.com",
       "https://solana-testnet-rpc.publicnode.com",
-      "https://solana-testnet.web3cdn.rest",
     ],
   },
 ] as const;
@@ -114,9 +111,28 @@ describe("Solana public registry", () => {
     }
   });
 
+  test("PublicNode never receives token-gated indexed methods", () => {
+    const gated = [
+      "getProgramAccounts", "getTokenAccountsByOwner", "getTokenAccountsByDelegate", "getTokenAccountBalance",
+      "getTokenSupply", "getTokenLargestAccounts", "getSupply", "getLargestAccounts",
+    ];
+    for (const registry of [MAINNET_REGISTRY, TESTNET_REGISTRY]) {
+      const publicNode = registry.find((endpoint) => endpoint.provider === "PublicNode");
+      expect(publicNode?.unsupportedMethods).toEqual(gated);
+    }
+    expect(MAINNET_REGISTRY.find((endpoint) => endpoint.id === "pocket")?.unsupportedMethods)
+      .toEqual(["getTokenAccountsByOwner", "getProgramAccounts"]);
+  });
+
+  test("paid-only Tatum gateways stay out of all keyless defaults", () => {
+    for (const registry of [MAINNET_REGISTRY, DEVNET_REGISTRY, TESTNET_REGISTRY]) {
+      expect(registry.some((endpoint) => endpoint.provider === "Tatum")).toBe(false);
+    }
+  });
+
   test("known method restrictions skip Pocket during configured failover", async () => {
     const calls: { url: string; method: string }[] = [];
-    const first = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "publicnode")!;
+    const first = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "solanavibestation")!;
     const pocket = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "pocket")!;
     const fallback = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "solana")!;
     const pool = solana({

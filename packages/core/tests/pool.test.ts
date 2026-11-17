@@ -149,7 +149,7 @@ describe("race", () => {
 });
 
 describe("Retry-After", () => {
-  test("ejects the endpoint that asked for it and uses another", async () => {
+  test("cools down the rate-limited endpoint that asked for it, without ejecting it, and uses another", async () => {
     const seen: string[] = [];
     const limited = new Error("rate limited");
     Object.defineProperty(limited, "headers", { value: new Headers({ "retry-after": "3" }) });
@@ -175,7 +175,10 @@ describe("Retry-After", () => {
       { routing: "best" },
     );
     await expect(client.request({ method: "eth_call", params: [{ to: "0x1" }] })).resolves.toBe("ok");
-    expect(client.snapshot("eth_call").find((row) => row.id === "limited")?.ejected).toBe(true);
+    const row = client.snapshot("eth_call").find((entry) => entry.id === "limited");
+    expect(row?.ejected).toBe(false);
+    expect(row?.throttledMs).toBeGreaterThan(2_900);
+    expect(row?.throttledMs).toBeLessThanOrEqual(3_000);
     seen.length = 0;
     await client.request({ method: "eth_call", params: [{ to: "0x2" }] });
     expect(seen).toEqual(["open"]);

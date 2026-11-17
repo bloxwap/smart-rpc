@@ -68,7 +68,10 @@ export type RpcEvent =
       expected: unknown;
     }
   | {
-      /** Consecutive failures or a `Retry-After` took the endpoint out of rotation. */
+      /**
+       * Consecutive failures, or a `Retry-After` on an error that is not a rate limit (such as HTTP 503), took the
+       * endpoint out of rotation. Rate limits emit `throttle` instead.
+       */
       type: "eject";
       endpoint: string;
       failures: number;
@@ -79,6 +82,18 @@ export type RpcEvent =
       /** A healthy answer closed an ejected endpoint's circuit. */
       type: "restore";
       endpoint: string;
+    }
+  | {
+      /**
+       * The endpoint answered with a rate limit. It gets no requests for `cooldownMs` (its `Retry-After` when it
+       * sent one) and its request rate is cut to `rps`. It is not ejected and its score is unchanged.
+       */
+      type: "throttle";
+      endpoint: string;
+      cooldownMs: number;
+      /** Effective requests per second after the cut. Null when the endpoint has no budget. */
+      rps: number | null;
+      error: Error;
     }
   | {
       /** `persist.load` or `persist.save` failed, or loaded a snapshot that is not valid. Calls are unaffected. */
@@ -102,8 +117,10 @@ export interface EndpointSnapshot {
   quarantined: boolean;
   ejected: boolean;
   inflight: number;
-  /** Whole tokens left in the endpoint's request budget. Null when it has none. */
+  /** Whole tokens left in the endpoint's request budget. Null when it has none. Zero during a rate-limit cooldown. */
   tokens: number | null;
+  /** Milliseconds left of a rate-limit cooldown. Zero when the endpoint may be sent requests. */
+  throttledMs: number;
   head: number | null;
   lag: number | null;
   score: number;

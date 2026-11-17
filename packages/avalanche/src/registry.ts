@@ -27,7 +27,13 @@ export interface AvalanchePublicRpcEndpoint extends EthereumEndpointConfig {
   readonly websocketUrl: string;
 }
 
-/** Unknown numeric quotas are omitted; advanced capabilities require explicit verification. */
+/**
+ * Unknown numeric quotas are omitted; advanced capabilities require explicit verification.
+ * `archive` is enabled only where repeated live probes (2026-11-08: block 1 plus five
+ * spread historical blocks, on separate runs) returned historical state. The official
+ * endpoint keeps only 8,192 ancestors; dRPC (free-plan timeouts) and PublicNode
+ * (timeouts) did not reliably serve historical state.
+ */
 export const AVALANCHE_MAINNET_REGISTRY: readonly AvalanchePublicRpcEndpoint[] = [
   {
     id: "avalanche-public-c-chain",
@@ -35,7 +41,7 @@ export const AVALANCHE_MAINNET_REGISTRY: readonly AvalanchePublicRpcEndpoint[] =
     websocketUrl: AVALANCHE_WS_URL,
     provider: "Avalanche",
     sourceUrls: ["https://build.avax.network/docs/rpcs/c-chain", "https://chainlist.org/chain/43114"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     supportedMethods: AVALANCHE_RPC_METHODS,
     unsupportedMethods: ["eth_getChainConfig", "eth_resend", "eth_sendTransaction", "eth_sign", "eth_signTransaction", "eth_accounts", "eth_coinbase", "eth_etherbase"],
     capabilities: {
@@ -49,7 +55,7 @@ export const AVALANCHE_MAINNET_REGISTRY: readonly AvalanchePublicRpcEndpoint[] =
     websocketUrl: "wss://avalanche-c-chain-rpc.publicnode.com",
     provider: "Allnodes / PublicNode",
     sourceUrls: ["https://avalanche.publicnode.com/", "https://chainlist.org/chain/43114"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     supportedMethods: AVALANCHE_RPC_METHODS,
     capabilities: {
       archive: false, blockTags: ["latest", "pending"], pinning: false,
@@ -62,7 +68,7 @@ export const AVALANCHE_MAINNET_REGISTRY: readonly AvalanchePublicRpcEndpoint[] =
     websocketUrl: "wss://avalanche.drpc.org",
     provider: "dRPC",
     sourceUrls: ["https://drpc.org/chainlist/avalanche-mainnet-rpc", "https://chainlist.org/chain/43114"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     supportedMethods: AVALANCHE_RPC_METHODS.filter((method) => !DRPC_UNSUPPORTED_METHODS.includes(method)),
     unsupportedMethods: DRPC_UNSUPPORTED_METHODS,
     capabilities: {
@@ -76,10 +82,10 @@ export const AVALANCHE_MAINNET_REGISTRY: readonly AvalanchePublicRpcEndpoint[] =
     websocketUrl: "wss://avalanche.gateway.tenderly.co",
     provider: "Tenderly",
     sourceUrls: ["https://docs.tenderly.co/node-rpc/rpc-reference", "https://chainlist.org/chain/43114"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     supportedMethods: AVALANCHE_RPC_METHODS,
     capabilities: {
-      archive: false, blockTags: ["latest", "pending"], pinning: false,
+      archive: true, blockTags: ["latest", "pending"], pinning: false,
       batch: false, debug: false, trace: false, subscriptions: false,
     },
   },

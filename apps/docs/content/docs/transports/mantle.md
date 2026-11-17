@@ -15,13 +15,15 @@ rpc.close();
 
 `@smart-rpc/mantle` is a private workspace package compiled into the public subpath. It composes the canonical Ethereum adapter and shared core; scoring, cancellation, retry, breaker, cache, and budget policies are not copied.
 
-Mantle mainnet uses chain ID 5000 and MNT as native gas currency. The default HTTP endpoint is `https://rpc.mantle.xyz`; the separately documented WebSocket address is `wss://wss.mantle.xyz`. The public service is rate limited, but no numeric allowance is published on the cited network page. Registry entries omit unverified rate and batch ceilings. [Network details](https://docs.mantle.xyz/network/for-developers/quick-access).
+Mantle mainnet uses chain ID 5000 and MNT as native gas currency. The official HTTP endpoint is `https://rpc.mantle.xyz`; the separately documented WebSocket address is `wss://wss.mantle.xyz`. The public service is rate limited, but no numeric allowance is published on the cited network page. Registry entries omit unverified rate and batch ceilings. [Network details](https://docs.mantle.xyz/network/for-developers/quick-access).
 
 The public provider rejects `eth_getBlockRange` and `eth_sendTransaction`. The factory retains those restrictions even if its public URL is supplied explicitly. A capable dedicated provider may be configured separately. Use `requestBatch` with individual `eth_getBlockByNumber` calls instead of deprecated block-range requests. Sign locally before `eth_sendRawTransaction`; successful writes are never raced, cached, or coalesced. `rebroadcastRawTransactions: false` disables failover of signed submissions.
 
 `eth_gasPrice` and `GasPriceOracle.gasPrice()` describe L2 execution gas. The oracle's `l1BaseFee()` is a separate L1 value; its address is exported as `MANTLE_GAS_PRICE_ORACLE`. RPC quantities, call data, and extra receipt fields pass through unchanged. The adapter does not calculate a combined transaction fee. [Mantle API](https://docs.mantle.xyz/network/for-developers/resources-and-tooling/mantle-api).
 
-Advanced public capabilities remain disabled until explicitly configured: archive state, debug/trace, safe/finalized tags, HTTP batching, and numeric state pinning. This is a conservative client policy, not a claim that a provider can never support them. Unsupported state requests fail without changing their selector to `latest`.
+Default pool members are PublicNode, `rpc.mantle.xyz`, Pocket Network and thirdweb. dRPC was removed on 2026-11-17 after repeated state-read failures. Historical state reads route to `rpc.mantle.xyz`, which passed the historical-state audit; PublicNode and Pocket reported that historical state was unavailable. Thirdweb’s observed 1,000-block log ceiling remains recorded as `maxLogBlockRange`. PublicNode rejects `eth_getLogs` calls that have no `address` filter, and those calls fail over.
+
+Other advanced public capabilities remain disabled until explicitly configured: debug/trace, safe/finalized tags, HTTP batching, and numeric state pinning. This is a conservative client policy, not a claim that a provider can never support them. Unsupported state requests fail without changing their selector to `latest`.
 
 ```ts
 const transport = mantle({
@@ -41,6 +43,8 @@ const transport = mantle({
 ```
 
 `requestBatch` preserves each item's outcome and shares one operation budget across its identity checks, attempts, and races. Head freshness remains configurable with `headLag`; finality is not inferred from an Ethereum epoch duration. Subscription callbacks use a dedicated `connectViem` session from the Ethereum subpath with `expectedChainId: 5000`, not ordinary pool requests. See the [Ethereum adapter](ethereum.md) for its lifecycle.
+
+Blocks arrive every 2s (measured 2026-11-08), so the factory passes `blockTimeMs: 2000` and the default `headLag.maxLag` is 1 block, about one second of staleness. An endpoint further behind does not lead, race or hedge `latest`, `pending` or other head reads while a fresh endpoint can serve them; it still serves block-number, block-hash, `safe`/`finalized` and transaction reads, and remains a failover. Pass `blockTimeMs` or `headLag: { maxLag }` to change it.
 
 Run deterministic fixtures with `pnpm --filter @smart-rpc/mantle test`. Read-only live checks are opt-in:
 

@@ -1,0 +1,100 @@
+[
+  {
+    "scenario": "cache-mixed",
+    "rep": 0,
+    "version": "before",
+    "ops": 1035062.1250083777,
+    "cpuOps": 1031592.5209542231
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 0,
+    "version": "after",
+    "ops": 1078100.6665436074,
+    "cpuOps": 999359.410617794
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 1,
+    "version": "after",
+    "ops": 1075822.6345013632,
+    "cpuOps": 998593.9796766153
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 1,
+    "version": "before",
+    "ops": 1025230.1007984093,
+    "cpuOps": 955465.7417758286
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 2,
+    "version": "before",
+    "ops": 1011214.9634833543,
+    "cpuOps": 939209.6550752542
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 2,
+    "version": "after",
+    "ops": 1069806.6204180347,
+    "cpuOps": 988785.1982810958
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 3,
+    "version": "after",
+    "ops": 1066723.843064655,
+    "cpuOps": 988218.4595255365
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 3,
+    "version": "before",
+    "ops": 1051305.1361906677,
+    "cpuOps": 980016.4838772588
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 4,
+    "version": "before",
+    "ops": 1020344.478152352,
+    "cpuOps": 946394.3322336231
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 4,
+    "version": "after",
+    "ops": 1086633.1397167507,
+    "cpuOps": 1002917.4869695945
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 5,
+    "version": "after",
+    "ops": 1094053.1510166707,
+    "cpuOps": 1014610.3896103896
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 5,
+    "version": "before",
+    "ops": 1036050.9918521241,
+    "cpuOps": 964533.1514866832
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 6,
+    "version": "before",
+    "ops": 1027933.4490186755,
+    "cpuOps": 955797.2448188621
+  },
+  {
+    "scenario": "cache-mixed",
+    "rep": 6,
+    "version": "after",
+    "ops": 1043620.3293587478,
+    "cpuOps": 964172.3207338508
+  }
+]

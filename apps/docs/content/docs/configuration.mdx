@@ -32,7 +32,7 @@ Sends, errors, filters, subscriptions, latest nonces, gas estimates, and pending
 
 ## Routing and retries
 
-Defaults include two extra attempts, a ten-second attempt timeout, power-of-two endpoint selection, safe-read racing, and a three-failure circuit breaker. Cooldown starts at five seconds and doubles to sixty seconds. Backoff starts between 100 and 200 milliseconds, doubles, and is capped at two seconds.
+Defaults include two extra attempts, a ten-second attempt timeout, power-of-two endpoint selection, safe-read racing, and a three-failure circuit breaker. Cooldown starts at five seconds and doubles to sixty seconds. Backoff starts between 100 and 200 milliseconds, doubles, and is capped at two seconds. Rate limits do not count toward the breaker: a rate-limited endpoint cools down for its `Retry-After` (or from one second, doubling) and its request rate is halved, then recovers. Head-lag tolerance is about one second of blocks on chains that declare `blockTimeMs`. See [Defaults](./reference#defaults).
 
 ```ts
 const transport = hyperevm({
@@ -44,6 +44,8 @@ const transport = hyperevm({
 ```
 
 An operation budget covers identity checks, retries, races, and batch items. Unknown EVM extensions are not raced or coalesced unless explicitly listed as safe methods. Writes and stateful filters remain unshared.
+
+`coldStart: "ordered"` prefers the configured endpoint order with neutral weights until the pool records a request-latency sample or restores a score book. Health, in-flight load, capabilities, budgets, and identity checks still apply. Normal weighted scoring resumes after that first sample, including a failed request. Background probes do not end this startup phase. The general default is `"weighted"`; HyperEVM uses `"ordered"` for its built-in registries and `"weighted"` when endpoints are supplied explicitly. Set `coldStart` explicitly to override either behavior.
 
 ## Endpoint and provider budgets
 

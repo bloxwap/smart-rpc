@@ -218,6 +218,7 @@ export class WarmStart {
   }
 
   #schedule(): void {
+    /* v8 ignore next -- @preserve touch returns first once closed */
     if (this.#closed) return;
     if (this.#timer !== undefined) {
       // Workers cancel an invocation's timers when it ends, and nothing clears `#timer` then. Past its due time,
@@ -253,6 +254,7 @@ export class WarmStart {
 
   #write(snapshot: ScoreSnapshot): void {
     const persistence = this.#options.persistence;
+    /* v8 ignore next -- @preserve save returns first without persistence */
     if (!persistence) return;
     this.#writing = true;
     try {

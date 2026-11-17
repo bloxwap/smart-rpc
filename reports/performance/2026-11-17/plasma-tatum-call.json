@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-11-17T11:14:17.973Z",
+  "url": "https://plasma-mainnet.gateway.tatum.io",
+  "method": "eth_call",
+  "httpStatus": 200,
+  "body": {
+    "id": 1,
+    "jsonrpc": "2.0",
+    "error": {
+      "code": -16401,
+      "message": "Method 'eth_call' is available for paid plans only. To access this feature, please upgrade your subscription at https://co.tatum.io/upgrade."
+    }
+  }
+}

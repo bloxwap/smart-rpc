@@ -47,5 +47,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # Fails below 100% statements, branches, functions, or lines (vitest.config.ts thresholds).
+      - name: Coverage
+        run: pnpm coverage
+
       - name: Build
         run: pnpm build

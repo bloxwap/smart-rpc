@@ -1,0 +1,3370 @@
+[
+  {
+    "protocol": "ethereum",
+    "network": "mainnet",
+    "chainId": "eip155:1",
+    "identity": 1,
+    "entries": [
+      {
+        "id": "ethereum-drpc",
+        "url": "https://eth.drpc.org",
+        "provider": "dRPC",
+        "sourceUrls": [
+          "https://drpc.org/docs/ethereum-api",
+          "https://drpc.org/docs/howitworks/ratelimiting"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 2,
+        "burst": 3,
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ]
+      },
+      {
+        "id": "ethereum-publicnode",
+        "url": "https://ethereum-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://ethereum.publicnode.com/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 2,
+        "burst": 3
+      },
+      {
+        "id": "ethereum-nownodes",
+        "url": "https://public-eth.nownodes.io",
+        "provider": "NOWNodes",
+        "sourceUrls": [
+          "https://nownodes.io/public-endpoints"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 2,
+        "burst": 3
+      },
+      {
+        "id": "ethereum-tenderly",
+        "url": "https://mainnet.gateway.tenderly.co",
+        "provider": "Tenderly",
+        "sourceUrls": [
+          "https://docs.tenderly.co/node-rpc/rpc-reference",
+          "https://docs.tenderly.co/node-rpc/overview#public-endpoint-limits"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 2,
+        "burst": 3,
+        "unsupportedMethods": [
+          "eth_getLogs"
+        ]
+      },
+      {
+        "id": "ethereum-pocket",
+        "url": "https://eth.api.pocket.network",
+        "provider": "Pocket Network",
+        "sourceUrls": [
+          "https://docs.pocket.network/developers/supported-chains/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 2,
+        "burst": 3
+      }
+    ]
+  },
+  {
+    "protocol": "hyperevm",
+    "network": "mainnet",
+    "chainId": "eip155:999",
+    "identity": 999,
+    "entries": [
+      {
+        "id": "publicnode-mainnet",
+        "url": "https://hyperliquid-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://publicnode.com/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest"
+          ],
+          "subscriptions": false,
+          "batch": false,
+          "debug": false,
+          "trace": false
+        },
+        "rps": 1,
+        "burst": 2,
+        "eligible": true,
+        "weight": 0.15,
+        "rank": 1,
+        "stats": {
+          "observations": 1,
+          "successes": 1,
+          "uptime": 1,
+          "latencyMs": 336.9,
+          "tailMs": 336.9,
+          "medianLag": 1,
+          "established": false,
+          "precompileOk": true
+        }
+      },
+      {
+        "id": "hyperliquid-mainnet",
+        "url": "https://rpc.hyperliquid.xyz/evm",
+        "provider": "Hyperliquid",
+        "sourceUrls": [
+          "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm",
+          "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/json-rpc"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest"
+          ],
+          "subscriptions": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "maxLogBlockRange": 50,
+          "maxLogTopics": 4
+        },
+        "rps": 1.5,
+        "burst": 3,
+        "eligible": true,
+        "weight": 0.15,
+        "rank": 2,
+        "stats": {
+          "observations": 3,
+          "successes": 2,
+          "uptime": 0.6667,
+          "latencyMs": 198.2,
+          "tailMs": 238.4,
+          "medianLag": 0,
+          "established": false,
+          "precompileOk": true
+        }
+      },
+      {
+        "id": "hypurrscan-mainnet",
+        "url": "https://rpc.hypurrscan.io",
+        "provider": "Hypurrscan",
+        "sourceUrls": [
+          "https://hyperliquid.gitbook.io/hyperliquid-docs/builder-tools/hyperevm-tools"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest"
+          ],
+          "subscriptions": false,
+          "batch": false,
+          "debug": false,
+          "trace": false
+        },
+        "rps": 1,
+        "burst": 2,
+        "eligible": true,
+        "weight": 1,
+        "rank": 3,
+        "stats": {
+          "observations": 3,
+          "successes": 3,
+          "uptime": 1,
+          "latencyMs": 586.9,
+          "tailMs": 662.5,
+          "medianLag": 0,
+          "established": true,
+          "precompileOk": true
+        }
+      },
+      {
+        "id": "stakely-mainnet",
+        "url": "https://hyperliquid-json-rpc.stakely.io",
+        "provider": "Stakely",
+        "sourceUrls": [
+          "https://stakely.io/web3-api-load-balancer/hyperliquid"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest"
+          ],
+          "subscriptions": false,
+          "batch": false,
+          "debug": false,
+          "trace": false
+        },
+        "rps": 1,
+        "burst": 2,
+        "eligible": true,
+        "weight": 1,
+        "rank": 4,
+        "stats": {
+          "observations": 3,
+          "successes": 3,
+          "uptime": 1,
+          "latencyMs": 992.9,
+          "tailMs": 1701.4,
+          "medianLag": 10,
+          "established": true,
+          "precompileOk": true
+        }
+      },
+      {
+        "id": "drpc-mainnet",
+        "url": "https://hyperliquid.drpc.org",
+        "provider": "dRPC",
+        "sourceUrls": [
+          "https://blog.drpc.org/drpc-adds-support-for-hyperliquid-rpc/",
+          "https://drpc.org/docs/howitworks/ratelimiting"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest"
+          ],
+          "subscriptions": false,
+          "batch": false,
+          "debug": false,
+          "trace": false
+        },
+        "rps": 1,
+        "burst": 2,
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "eligible": false,
+        "weight": 0,
+        "rank": null,
+        "stats": {
+          "observations": 3,
+          "successes": 1,
+          "uptime": 0.3333,
+          "latencyMs": 267.3,
+          "tailMs": 291.8,
+          "medianLag": 1,
+          "established": false,
+          "precompileOk": true
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "hyperevm",
+    "network": "testnet",
+    "chainId": "eip155:998",
+    "identity": 998,
+    "entries": [
+      {
+        "id": "hyperliquid-testnet",
+        "url": "https://rpc.hyperliquid-testnet.xyz/evm",
+        "provider": "Hyperliquid",
+        "sourceUrls": [
+          "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm",
+          "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/json-rpc"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest"
+          ],
+          "subscriptions": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "maxLogBlockRange": 50,
+          "maxLogTopics": 4
+        },
+        "rps": 1.5,
+        "burst": 3,
+        "eligible": true,
+        "weight": 1,
+        "rank": null,
+        "stats": null
+      },
+      {
+        "id": "drpc-testnet",
+        "url": "https://hyperliquid-testnet.drpc.org",
+        "provider": "dRPC",
+        "sourceUrls": [
+          "https://drpc.org/chainlist/hyperliquid-testnet-rpc",
+          "https://drpc.org/docs/howitworks/ratelimiting"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest"
+          ],
+          "subscriptions": false,
+          "batch": false,
+          "debug": false,
+          "trace": false
+        },
+        "rps": 1,
+        "burst": 2,
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "eligible": true,
+        "weight": 1,
+        "rank": null,
+        "stats": null
+      }
+    ]
+  },
+  {
+    "protocol": "solana",
+    "network": "mainnet",
+    "chainId": "solana:mainnet",
+    "identity": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+    "entries": [
+      {
+        "id": "solana",
+        "url": "https://api.mainnet.solana.com",
+        "provider": "Solana",
+        "sourceUrls": [
+          "https://solana.com/docs/references/clusters"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 3,
+        "burst": 3
+      },
+      {
+        "id": "publicnode",
+        "url": "https://solana-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://solana.publicnode.com/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 3,
+        "burst": 3
+      },
+      {
+        "id": "solanavibestation",
+        "url": "https://public.rpc.solanavibestation.com",
+        "provider": "Solana Vibe Station",
+        "sourceUrls": [
+          "https://solanavibestation.com/",
+          "https://docs.solanavibestation.com/services/solana-node-services/rpc-services"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 1,
+        "burst": 1
+      },
+      {
+        "id": "pocket",
+        "url": "https://solana.api.pocket.network",
+        "provider": "Pocket Network",
+        "sourceUrls": [
+          "https://docs.pocket.network/developers/supported-chains/",
+          "https://docs.pocket.network/developers/integration-examples/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 3,
+        "burst": 3,
+        "unsupportedMethods": [
+          "getTokenAccountsByOwner"
+        ]
+      }
+    ]
+  },
+  {
+    "protocol": "solana",
+    "network": "devnet",
+    "chainId": "solana:devnet",
+    "identity": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+    "entries": [
+      {
+        "id": "solana-devnet",
+        "url": "https://api.devnet.solana.com",
+        "provider": "Solana",
+        "sourceUrls": [
+          "https://solana.com/docs/references/clusters"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 3,
+        "burst": 3
+      }
+    ]
+  },
+  {
+    "protocol": "solana",
+    "network": "testnet",
+    "chainId": "solana:testnet",
+    "identity": "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY",
+    "entries": [
+      {
+        "id": "solana-testnet",
+        "url": "https://api.testnet.solana.com",
+        "provider": "Solana",
+        "sourceUrls": [
+          "https://solana.com/docs/references/clusters"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 3,
+        "burst": 3
+      },
+      {
+        "id": "publicnode-testnet",
+        "url": "https://solana-testnet-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://solana.publicnode.com/",
+          "https://www.comparenodes.com/library/public-endpoints/solana/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 3,
+        "burst": 3
+      }
+    ]
+  },
+  {
+    "protocol": "bsc",
+    "network": "mainnet",
+    "chainId": "eip155:56",
+    "identity": 56,
+    "entries": [
+      {
+        "id": "bnb-dataseed",
+        "url": "https://bsc-dataseed.bnbchain.org",
+        "provider": "BNB Chain public dataseeds",
+        "sourceUrls": [
+          "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/",
+          "https://chainlist.org/chain/56"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 5,
+        "burst": 10,
+        "providerGroup": "bnb-public-dataseeds",
+        "providerBudget": {
+          "rps": 10,
+          "burst": 20
+        },
+        "unsupportedMethods": [
+          "eth_getLogs",
+          "eth_getHeaderByNumber",
+          "eth_newFinalizedHeaderFilter",
+          "eth_getFinalizedHeader",
+          "eth_getFinalizedBlock",
+          "eth_getBlobSidecarByTxHash",
+          "eth_getBlobSidecars",
+          "eth_health",
+          "eth_getTransactionsByBlockNumber",
+          "eth_getTransactionDataAndReceipt"
+        ],
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "bnb-public-dataseed",
+        "url": "https://bsc-dataseed-public.bnbchain.org",
+        "provider": "BNB Chain public dataseeds",
+        "sourceUrls": [
+          "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/",
+          "https://chainlist.org/chain/56"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 5,
+        "burst": 10,
+        "providerGroup": "bnb-public-dataseeds",
+        "providerBudget": {
+          "rps": 10,
+          "burst": 20
+        },
+        "unsupportedMethods": [
+          "eth_getLogs",
+          "eth_getHeaderByNumber",
+          "eth_newFinalizedHeaderFilter",
+          "eth_getFinalizedHeader",
+          "eth_getFinalizedBlock",
+          "eth_getBlobSidecarByTxHash",
+          "eth_getBlobSidecars",
+          "eth_health",
+          "eth_getTransactionsByBlockNumber",
+          "eth_getTransactionDataAndReceipt"
+        ],
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "bsc-publicnode",
+        "url": "https://bsc-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/",
+          "https://chainlist.org/chain/56",
+          "https://bsc.publicnode.com/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "unsupportedMethods": [
+          "eth_getHeaderByNumber",
+          "eth_newFinalizedHeaderFilter",
+          "eth_getFinalizedHeader",
+          "eth_getFinalizedBlock",
+          "eth_getBlobSidecarByTxHash",
+          "eth_getBlobSidecars",
+          "eth_health",
+          "eth_getTransactionsByBlockNumber",
+          "eth_getTransactionDataAndReceipt"
+        ],
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "bsc-thirdweb",
+        "url": "https://56.rpc.thirdweb.com",
+        "provider": "thirdweb",
+        "sourceUrls": [
+          "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/",
+          "https://chainlist.org/chain/56",
+          "https://portal.thirdweb.com/infrastructure/rpc-edge/overview"
+        ],
+        "reviewedAt": "2026-11-07",
+        "unsupportedMethods": [
+          "eth_getHeaderByNumber",
+          "eth_newFinalizedHeaderFilter",
+          "eth_getFinalizedHeader",
+          "eth_getFinalizedBlock",
+          "eth_getBlobSidecarByTxHash",
+          "eth_getBlobSidecars",
+          "eth_health",
+          "eth_getTransactionsByBlockNumber",
+          "eth_getTransactionDataAndReceipt"
+        ],
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "bsc-pocket",
+        "url": "https://bsc.api.pocket.network",
+        "provider": "Pocket Network",
+        "sourceUrls": [
+          "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/",
+          "https://chainlist.org/chain/56",
+          "https://api.pocket.network/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "unsupportedMethods": [
+          "eth_getHeaderByNumber",
+          "eth_newFinalizedHeaderFilter",
+          "eth_getFinalizedHeader",
+          "eth_getFinalizedBlock",
+          "eth_getBlobSidecarByTxHash",
+          "eth_getBlobSidecars",
+          "eth_health",
+          "eth_getTransactionsByBlockNumber",
+          "eth_getTransactionDataAndReceipt"
+        ],
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "batch": false
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "polygon",
+    "network": "mainnet",
+    "chainId": "eip155:137",
+    "identity": 137,
+    "entries": [
+      {
+        "id": "polygon-drpc",
+        "provider": "dRPC",
+        "url": "https://polygon.drpc.org",
+        "websocketUrl": "wss://polygon.drpc.org",
+        "sourceUrls": [
+          "https://drpc.org/chainlist/polygon-mainnet-rpc",
+          "https://chainlist.org/chain/137"
+        ],
+        "reviewedAt": "2026-11-07",
+        "supportedMethods": [
+          "eth_chainId",
+          "eth_blockNumber",
+          "eth_syncing",
+          "net_version",
+          "web3_clientVersion",
+          "eth_getBalance",
+          "eth_getCode",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_gasPrice",
+          "eth_maxPriorityFeePerGas",
+          "eth_feeHistory",
+          "eth_getBlockByHash",
+          "eth_getBlockByNumber",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_getLogs",
+          "eth_sendRawTransaction"
+        ],
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "polygon-publicnode",
+        "provider": "Allnodes / PublicNode",
+        "url": "https://polygon-bor-rpc.publicnode.com",
+        "sourceUrls": [
+          "https://polygon.publicnode.com/",
+          "https://chainlist.org/chain/137"
+        ],
+        "reviewedAt": "2026-11-07",
+        "supportedMethods": [
+          "eth_chainId",
+          "eth_blockNumber",
+          "eth_syncing",
+          "net_version",
+          "web3_clientVersion",
+          "eth_getBalance",
+          "eth_getCode",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_gasPrice",
+          "eth_maxPriorityFeePerGas",
+          "eth_feeHistory",
+          "eth_getBlockByHash",
+          "eth_getBlockByNumber",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_getLogs",
+          "eth_sendRawTransaction"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "polygon-tenderly",
+        "provider": "Tenderly",
+        "url": "https://polygon.gateway.tenderly.co",
+        "sourceUrls": [
+          "https://docs.tenderly.co/node-rpc/rpc-reference",
+          "https://chainlist.org/chain/137"
+        ],
+        "reviewedAt": "2026-11-07",
+        "supportedMethods": [
+          "eth_chainId",
+          "eth_blockNumber",
+          "eth_syncing",
+          "net_version",
+          "web3_clientVersion",
+          "eth_getBalance",
+          "eth_getCode",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_gasPrice",
+          "eth_maxPriorityFeePerGas",
+          "eth_feeHistory",
+          "eth_getBlockByHash",
+          "eth_getBlockByNumber",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_getLogs",
+          "eth_sendRawTransaction"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "polygon-pocket",
+        "provider": "Pocket Network",
+        "url": "https://poly.api.pocket.network",
+        "sourceUrls": [
+          "https://api.pocket.network/docs/polygon",
+          "https://chainlist.org/chain/137"
+        ],
+        "reviewedAt": "2026-11-07",
+        "supportedMethods": [
+          "eth_chainId",
+          "eth_blockNumber",
+          "eth_syncing",
+          "net_version",
+          "web3_clientVersion",
+          "eth_getBalance",
+          "eth_getCode",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_gasPrice",
+          "eth_maxPriorityFeePerGas",
+          "eth_feeHistory",
+          "eth_getBlockByHash",
+          "eth_getBlockByNumber",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_getLogs",
+          "eth_sendRawTransaction"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "base",
+    "network": "mainnet",
+    "chainId": "eip155:8453",
+    "identity": 8453,
+    "entries": [
+      {
+        "id": "base-drpc",
+        "url": "https://base.drpc.org",
+        "provider": "dRPC",
+        "sourceUrls": [
+          "https://drpc.org/chainlist/base-mainnet-rpc",
+          "https://chainlist.org/chain/8453"
+        ],
+        "reviewedAt": "2026-11-07",
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "capabilities": {
+          "batch": false,
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false
+        }
+      },
+      {
+        "id": "base-mainnet",
+        "url": "https://mainnet.base.org",
+        "provider": "Base",
+        "sourceUrls": [
+          "https://docs.base.org/get-started/connect-to-base",
+          "https://chainlist.org/chain/8453"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "batch": false,
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false
+        }
+      },
+      {
+        "id": "base-publicnode",
+        "url": "https://base-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://base.publicnode.com/",
+          "https://chainlist.org/chain/8453"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "batch": false,
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false
+        }
+      },
+      {
+        "id": "base-tenderly",
+        "url": "https://base.gateway.tenderly.co",
+        "provider": "Tenderly",
+        "sourceUrls": [
+          "https://docs.tenderly.co/node-rpc/rpc-reference",
+          "https://chainlist.org/chain/8453"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "batch": false,
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false
+        }
+      },
+      {
+        "id": "base-pocket",
+        "url": "https://base.api.pocket.network",
+        "provider": "Pocket Network",
+        "sourceUrls": [
+          "https://docs.pocket.network/developers/supported-chains/",
+          "https://chainlist.org/chain/8453"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "batch": false,
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "arbitrum",
+    "network": "mainnet",
+    "chainId": "eip155:42161",
+    "identity": 42161,
+    "entries": [
+      {
+        "id": "arbitrum-public",
+        "url": "https://arb1.arbitrum.io/rpc",
+        "provider": "Offchain Labs",
+        "sourceUrls": [
+          "https://docs.arbitrum.io/chain-info"
+        ],
+        "reviewedAt": "2026-11-07",
+        "ipv6": false,
+        "capabilities": {
+          "subscriptions": false,
+          "batch": false,
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "arbitrum-publicnode",
+        "url": "https://arbitrum-one-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://chainlist.org/chain/42161",
+          "https://www.publicnode.com/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "ipv6": false,
+        "capabilities": {
+          "subscriptions": false,
+          "batch": false,
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "arbitrum-drpc",
+        "url": "https://arbitrum.drpc.org",
+        "provider": "dRPC",
+        "sourceUrls": [
+          "https://chainlist.org/chain/42161",
+          "https://drpc.org/chainlist/arbitrum-mainnet-rpc"
+        ],
+        "reviewedAt": "2026-11-07",
+        "ipv6": false,
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "capabilities": {
+          "subscriptions": false,
+          "batch": false,
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "arbitrum-pocket",
+        "url": "https://arb-one.api.pocket.network",
+        "provider": "Pocket Network",
+        "sourceUrls": [
+          "https://docs.pocket.network/developers/supported-chains/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "ipv6": false,
+        "capabilities": {
+          "subscriptions": false,
+          "batch": false,
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "arbitrum-tenderly",
+        "url": "https://arbitrum.gateway.tenderly.co",
+        "provider": "Tenderly",
+        "sourceUrls": [
+          "https://chainlist.org/chain/42161",
+          "https://docs.tenderly.co/node-rpc/rpc-reference"
+        ],
+        "reviewedAt": "2026-11-07",
+        "ipv6": false,
+        "capabilities": {
+          "subscriptions": false,
+          "batch": false,
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "monad",
+    "network": "mainnet",
+    "chainId": "eip155:143",
+    "identity": 143,
+    "entries": [
+      {
+        "id": "monad-mf",
+        "label": "monad-mf",
+        "url": "https://rpc.monad.xyz",
+        "provider": "Monad Foundation",
+        "websocketUrl": "wss://rpc.monad.xyz",
+        "sourceUrls": [
+          "https://docs.monad.xyz/developer-essentials/network-information",
+          "https://chainlist.org/chain/143",
+          "https://docs.monad.xyz/reference/json-rpc/overview"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 2,
+        "burst": 3,
+        "providerGroup": "monad-foundation",
+        "providerBudget": {
+          "rps": 2,
+          "burst": 3
+        },
+        "documentedLimits": {
+          "requests": 20,
+          "windowMs": 1000,
+          "batchSize": 100,
+          "batchesPerSecond": 5
+        },
+        "capabilities": {
+          "archive": true,
+          "pinning": true,
+          "batch": true,
+          "maxBatchSize": 100,
+          "maxLogBlockRange": 100,
+          "subscriptions": false
+        }
+      },
+      {
+        "id": "monad-mf-1",
+        "label": "monad-mf-1",
+        "url": "https://rpc1.monad.xyz",
+        "provider": "Monad Foundation",
+        "websocketUrl": "wss://rpc1.monad.xyz",
+        "sourceUrls": [
+          "https://docs.monad.xyz/developer-essentials/network-information",
+          "https://chainlist.org/chain/143",
+          "https://docs.monad.xyz/reference/json-rpc/overview"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 2,
+        "burst": 3,
+        "providerGroup": "monad-foundation",
+        "providerBudget": {
+          "rps": 2,
+          "burst": 3
+        },
+        "documentedLimits": {
+          "requests": 20,
+          "windowMs": 1000,
+          "batchSize": 100,
+          "batchesPerSecond": 5
+        },
+        "capabilities": {
+          "archive": true,
+          "pinning": true,
+          "batch": true,
+          "maxBatchSize": 100,
+          "maxLogBlockRange": 1000,
+          "subscriptions": false
+        }
+      },
+      {
+        "id": "monad-goldsky",
+        "label": "monad-goldsky",
+        "url": "https://rpc2.monad.xyz",
+        "provider": "Goldsky Edge",
+        "sourceUrls": [
+          "https://docs.monad.xyz/developer-essentials/network-information",
+          "https://chainlist.org/chain/143"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 20,
+        "burst": 20,
+        "providerGroup": "monad-goldsky",
+        "providerBudget": {
+          "rps": 20,
+          "burst": 20
+        },
+        "documentedLimits": {
+          "requests": 300,
+          "windowMs": 10000,
+          "batchSize": 10
+        },
+        "capabilities": {
+          "archive": true,
+          "pinning": true,
+          "batch": true,
+          "maxBatchSize": 10,
+          "subscriptions": false
+        }
+      },
+      {
+        "id": "monad-ankr",
+        "label": "monad-ankr",
+        "url": "https://rpc3.monad.xyz",
+        "provider": "Ankr",
+        "websocketUrl": "wss://rpc3.monad.xyz",
+        "sourceUrls": [
+          "https://docs.monad.xyz/developer-essentials/network-information",
+          "https://chainlist.org/chain/143",
+          "https://docs.monad.xyz/reference/json-rpc/overview"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 20,
+        "burst": 20,
+        "providerGroup": "monad-ankr",
+        "providerBudget": {
+          "rps": 20,
+          "burst": 20
+        },
+        "documentedLimits": {
+          "requests": 300,
+          "windowMs": 10000,
+          "batchSize": 10
+        },
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "debug": false,
+          "batch": true,
+          "maxBatchSize": 10,
+          "maxLogBlockRange": 1000,
+          "subscriptions": false
+        }
+      },
+      {
+        "id": "monad-mf-infra",
+        "label": "monad-mf-infra",
+        "url": "https://rpc-mainnet.monadinfra.com",
+        "provider": "Monad Foundation",
+        "websocketUrl": "wss://rpc-mainnet.monadinfra.com",
+        "sourceUrls": [
+          "https://docs.monad.xyz/developer-essentials/network-information",
+          "https://chainlist.org/chain/143",
+          "https://docs.monad.xyz/reference/json-rpc/overview"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 2,
+        "burst": 3,
+        "providerGroup": "monad-foundation",
+        "providerBudget": {
+          "rps": 2,
+          "burst": 3
+        },
+        "documentedLimits": {
+          "requests": 20,
+          "windowMs": 1000,
+          "batchSize": 100,
+          "batchesPerSecond": 5
+        },
+        "capabilities": {
+          "archive": true,
+          "pinning": true,
+          "batch": true,
+          "maxBatchSize": 100,
+          "maxLogBlockRange": 100,
+          "subscriptions": false
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "xlayer",
+    "network": "mainnet",
+    "chainId": "eip155:196",
+    "identity": 196,
+    "entries": [
+      {
+        "url": "https://xlayer-mainnet.rpc.sentio.xyz",
+        "provider": "Sentio",
+        "sourceUrls": [
+          "https://chainlist.org/chain/196",
+          "https://docs.sentio.xyz/docs/supported-network"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 2,
+        "burst": 3,
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      },
+      {
+        "url": "https://rpc.xlayer.tech",
+        "provider": "OKX",
+        "sourceUrls": [
+          "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/build-on-xlayer/network-information",
+          "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/rpc-endpoints/rpc-endpoints"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 2,
+        "burst": 3,
+        "providerGroup": "xlayer-public",
+        "providerBudget": {
+          "rps": 100,
+          "burst": 100
+        },
+        "supportedMethods": [
+          "web3_clientVersion",
+          "web3_sha3",
+          "net_version",
+          "eth_protocolVersion",
+          "eth_syncing",
+          "eth_gasPrice",
+          "eth_blockNumber",
+          "eth_chainId",
+          "eth_getBalance",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getCode",
+          "eth_sign",
+          "eth_sendTransaction",
+          "eth_sendRawTransaction",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_getBlockByNumber",
+          "eth_getBlockByHash",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_uninstallFilter",
+          "eth_getFilterChanges",
+          "eth_getLogs",
+          "eth_getFilterLogs",
+          "eth_getCompilers",
+          "eth_getUncleCountByBlockHash",
+          "eth_getUncleCountByBlockNumber",
+          "eth_getUncleByBlockHashAndIndex",
+          "eth_getUncleByBlockNumberAndIndex",
+          "debug_traceBlockByHash",
+          "debug_traceBlockByNumber",
+          "debug_traceTransaction",
+          "txpool_content"
+        ],
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      },
+      {
+        "url": "https://xlayerrpc.okx.com",
+        "provider": "OKX",
+        "sourceUrls": [
+          "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/build-on-xlayer/network-information",
+          "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/rpc-endpoints/rpc-endpoints"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 2,
+        "burst": 3,
+        "providerGroup": "xlayer-public",
+        "providerBudget": {
+          "rps": 100,
+          "burst": 100
+        },
+        "supportedMethods": [
+          "web3_clientVersion",
+          "web3_sha3",
+          "net_version",
+          "eth_protocolVersion",
+          "eth_syncing",
+          "eth_gasPrice",
+          "eth_blockNumber",
+          "eth_chainId",
+          "eth_getBalance",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getCode",
+          "eth_sign",
+          "eth_sendTransaction",
+          "eth_sendRawTransaction",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_getBlockByNumber",
+          "eth_getBlockByHash",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_uninstallFilter",
+          "eth_getFilterChanges",
+          "eth_getLogs",
+          "eth_getFilterLogs",
+          "eth_getCompilers",
+          "eth_getUncleCountByBlockHash",
+          "eth_getUncleCountByBlockNumber",
+          "eth_getUncleByBlockHashAndIndex",
+          "eth_getUncleByBlockNumberAndIndex",
+          "debug_traceBlockByHash",
+          "debug_traceBlockByNumber",
+          "debug_traceTransaction",
+          "txpool_content"
+        ],
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      },
+      {
+        "url": "https://xlayer.drpc.org",
+        "provider": "dRPC",
+        "sourceUrls": [
+          "https://chainlist.org/chain/196",
+          "https://drpc.org/chainlist/xlayer-mainnet-rpc",
+          "https://drpc.org/docs/howitworks/ratelimiting"
+        ],
+        "reviewedAt": "2026-11-07",
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "rps": 2,
+        "burst": 3,
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      },
+      {
+        "url": "https://196.rpc.thirdweb.com",
+        "provider": "thirdweb",
+        "sourceUrls": [
+          "https://chainlist.org/chain/196",
+          "https://portal.thirdweb.com/infrastructure/rpc-edge/overview"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 2,
+        "burst": 3,
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "robinhood",
+    "network": "mainnet",
+    "chainId": "eip155:4663",
+    "identity": 4663,
+    "entries": [
+      {
+        "url": "https://robinhood.drpc.org",
+        "provider": "dRPC",
+        "sourceUrls": [
+          "https://drpc.org/chainlist/robinhood-mainnet-rpc",
+          "https://docs.robinhood.com/chain/connecting/",
+          "https://drpc.org/docs/howitworks/ratelimiting"
+        ],
+        "reviewedAt": "2026-11-07",
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "url": "https://robinhood-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://chainlist.org/chain/4663",
+          "https://www.publicnode.com/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "url": "https://4663.rpc.thirdweb.com",
+        "provider": "thirdweb",
+        "sourceUrls": [
+          "https://chainlist.org/chain/4663",
+          "https://thirdweb.com/robinhood-chain"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "url": "https://robinhood.api.pocket.network",
+        "provider": "POKT Network",
+        "sourceUrls": [
+          "https://chainlist.org/chain/4663",
+          "https://www.pokt.network/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "url": "https://rpc.mainnet.chain.robinhood.com",
+        "provider": "Robinhood Chain",
+        "sourceUrls": [
+          "https://docs.robinhood.com/chain/connecting/",
+          "https://chainlist.org/chain/4663"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "plasma",
+    "network": "mainnet",
+    "chainId": "eip155:9745",
+    "identity": 9745,
+    "entries": [
+      {
+        "url": "https://rpc.plasma.to",
+        "provider": "Plasma",
+        "sourceUrls": [
+          "https://docs.plasma.org/docs/guides/network-configuration/mainnet-details",
+          "https://www.plasma.org/docs/plasma-chain/tools/rpc-providers",
+          "https://chainlist.org/chain/9745"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "batch": false,
+          "subscriptions": false,
+          "debug": false,
+          "trace": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "url": "https://9745.rpc.thirdweb.com",
+        "provider": "thirdweb",
+        "sourceUrls": [
+          "https://chainlist.org/chain/9745",
+          "https://www.plasma.org/docs/plasma-chain/tools/rpc-providers"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "batch": false,
+          "subscriptions": false,
+          "debug": false,
+          "trace": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "ink",
+    "network": "mainnet",
+    "chainId": "eip155:57073",
+    "identity": 57073,
+    "entries": [
+      {
+        "url": "https://rpc-qnd.inkonchain.com",
+        "provider": "QuickNode",
+        "sourceUrls": [
+          "https://docs.inkonchain.com/general/network-information",
+          "https://docs.inkonchain.com/tools/rpc",
+          "https://chainlist.org/chain/57073"
+        ],
+        "reviewedAt": "2026-11-07",
+        "websocketUrls": [
+          "wss://rpc-qnd.inkonchain.com"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "url": "https://rpc-ten.inkonchain.com",
+        "provider": "Tenderly",
+        "sourceUrls": [
+          "https://docs.inkonchain.com/general/network-information",
+          "https://docs.inkonchain.com/tools/rpc"
+        ],
+        "reviewedAt": "2026-11-07",
+        "websocketUrls": [
+          "wss://rpc-ten.inkonchain.com"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "url": "https://ink-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://ink.publicnode.com/",
+          "https://chainlist.org/chain/57073"
+        ],
+        "reviewedAt": "2026-11-07",
+        "websocketUrls": [
+          "wss://ink-rpc.publicnode.com"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "url": "https://ink.drpc.org",
+        "provider": "dRPC",
+        "sourceUrls": [
+          "https://docs.inkonchain.com/general/network-information",
+          "https://docs.inkonchain.com/tools/rpc",
+          "https://chainlist.org/chain/57073"
+        ],
+        "reviewedAt": "2026-11-07",
+        "websocketUrls": [
+          "wss://ink.drpc.org"
+        ],
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "url": "https://rpc-gel.inkonchain.com",
+        "provider": "Gelato",
+        "sourceUrls": [
+          "https://docs.inkonchain.com/general/network-information",
+          "https://docs.inkonchain.com/tools/rpc",
+          "https://chainlist.org/chain/57073"
+        ],
+        "reviewedAt": "2026-11-07",
+        "websocketUrls": [
+          "wss://ws-gel.inkonchain.com",
+          "wss://rpc-gel.inkonchain.com"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "optimism",
+    "network": "mainnet",
+    "chainId": "eip155:10",
+    "identity": 10,
+    "entries": [
+      {
+        "id": "optimism-publicnode",
+        "url": "https://optimism-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://chainlist.org/chain/10",
+          "https://www.publicnode.com/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false
+        }
+      },
+      {
+        "id": "optimism-tenderly",
+        "url": "https://optimism.gateway.tenderly.co",
+        "provider": "Tenderly",
+        "sourceUrls": [
+          "https://chainlist.org/chain/10",
+          "https://docs.tenderly.co/node-rpc/rpc-reference"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false
+        }
+      },
+      {
+        "id": "optimism-drpc",
+        "url": "https://optimism.drpc.org",
+        "provider": "dRPC",
+        "sourceUrls": [
+          "https://chainlist.org/chain/10",
+          "https://drpc.org/chainlist/optimism-mainnet-rpc"
+        ],
+        "reviewedAt": "2026-11-07",
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "capabilities": {
+          "archive": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false
+        }
+      },
+      {
+        "id": "optimism-mainnet",
+        "url": "https://mainnet.optimism.io",
+        "provider": "Optimism",
+        "sourceUrls": [
+          "https://docs.optimism.io/op-mainnet/network-information/connecting-to-op"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false
+        }
+      },
+      {
+        "id": "optimism-pocket",
+        "url": "https://op.api.pocket.network",
+        "provider": "Pocket Network",
+        "sourceUrls": [
+          "https://docs.pocket.network/developers/supported-chains/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "opbnb",
+    "network": "mainnet",
+    "chainId": "eip155:204",
+    "identity": 204,
+    "entries": [
+      {
+        "id": "opbnb-bnbchain",
+        "url": "https://opbnb-mainnet-rpc.bnbchain.org",
+        "provider": "BNB Chain",
+        "sourceUrls": [
+          "https://docs.bnbchain.org/bnb-opbnb/get-started/network-info/",
+          "https://chainlist.org/chain/204"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "opbnb-publicnode",
+        "url": "https://opbnb-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://docs.bnbchain.org/bnb-opbnb/get-started/network-info/",
+          "https://chainlist.org/chain/204",
+          "https://opbnb.publicnode.com/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "websocketUrl": "wss://opbnb-rpc.publicnode.com",
+        "capabilities": {
+          "archive": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "opbnb-thirdweb",
+        "url": "https://204.rpc.thirdweb.com",
+        "provider": "thirdweb",
+        "sourceUrls": [
+          "https://docs.bnbchain.org/bnb-opbnb/get-started/network-info/",
+          "https://chainlist.org/chain/204",
+          "https://thirdweb.com/opbnb"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "opbnb-pocket",
+        "url": "https://opbnb.api.pocket.network",
+        "provider": "Pocket Network",
+        "sourceUrls": [
+          "https://docs.bnbchain.org/bnb-opbnb/get-started/network-info/",
+          "https://chainlist.org/chain/204",
+          "https://api.pocket.network/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "arc",
+    "network": "mainnet",
+    "chainId": "eip155:5042",
+    "identity": 5042,
+    "entries": [
+      {
+        "id": "arc-primary",
+        "provider": "Arc",
+        "url": "https://rpc.mainnet.arc.io",
+        "sourceUrls": [
+          "https://docs.arc.io/arc/references/connect-to-arc",
+          "https://chainlist.org/chain/5042"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "arc-blockdaemon",
+        "provider": "Blockdaemon",
+        "url": "https://rpc.blockdaemon.mainnet.arc.io",
+        "webSocketUrl": "wss://rpc.blockdaemon.mainnet.arc.io/websocket",
+        "sourceUrls": [
+          "https://docs.arc.io/arc/references/connect-to-arc",
+          "https://chainlist.org/chain/5042"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "arc-drpc",
+        "provider": "dRPC",
+        "url": "https://rpc.drpc.mainnet.arc.io",
+        "sourceUrls": [
+          "https://docs.arc.io/arc/references/connect-to-arc",
+          "https://chainlist.org/chain/5042",
+          "https://drpc.org/docs/howitworks/ratelimiting"
+        ],
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "arc-quicknode",
+        "provider": "QuickNode",
+        "url": "https://rpc.quicknode.mainnet.arc.io",
+        "webSocketUrl": "wss://rpc.quicknode.mainnet.arc.io",
+        "sourceUrls": [
+          "https://docs.arc.io/arc/references/connect-to-arc",
+          "https://chainlist.org/chain/5042"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "arc-publicnode",
+        "provider": "PublicNode",
+        "url": "https://arc-rpc.publicnode.com",
+        "sourceUrls": [
+          "https://chainlist.org/chain/5042",
+          "https://arc.publicnode.com/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "etherlink",
+    "network": "mainnet",
+    "chainId": "eip155:42793",
+    "identity": 42793,
+    "entries": [
+      {
+        "id": "etherlink-mainnet",
+        "url": "https://node.mainnet.etherlink.com",
+        "provider": "Etherlink",
+        "sourceUrls": [
+          "https://docs.etherlink.com/evm/get-started/network-information/",
+          "https://docs.etherlink.com/evm/tools/node-providers/",
+          "https://chainlist.org/chain/42793"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 16,
+        "burst": 4,
+        "providerGroup": "etherlink-public",
+        "providerBudget": {
+          "rps": 16,
+          "burst": 4
+        },
+        "limits": {
+          "requestsPerMinute": 1000,
+          "maxLogBlockRange": 500,
+          "maxLogResults": 5000
+        },
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest"
+          ],
+          "pinning": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "maxLogBlockRange": 500
+        }
+      },
+      {
+        "id": "etherlink-ankr-public",
+        "url": "https://rpc.ankr.com/etherlink_mainnet",
+        "provider": "Ankr",
+        "sourceUrls": [
+          "https://chainlist.org/chain/42793",
+          "https://www.ankr.com/docs/rpc-service/chains/chains-api/etherlink/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 16,
+        "burst": 4,
+        "providerGroup": "etherlink-ankr-public",
+        "providerBudget": {
+          "rps": 16,
+          "burst": 4
+        },
+        "limits": {
+          "requestsPerMinute": 1000,
+          "maxLogBlockRange": 500,
+          "maxLogResults": 5000
+        },
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest"
+          ],
+          "pinning": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "maxLogBlockRange": 500
+        }
+      },
+      {
+        "id": "etherlink-thirdweb-public",
+        "url": "https://42793.rpc.thirdweb.com",
+        "provider": "thirdweb",
+        "sourceUrls": [
+          "https://thirdweb.com/etherlink",
+          "https://portal.thirdweb.com/infrastructure/rpc-edge/overview"
+        ],
+        "reviewedAt": "2026-11-07",
+        "rps": 16,
+        "burst": 4,
+        "providerGroup": "etherlink-thirdweb-public",
+        "providerBudget": {
+          "rps": 16,
+          "burst": 4
+        },
+        "limits": {
+          "requestsPerMinute": 1000,
+          "maxLogBlockRange": 500,
+          "maxLogResults": 5000
+        },
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest"
+          ],
+          "pinning": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "maxLogBlockRange": 500
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "avalanche",
+    "network": "mainnet",
+    "chainId": "eip155:43114",
+    "identity": 43114,
+    "entries": [
+      {
+        "id": "avalanche-public-c-chain",
+        "url": "https://api.avax.network/ext/bc/C/rpc",
+        "websocketUrl": "wss://api.avax.network/ext/bc/C/ws",
+        "provider": "Avalanche",
+        "sourceUrls": [
+          "https://build.avax.network/docs/rpcs/c-chain",
+          "https://chainlist.org/chain/43114"
+        ],
+        "reviewedAt": "2026-11-07",
+        "supportedMethods": [
+          "web3_clientVersion",
+          "web3_sha3",
+          "net_version",
+          "net_listening",
+          "net_peerCount",
+          "eth_chainId",
+          "eth_syncing",
+          "eth_coinbase",
+          "eth_accounts",
+          "eth_blockNumber",
+          "eth_gasPrice",
+          "eth_maxPriorityFeePerGas",
+          "eth_blobBaseFee",
+          "eth_feeHistory",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_createAccessList",
+          "eth_getBalance",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_getCode",
+          "eth_getProof",
+          "eth_getLogs",
+          "eth_getBlockByHash",
+          "eth_getBlockByNumber",
+          "eth_getBlockReceipts",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_getUncleCountByBlockHash",
+          "eth_getUncleCountByBlockNumber",
+          "eth_getUncleByBlockHashAndIndex",
+          "eth_getUncleByBlockNumberAndIndex",
+          "eth_sendRawTransaction",
+          "eth_sendRawTransactionSync",
+          "eth_sendTransaction",
+          "eth_sign",
+          "eth_signTransaction",
+          "eth_signTypedData",
+          "eth_signTypedData_v3",
+          "eth_signTypedData_v4",
+          "eth_submitWork",
+          "eth_submitHashrate",
+          "eth_subscribe",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter",
+          "eth_unsubscribe",
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_baseFee",
+          "eth_suggestPriceOptions",
+          "eth_getChainConfig",
+          "eth_pendingTransactions",
+          "eth_getHeaderByHash",
+          "eth_getHeaderByNumber"
+        ],
+        "unsupportedMethods": [
+          "eth_getChainConfig",
+          "eth_resend",
+          "eth_sendTransaction",
+          "eth_sign",
+          "eth_signTransaction",
+          "eth_accounts",
+          "eth_coinbase",
+          "eth_etherbase"
+        ],
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "pinning": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        }
+      },
+      {
+        "id": "avalanche-publicnode",
+        "url": "https://avalanche-c-chain-rpc.publicnode.com",
+        "websocketUrl": "wss://avalanche-c-chain-rpc.publicnode.com",
+        "provider": "Allnodes / PublicNode",
+        "sourceUrls": [
+          "https://avalanche.publicnode.com/",
+          "https://chainlist.org/chain/43114"
+        ],
+        "reviewedAt": "2026-11-07",
+        "supportedMethods": [
+          "web3_clientVersion",
+          "web3_sha3",
+          "net_version",
+          "net_listening",
+          "net_peerCount",
+          "eth_chainId",
+          "eth_syncing",
+          "eth_coinbase",
+          "eth_accounts",
+          "eth_blockNumber",
+          "eth_gasPrice",
+          "eth_maxPriorityFeePerGas",
+          "eth_blobBaseFee",
+          "eth_feeHistory",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_createAccessList",
+          "eth_getBalance",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_getCode",
+          "eth_getProof",
+          "eth_getLogs",
+          "eth_getBlockByHash",
+          "eth_getBlockByNumber",
+          "eth_getBlockReceipts",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_getUncleCountByBlockHash",
+          "eth_getUncleCountByBlockNumber",
+          "eth_getUncleByBlockHashAndIndex",
+          "eth_getUncleByBlockNumberAndIndex",
+          "eth_sendRawTransaction",
+          "eth_sendRawTransactionSync",
+          "eth_sendTransaction",
+          "eth_sign",
+          "eth_signTransaction",
+          "eth_signTypedData",
+          "eth_signTypedData_v3",
+          "eth_signTypedData_v4",
+          "eth_submitWork",
+          "eth_submitHashrate",
+          "eth_subscribe",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter",
+          "eth_unsubscribe",
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_baseFee",
+          "eth_suggestPriceOptions",
+          "eth_getChainConfig",
+          "eth_pendingTransactions",
+          "eth_getHeaderByHash",
+          "eth_getHeaderByNumber"
+        ],
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "pinning": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        }
+      },
+      {
+        "id": "avalanche-drpc",
+        "url": "https://avalanche.drpc.org",
+        "websocketUrl": "wss://avalanche.drpc.org",
+        "provider": "dRPC",
+        "sourceUrls": [
+          "https://drpc.org/chainlist/avalanche-mainnet-rpc",
+          "https://chainlist.org/chain/43114"
+        ],
+        "reviewedAt": "2026-11-07",
+        "supportedMethods": [
+          "web3_clientVersion",
+          "web3_sha3",
+          "net_version",
+          "net_listening",
+          "net_peerCount",
+          "eth_chainId",
+          "eth_syncing",
+          "eth_coinbase",
+          "eth_accounts",
+          "eth_blockNumber",
+          "eth_gasPrice",
+          "eth_maxPriorityFeePerGas",
+          "eth_blobBaseFee",
+          "eth_feeHistory",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_createAccessList",
+          "eth_getBalance",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_getCode",
+          "eth_getProof",
+          "eth_getLogs",
+          "eth_getBlockByHash",
+          "eth_getBlockByNumber",
+          "eth_getBlockReceipts",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_getUncleCountByBlockHash",
+          "eth_getUncleCountByBlockNumber",
+          "eth_getUncleByBlockHashAndIndex",
+          "eth_getUncleByBlockNumberAndIndex",
+          "eth_sendRawTransaction",
+          "eth_sendRawTransactionSync",
+          "eth_sendTransaction",
+          "eth_sign",
+          "eth_signTransaction",
+          "eth_signTypedData",
+          "eth_signTypedData_v3",
+          "eth_signTypedData_v4",
+          "eth_submitWork",
+          "eth_submitHashrate",
+          "eth_subscribe",
+          "eth_unsubscribe",
+          "eth_baseFee",
+          "eth_suggestPriceOptions",
+          "eth_getChainConfig",
+          "eth_pendingTransactions",
+          "eth_getHeaderByHash",
+          "eth_getHeaderByNumber"
+        ],
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "pinning": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        }
+      },
+      {
+        "id": "avalanche-tenderly",
+        "url": "https://avalanche.gateway.tenderly.co",
+        "websocketUrl": "wss://avalanche.gateway.tenderly.co",
+        "provider": "Tenderly",
+        "sourceUrls": [
+          "https://docs.tenderly.co/node-rpc/rpc-reference",
+          "https://chainlist.org/chain/43114"
+        ],
+        "reviewedAt": "2026-11-07",
+        "supportedMethods": [
+          "web3_clientVersion",
+          "web3_sha3",
+          "net_version",
+          "net_listening",
+          "net_peerCount",
+          "eth_chainId",
+          "eth_syncing",
+          "eth_coinbase",
+          "eth_accounts",
+          "eth_blockNumber",
+          "eth_gasPrice",
+          "eth_maxPriorityFeePerGas",
+          "eth_blobBaseFee",
+          "eth_feeHistory",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_createAccessList",
+          "eth_getBalance",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_getCode",
+          "eth_getProof",
+          "eth_getLogs",
+          "eth_getBlockByHash",
+          "eth_getBlockByNumber",
+          "eth_getBlockReceipts",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_getUncleCountByBlockHash",
+          "eth_getUncleCountByBlockNumber",
+          "eth_getUncleByBlockHashAndIndex",
+          "eth_getUncleByBlockNumberAndIndex",
+          "eth_sendRawTransaction",
+          "eth_sendRawTransactionSync",
+          "eth_sendTransaction",
+          "eth_sign",
+          "eth_signTransaction",
+          "eth_signTypedData",
+          "eth_signTypedData_v3",
+          "eth_signTypedData_v4",
+          "eth_submitWork",
+          "eth_submitHashrate",
+          "eth_subscribe",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter",
+          "eth_unsubscribe",
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_baseFee",
+          "eth_suggestPriceOptions",
+          "eth_getChainConfig",
+          "eth_pendingTransactions",
+          "eth_getHeaderByHash",
+          "eth_getHeaderByNumber"
+        ],
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "pinning": false,
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "celo",
+    "network": "mainnet",
+    "chainId": "eip155:42220",
+    "identity": 42220,
+    "entries": [
+      {
+        "id": "celo-forno-mainnet",
+        "url": "https://forno.celo.org",
+        "websocketUrl": "wss://forno.celo.org/ws",
+        "provider": "cLabs Forno",
+        "sourceUrls": [
+          "https://docs.celo.org/learn/network/overview",
+          "https://docs.celo.org/build/tools/nodes/forno",
+          "https://chainlist.org/chain/42220"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        },
+        "unsupportedMethods": [
+          "eth_sendTransaction",
+          "eth_sign",
+          "eth_signTransaction"
+        ]
+      },
+      {
+        "id": "celo-publicnode-mainnet",
+        "url": "https://celo-rpc.publicnode.com",
+        "websocketUrl": "wss://celo-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://celo.publicnode.com/",
+          "https://chainlist.org/chain/42220"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        }
+      },
+      {
+        "id": "celo-ankr-mainnet",
+        "url": "https://rpc.ankr.com/celo",
+        "websocketUrl": "wss://rpc.ankr.com/celo",
+        "provider": "Ankr",
+        "sourceUrls": [
+          "https://www.ankr.com/docs/rpc-service/chains/chains-list/c-i/",
+          "https://chainlist.org/chain/42220"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        }
+      },
+      {
+        "id": "celo-drpc-mainnet",
+        "url": "https://celo.drpc.org",
+        "websocketUrl": "wss://celo.drpc.org",
+        "provider": "dRPC",
+        "sourceUrls": [
+          "https://drpc.org/chainlist/celo-mainnet-rpc",
+          "https://drpc.org/docs/howitworks/ratelimiting",
+          "https://chainlist.org/chain/42220"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        },
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ]
+      },
+      {
+        "id": "celo-tenderly-mainnet",
+        "url": "https://celo.gateway.tenderly.co",
+        "websocketUrl": "wss://celo.gateway.tenderly.co",
+        "provider": "Tenderly",
+        "sourceUrls": [
+          "https://docs.tenderly.co/node-rpc/rpc-reference",
+          "https://chainlist.org/chain/42220"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "celo",
+    "network": "sepolia",
+    "chainId": "eip155:11142220",
+    "identity": 11142220,
+    "entries": [
+      {
+        "id": "celo-forno-sepolia",
+        "url": "https://forno.celo-sepolia.celo-testnet.org",
+        "websocketUrl": "wss://forno.celo-sepolia.celo-testnet.org/ws",
+        "provider": "cLabs Forno",
+        "sourceUrls": [
+          "https://docs.celo.org/learn/network/overview",
+          "https://docs.celo.org/build/tools/nodes/forno",
+          "https://chainlist.org/chain/11142220"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        },
+        "unsupportedMethods": [
+          "eth_sendTransaction",
+          "eth_sign",
+          "eth_signTransaction"
+        ]
+      },
+      {
+        "id": "celo-ankr-sepolia",
+        "url": "https://rpc.ankr.com/celo_sepolia",
+        "websocketUrl": "wss://rpc.ankr.com/celo_sepolia",
+        "provider": "Ankr",
+        "sourceUrls": [
+          "https://www.ankr.com/docs/rpc-service/chains/chains-list/c-i/",
+          "https://chainlist.org/chain/11142220"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        }
+      },
+      {
+        "id": "celo-drpc-sepolia",
+        "url": "https://celo-sepolia.drpc.org",
+        "websocketUrl": "wss://celo-sepolia.drpc.org",
+        "provider": "dRPC",
+        "sourceUrls": [
+          "https://drpc.org/chainlist/celo-sepolia-rpc",
+          "https://drpc.org/docs/howitworks/ratelimiting",
+          "https://chainlist.org/chain/11142220"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        },
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ]
+      },
+      {
+        "id": "celo-tenderly-sepolia",
+        "url": "https://celo-sepolia.gateway.tenderly.co",
+        "websocketUrl": "wss://celo-sepolia.gateway.tenderly.co",
+        "provider": "Tenderly",
+        "sourceUrls": [
+          "https://docs.tenderly.co/node-rpc/rpc-reference",
+          "https://chainlist.org/chain/11142220"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "batch": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "gnosis",
+    "network": "mainnet",
+    "chainId": "eip155:100",
+    "identity": 100,
+    "entries": [
+      {
+        "id": "gnosis-publicnode",
+        "provider": "PublicNode",
+        "url": "https://gnosis-rpc.publicnode.com",
+        "sourceUrls": [
+          "https://gnosis.publicnode.com/",
+          "https://chainlist.org/chain/100"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "batch": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "gnosis-drpc",
+        "provider": "dRPC",
+        "url": "https://gnosis.drpc.org",
+        "sourceUrls": [
+          "https://drpc.org/chainlist/gnosis-mainnet-rpc",
+          "https://drpc.org/docs/howitworks/ratelimiting",
+          "https://docs.gnosischain.com/tools/RPC%20Providers/",
+          "https://chainlist.org/chain/100"
+        ],
+        "reviewedAt": "2026-11-07",
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "batch": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "gnosis-gateway",
+        "provider": "Gateway.fm",
+        "url": "https://rpc.gnosis.gateway.fm",
+        "sourceUrls": [
+          "https://docs.gnosischain.com/about/networks/mainnet",
+          "https://chainlist.org/chain/100"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "batch": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "gnosis-pocket",
+        "provider": "Pocket Network",
+        "url": "https://gnosis.api.pocket.network",
+        "sourceUrls": [
+          "https://docs.pocket.network/developers/supported-chains/",
+          "https://chainlist.org/chain/100"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "batch": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "gnosis-starter",
+        "provider": "Gnosis",
+        "url": "https://rpc.gnosischain.com",
+        "websocketUrl": "wss://rpc.gnosischain.com/wss",
+        "sourceUrls": [
+          "https://docs.gnosischain.com/about/networks/mainnet",
+          "https://docs.gnosischain.com/tools/RPC%20Providers/",
+          "https://chainlist.org/chain/100"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "batch": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "mantle",
+    "network": "mainnet",
+    "chainId": "eip155:5000",
+    "identity": 5000,
+    "entries": [
+      {
+        "id": "mantle-publicnode",
+        "url": "https://mantle-rpc.publicnode.com",
+        "provider": "PublicNode",
+        "sourceUrls": [
+          "https://chainlist.org/chain/5000",
+          "https://mantle.publicnode.com/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "mantle-mainnet",
+        "url": "https://rpc.mantle.xyz",
+        "provider": "Mantle",
+        "sourceUrls": [
+          "https://docs.mantle.xyz/network/for-developers/quick-access",
+          "https://docs.mantle.xyz/network/for-developers/resources-and-tooling/mantle-api"
+        ],
+        "reviewedAt": "2026-11-07",
+        "unsupportedMethods": [
+          "eth_getBlockRange",
+          "eth_sendTransaction"
+        ],
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "mantle-pocket",
+        "url": "https://mantle.api.pocket.network",
+        "provider": "Pocket Network",
+        "sourceUrls": [
+          "https://chainlist.org/chain/5000",
+          "https://pocket.network/foundation-partnerships/"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      },
+      {
+        "id": "mantle-thirdweb",
+        "url": "https://5000.rpc.thirdweb.com",
+        "provider": "thirdweb",
+        "sourceUrls": [
+          "https://chainlist.org/chain/5000",
+          "https://portal.thirdweb.com/infrastructure/rpc-edge/overview"
+        ],
+        "reviewedAt": "2026-11-07",
+        "capabilities": {
+          "archive": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ],
+          "debug": false,
+          "trace": false,
+          "subscriptions": false,
+          "pinning": false,
+          "batch": false
+        }
+      }
+    ]
+  },
+  {
+    "protocol": "flare",
+    "network": "mainnet",
+    "chainId": "eip155:14",
+    "identity": 14,
+    "entries": [
+      {
+        "id": "flare-drpc-public",
+        "provider": "dRPC",
+        "url": "https://flare.drpc.org",
+        "websocketUrl": "wss://flare.drpc.org",
+        "sourceUrls": [
+          "https://chainlist.org/chain/14",
+          "https://drpc.org/chainlist/flare-mainnet-rpc",
+          "https://drpc.org/docs/howitworks/ratelimiting"
+        ],
+        "unsupportedMethods": [
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "reviewedAt": "2026-11-07",
+        "supportedMethods": [
+          "web3_clientVersion",
+          "web3_sha3",
+          "net_version",
+          "net_listening",
+          "net_peerCount",
+          "eth_chainId",
+          "eth_syncing",
+          "eth_coinbase",
+          "eth_accounts",
+          "eth_blockNumber",
+          "eth_gasPrice",
+          "eth_maxPriorityFeePerGas",
+          "eth_blobBaseFee",
+          "eth_feeHistory",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_createAccessList",
+          "eth_getBalance",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_getCode",
+          "eth_getProof",
+          "eth_getLogs",
+          "eth_getBlockByHash",
+          "eth_getBlockByNumber",
+          "eth_getBlockReceipts",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_getUncleCountByBlockHash",
+          "eth_getUncleCountByBlockNumber",
+          "eth_getUncleByBlockHashAndIndex",
+          "eth_getUncleByBlockNumberAndIndex",
+          "eth_sendRawTransaction"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "batch": false,
+          "subscriptions": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "flare-quicknode-public",
+        "provider": "QuickNode",
+        "url": "https://stylish-light-theorem.flare-mainnet.quiknode.pro/ext/bc/C/rpc",
+        "websocketUrl": "wss://stylish-light-theorem.flare-mainnet.quiknode.pro/ext/bc/C/ws",
+        "sourceUrls": [
+          "https://dev.flare.network/network/overview"
+        ],
+        "reviewedAt": "2026-11-07",
+        "supportedMethods": [
+          "web3_clientVersion",
+          "web3_sha3",
+          "net_version",
+          "net_listening",
+          "net_peerCount",
+          "eth_chainId",
+          "eth_syncing",
+          "eth_coinbase",
+          "eth_accounts",
+          "eth_blockNumber",
+          "eth_gasPrice",
+          "eth_maxPriorityFeePerGas",
+          "eth_blobBaseFee",
+          "eth_feeHistory",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_createAccessList",
+          "eth_getBalance",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_getCode",
+          "eth_getProof",
+          "eth_getLogs",
+          "eth_getBlockByHash",
+          "eth_getBlockByNumber",
+          "eth_getBlockReceipts",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_getUncleCountByBlockHash",
+          "eth_getUncleCountByBlockNumber",
+          "eth_getUncleByBlockHashAndIndex",
+          "eth_getUncleByBlockNumberAndIndex",
+          "eth_sendRawTransaction",
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "batch": false,
+          "subscriptions": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "flare-tenderly-public",
+        "provider": "Tenderly",
+        "url": "https://flare.gateway.tenderly.co",
+        "websocketUrl": "wss://flare.gateway.tenderly.co",
+        "sourceUrls": [
+          "https://docs.tenderly.co/node-rpc/rpc-reference",
+          "https://docs.tenderly.co/node-rpc/overview#public-endpoint-limits"
+        ],
+        "reviewedAt": "2026-11-07",
+        "supportedMethods": [
+          "web3_clientVersion",
+          "web3_sha3",
+          "net_version",
+          "net_listening",
+          "net_peerCount",
+          "eth_chainId",
+          "eth_syncing",
+          "eth_coinbase",
+          "eth_accounts",
+          "eth_blockNumber",
+          "eth_gasPrice",
+          "eth_maxPriorityFeePerGas",
+          "eth_blobBaseFee",
+          "eth_feeHistory",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_createAccessList",
+          "eth_getBalance",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_getCode",
+          "eth_getProof",
+          "eth_getLogs",
+          "eth_getBlockByHash",
+          "eth_getBlockByNumber",
+          "eth_getBlockReceipts",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_getUncleCountByBlockHash",
+          "eth_getUncleCountByBlockNumber",
+          "eth_getUncleByBlockHashAndIndex",
+          "eth_getUncleByBlockNumberAndIndex",
+          "eth_sendRawTransaction",
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "batch": false,
+          "subscriptions": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      },
+      {
+        "id": "flare-public",
+        "provider": "Flare",
+        "url": "https://flare-api.flare.network/ext/C/rpc",
+        "websocketUrl": "wss://flare-api.flare.network/ext/C/ws",
+        "sourceUrls": [
+          "https://dev.flare.network/network/overview",
+          "https://chainlist.org/chain/14"
+        ],
+        "reviewedAt": "2026-11-07",
+        "supportedMethods": [
+          "web3_clientVersion",
+          "web3_sha3",
+          "net_version",
+          "net_listening",
+          "net_peerCount",
+          "eth_chainId",
+          "eth_syncing",
+          "eth_coinbase",
+          "eth_accounts",
+          "eth_blockNumber",
+          "eth_gasPrice",
+          "eth_maxPriorityFeePerGas",
+          "eth_blobBaseFee",
+          "eth_feeHistory",
+          "eth_call",
+          "eth_estimateGas",
+          "eth_createAccessList",
+          "eth_getBalance",
+          "eth_getStorageAt",
+          "eth_getTransactionCount",
+          "eth_getCode",
+          "eth_getProof",
+          "eth_getLogs",
+          "eth_getBlockByHash",
+          "eth_getBlockByNumber",
+          "eth_getBlockReceipts",
+          "eth_getBlockTransactionCountByHash",
+          "eth_getBlockTransactionCountByNumber",
+          "eth_getTransactionByHash",
+          "eth_getTransactionByBlockHashAndIndex",
+          "eth_getTransactionByBlockNumberAndIndex",
+          "eth_getTransactionReceipt",
+          "eth_getUncleCountByBlockHash",
+          "eth_getUncleCountByBlockNumber",
+          "eth_getUncleByBlockHashAndIndex",
+          "eth_getUncleByBlockNumberAndIndex",
+          "eth_sendRawTransaction",
+          "eth_newFilter",
+          "eth_newBlockFilter",
+          "eth_newPendingTransactionFilter",
+          "eth_getFilterChanges",
+          "eth_getFilterLogs",
+          "eth_uninstallFilter"
+        ],
+        "capabilities": {
+          "archive": false,
+          "debug": false,
+          "trace": false,
+          "batch": false,
+          "subscriptions": false,
+          "pinning": false,
+          "blockTags": [
+            "latest",
+            "pending"
+          ]
+        }
+      }
+    ]
+  }
+]

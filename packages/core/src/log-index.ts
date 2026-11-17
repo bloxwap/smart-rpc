@@ -487,7 +487,7 @@ function firstAtBlock(logs: readonly StoredLog[], block: number): number {
   let high = logs.length;
   while (low < high) {
     const middle = (low + high) >>> 1;
-    if ((logs[middle]?.blockNumber ?? block) < block) low = middle + 1;
+    if ((/* v8 ignore next -- @preserve the binary search keeps middle in range */ logs[middle]?.blockNumber ?? block) < block) low = middle + 1;
     else high = middle;
   }
   return low;

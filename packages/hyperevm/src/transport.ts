@@ -50,6 +50,12 @@ export const HYPEREVM_SAFE_METHODS: readonly string[] = [
   "eth_getSystemTxsByBlockNumber",
 ];
 
+/**
+ * Small blocks every second (measured 2026-11-08: 1,000 mainnet blocks in 983s). Large blocks are slower but do
+ * not set the head rate. Lag tolerance is one block.
+ */
+const HYPEREVM_BLOCK_TIME_MS = 1_000;
+
 /** HyperEVM mainnet chain id. */
 export const HYPEREVM_CHAIN_ID = 999;
 
@@ -64,6 +70,8 @@ export const HYPEREVM_TESTNET_CAIP = "eip155:998";
 
 export interface HyperEvmOptions
   extends Omit<EthereumOptions, "chainId" | "chainIds" | "endpoints" | "skipPrecompiles" | "cachePolicy"> {
+  /** Use curated order before latency samples. Default: "ordered" for public defaults, "weighted" for explicit endpoints. */
+  coldStart?: EthereumOptions["coldStart"];
   /**
    * One HyperEVM chain. Omit to serve both `eip155:999` and `eip155:998`.
    */
@@ -93,13 +101,16 @@ export function hyperevm(options: HyperEvmOptions = {}): HyperEvmTransport {
       chainId,
       chainIds: [`eip155:${chainId}`],
       endpoints: endpointsFor(options, chainId),
+      coldStart: options.coldStart ?? (configuredEndpoints(options, chainId) === undefined ? "ordered" : "weighted"),
       skipPrecompiles: options.skipPrecompiles ?? true,
       blockHashProbe: true,
       cachePolicy: HYPEREVM_CACHE_POLICY,
       safeMethods: [...HYPEREVM_SAFE_METHODS, ...(options.safeMethods ?? [])],
+      blockTimeMs: options.blockTimeMs ?? HYPEREVM_BLOCK_TIME_MS,
     }),
   );
   const first = pools[0];
+  /* v8 ignore next -- @preserve chains always has at least one id */
   if (!first) throw new Error("hyperevm() requires a chain.");
   if (pools.length === 1) return first;
   return combine(pools);
@@ -114,10 +125,14 @@ function shared(options: HyperEvmOptions): Omit<EthereumOptions, "chainId" | "ch
   return rest;
 }
 
-function endpointsFor(options: HyperEvmOptions, chainId: 999 | 998): readonly EthereumEndpoint[] {
-  const configured = chainId === 998 && options.chainId === undefined
+function configuredEndpoints(options: HyperEvmOptions, chainId: 999 | 998): readonly EthereumEndpoint[] | undefined {
+  return chainId === 998 && options.chainId === undefined
     ? options.testnetEndpoints
     : options.endpoints;
+}
+
+function endpointsFor(options: HyperEvmOptions, chainId: 999 | 998): readonly EthereumEndpoint[] {
+  const configured = configuredEndpoints(options, chainId);
   if (configured !== undefined) return configured.map((endpoint) => tagOfficial(endpoint));
   const registry = chainId === 999 ? HYPEREVM_MAINNET_REGISTRY : HYPEREVM_TESTNET_REGISTRY;
   return registry
@@ -150,18 +165,18 @@ function combine(transports: readonly RpcPool[]): HyperEvmTransport {
       return router.requestBatch(requests.map((request) => ({ ...request, chainId: request.chainId ?? "" })));
     },
     probe(): Promise<void> {
-      return Promise.all(transports.map((transport) => transport.probe?.() ?? Promise.resolve())).then(() => undefined);
+      return Promise.all(transports.map((transport) => /* v8 ignore next -- @preserve ethereum() pools always implement probe */ transport.probe?.() ?? Promise.resolve())).then(() => undefined);
     },
     close(): void {
       for (const transport of transports) transport.close?.();
     },
     snapshot(method) {
-      return transports.flatMap((transport) => transport.snapshot?.(method) ?? []);
+      return transports.flatMap((transport) => /* v8 ignore next -- @preserve ethereum() pools always implement snapshot */ transport.snapshot?.(method) ?? []);
     },
     onEvent(listener: (event: RpcEvent) => void): () => void {
       const stops = transports.flatMap((transport) => {
         const stop = transport.onEvent?.(listener);
-        return stop ? [stop] : [];
+        return stop ? [stop] : /* v8 ignore next -- @preserve ethereum() pools always implement onEvent */ [];
       });
       return () => {
         for (const stop of stops) stop();

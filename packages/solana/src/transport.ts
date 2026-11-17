@@ -9,7 +9,14 @@
 import { createPool, type PoolOptions, type RpcPool } from "@smart-rpc/core";
 
 import { jsonRpcCaller, type FetchLike } from "./client.js";
-import { isSafeSolanaMethod, isSolanaRebroadcast, parseSlot, solanaCachePolicy } from "./methods.js";
+import {
+  isHeadSensitiveSolanaMethod,
+  isSafeSolanaMethod,
+  isSolanaRateLimit,
+  isSolanaRebroadcast,
+  parseSlot,
+  solanaCachePolicy,
+} from "./methods.js";
 import {
   defaultChainIds,
   defaultEndpoints,
@@ -37,7 +44,15 @@ export interface SolanaOptions extends Omit<PoolOptions, "endpoints" | "policy">
    * Unknown methods are not safe unless listed here.
    */
   safeMethods?: readonly string[] | undefined;
+  /**
+   * Typical milliseconds per slot. Sets the default `headLag.maxLag` to about one second of slots and the slot-rate
+   * ceiling. Default: 220 (measured 2026-11-08: 215-245ms per slot on mainnet, devnet and testnet), so `maxLag` 5.
+   */
+  slotTimeMs?: number | undefined;
 }
+
+/** Slot time on every cluster, from `getRecentPerformanceSamples` on 2026-11-08 (215-216ms mainnet and testnet). */
+const SOLANA_SLOT_TIME_MS = 220;
 
 /** Solana transport for `createSmartRpc({ transports })`. */
 export function solana(options: SolanaOptions = {}): RpcPool {
@@ -55,6 +70,7 @@ export function solana(options: SolanaOptions = {}): RpcPool {
     fetchFn,
     nonSafeMethods,
     safeMethods,
+    slotTimeMs,
     ...poolOptions
   } = options;
   void _chainIds;
@@ -93,11 +109,15 @@ export function solana(options: SolanaOptions = {}): RpcPool {
         genesis,
         nonSafeMethods: nonSafeMethods ?? [],
         safeMethods: safeMethods ?? [],
+        slotTimeMs: slotTimeMs ?? SOLANA_SLOT_TIME_MS,
         fetch: functionId(fetchFn),
       }),
       isRebroadcastMethod: isSolanaRebroadcast,
+      isHeadSensitive: isHeadSensitiveSolanaMethod,
+      isRateLimited: isSolanaRateLimit,
       cachePolicy: solanaCachePolicy(),
       pin: false,
+      blockTimeMs: slotTimeMs ?? SOLANA_SLOT_TIME_MS,
     },
   });
 }

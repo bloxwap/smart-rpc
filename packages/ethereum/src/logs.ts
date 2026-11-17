@@ -48,6 +48,7 @@ export async function requestLogs(
   if (errors.length > 0) throw new AggregateError(errors.map((result) => result.reason), "One or more log ranges failed; no partial result was returned.");
   const logs: unknown[] = [];
   for (const result of results) {
+    /* v8 ignore next -- @preserve a rejected result already threw above; this narrows the type */
     if (result.status !== "fulfilled") continue;
     if (!Array.isArray(result.value)) throw new Error("eth_getLogs returned a non-array result.");
     for (const log of result.value) logs.push(log);

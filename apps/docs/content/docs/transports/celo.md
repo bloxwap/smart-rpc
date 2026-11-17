@@ -20,7 +20,9 @@ The factory composes the canonical Ethereum adapter and shared core. Mainnet is 
 
 Forno is a best-effort, rate-limited service without a stated numeric quota in the reviewed documentation. No numeric provider limit is invented. Supply `rps`, `burst`, or a shared `providerGroup`/`providerBudget` for your own traffic policy. Public defaults exclude signing operations: submit locally signed bytes with `eth_sendRawTransaction`.
 
-Forno documents non-archive nodes. Defaults disable numeric historical state reads and numeric pinning, preserving `latest` requests without converting them into unsupported historical reads. HTTP batching, debug/trace, subscriptions and finality tags require explicit capability configuration. Supply a dedicated endpoint's explicit `capabilities` after checking its support; archive/finality requests are never silently changed to `latest`. The exported `CELO_MAINNET_REGISTRY` and `CELO_SEPOLIA_REGISTRY` record sources and review dates.
+The mainnet registry adds PublicNode, Ankr, thirdweb (`https://42220.rpc.thirdweb.com`) and Tenderly; Celo Sepolia adds Ankr, dRPC and Tenderly. dRPC mainnet is not a default: in repeated checks on 2026-11-07/08 it answered 25–90% of `eth_blockNumber`, `eth_getBalance` and `eth_getTransactionCount` calls with `-32601 method does not exist`.
+
+Forno documents non-archive nodes, so its entries disable numeric historical state reads and numeric pinning, preserving `latest` requests without converting them into unsupported historical reads. Historical state is routed only to entries whose `archive` flag was verified live on 2026-11-08 (block 1 plus five spread historical blocks on separate runs): thirdweb on mainnet; Ankr, dRPC and Tenderly on Celo Sepolia. Ankr and Tenderly mainnet lack pre-L2-migration state and stay disabled. HTTP batching, debug/trace, subscriptions and finality tags require explicit capability configuration. Supply a dedicated endpoint's explicit `capabilities` after checking its support; archive/finality requests are never silently changed to `latest`. The exported `CELO_MAINNET_REGISTRY` and `CELO_SEPOLIA_REGISTRY` record sources and review dates.
 
 WebSocket URLs are documentation metadata, not automatically opened defaults. Forno disconnects WebSocket sessions after about 20 minutes. Use the shared Ethereum dedicated subscription connection API and its reconnect/resubscribe lifecycle when enabling subscriptions; ordinary pool requests cannot receive notification callbacks.
 
@@ -36,6 +38,8 @@ await mainnet.request({
 ```
 
 The shared cache and coalescer serialize complete parameters. Requests that differ by `feeCurrency`, transaction fields or block tag remain distinct. Signed submissions are never raced, cached or coalesced. Tests exercise two different adapters and ensure the transport never replaces an adapter with the underlying token address.
+
+Blocks arrive every about 1s (measured 2026-11-08), so the factory passes `blockTimeMs: 1000` and the default `headLag.maxLag` is 1 block, about one second of staleness. An endpoint further behind does not lead, race or hedge `latest`, `pending` or other head reads while a fresh endpoint can serve them; it still serves block-number, block-hash, `safe`/`finalized` and transaction reads, and remains a failover. Pass `blockTimeMs` or `headLag: { maxLag }` to change it.
 
 ## Verification
 

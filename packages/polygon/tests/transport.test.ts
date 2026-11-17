@@ -49,7 +49,12 @@ describe("Polygon PoS transport", () => {
         expect(endpoint.rps).toBeUndefined();
         expect(endpoint.capabilities?.maxBatchSize).toBeUndefined();
         expect(endpoint.capabilities?.batch).toBe(false);
+        expect(endpoint.reviewedAt).toBe("2026-11-08");
       }
+      // ZAN rejects eth_getLogs and throttles keyless callers at 2 rps; QuickNode is listed by Polygon.
+      expect(POLYGON_MAINNET_ENDPOINTS.some((url) => url.includes("zan.top"))).toBe(false);
+      expect(POLYGON_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities?.archive).map(({ id }) => id))
+        .toEqual(["polygon-drpc", "polygon-tenderly", "polygon-quicknode"]);
     } finally { pool.close(); }
   });
 

@@ -2,8 +2,10 @@
  * Per-endpoint circuit breaker.
  *
  * Consecutive endpoint failures eject an endpoint for a cooldown that doubles
- * on each ejection, up to a ceiling. A `Retry-After` header ejects at once for
- * the time the provider asked for. A healthy answer closes the circuit.
+ * on each ejection, up to a ceiling. A `Retry-After` header on an endpoint
+ * failure (such as HTTP 503) ejects at once for the time the provider asked for.
+ * Rate limits never reach the breaker: the pool cools them down through the
+ * budgets instead. A healthy answer closes the circuit.
  * A health probe or chain check answering does not clear a streak that holds a
  * failed call: a node can answer the probe while it hangs every read.
  *

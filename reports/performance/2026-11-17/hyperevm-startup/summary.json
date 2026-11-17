@@ -1,0 +1,29 @@
+{
+  "scope": "HyperEVM mainnet cold startup, explicit weighted versus ordered policy",
+  "implementation": "Built-in registries use neutral weights and curated order until a latency sample or restored score exists; normal weighting resumes afterward. Custom endpoints default to weighted.",
+  "results": {
+    "eth_getBalance": {
+      "samplesPerMode": 5,
+      "weightedP50Ms": 1377.877416,
+      "orderedP50Ms": 561.1226669999999,
+      "reductionPercent": 59.27629987368921,
+      "speedup": 2.45557254595812
+    },
+    "eth_call": {
+      "samplesPerMode": 5,
+      "weightedP50Ms": 1351.575791,
+      "orderedP50Ms": 389.77475000000004,
+      "reductionPercent": 71.16145815902676,
+      "speedup": 3.4675817019958317
+    }
+  },
+  "validation": {
+    "unitTestsPassed": 1125,
+    "checkerTestsPassed": 9,
+    "coveragePercent": 100,
+    "typecheck": "passed",
+    "releaseBuild": "passed",
+    "docsCheck": "passed",
+    "docsBuild": "passed"
+  }
+}
