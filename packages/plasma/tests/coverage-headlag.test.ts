@@ -24,7 +24,8 @@ function nodes(heads: Record<string, number>) {
 describe("Plasma head-lag defaults", () => {
   test("an omitted headLag applies the Plasma lag grace and lead limit", async () => {
     const mock = nodes({ "b.example": HEAD - 1, "c.example": HEAD + 121 });
-    const pool = plasma({ endpoints: urls, fetchFn: mock.fetchFn, cache: false, race: false });
+    // All fixture heads were observed at the same logical instant.
+    const pool = plasma({ endpoints: urls, fetchFn: mock.fetchFn, cache: false, race: false, now: () => 0 });
     try {
       await pool.probe();
       const [leader, behind, ahead] = pool.snapshot();
