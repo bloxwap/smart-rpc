@@ -24,7 +24,8 @@ function nodes(heads: Record<string, number>) {
 describe("Monad head-lag defaults", () => {
   test("an omitted headLag applies the Monad lag grace and lead limit", async () => {
     const mock = nodes({ "b.example": HEAD - 3, "c.example": HEAD + 201 });
-    const pool = monad({ endpoints: urls, fetchFn: mock.fetchFn, cache: false, race: false });
+    // All fixture heads were observed at the same logical instant.
+    const pool = monad({ endpoints: urls, fetchFn: mock.fetchFn, cache: false, race: false, now: () => 0 });
     try {
       await pool.probe();
       const [leader, behind, ahead] = pool.snapshot();

@@ -24,7 +24,8 @@ function nodes(heads: Record<string, number>) {
 describe("Gnosis head-lag defaults", () => {
   test("an omitted headLag tracks heads with a one-block lag grace", async () => {
     const mock = nodes({ "b.example": HEAD - 1, "c.example": HEAD - 3 });
-    const pool = gnosis({ endpoints: urls, fetchFn: mock.fetchFn, cache: false, race: false });
+    // All fixture heads were observed at the same logical instant.
+    const pool = gnosis({ endpoints: urls, fetchFn: mock.fetchFn, cache: false, race: false, now: () => 0 });
     try {
       await pool.probe();
       const [leader, graced, behind] = pool.snapshot();
