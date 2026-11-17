@@ -25,13 +25,22 @@ export interface RobinhoodRpcEndpoint extends EthereumEndpointConfig {
  */
 export const ROBINHOOD_MAINNET_REGISTRY = [
   {
-    url: ROBINHOOD_RPC_URL,
-    provider: "Robinhood Chain",
+    url: "https://robinhood.drpc.org",
+    provider: "dRPC",
     sourceUrls: [
+      "https://drpc.org/chainlist/robinhood-mainnet-rpc",
       "https://docs.robinhood.com/chain/connecting/",
-      "https://chainlist.org/chain/4663",
+      "https://drpc.org/docs/howitworks/ratelimiting",
     ],
     reviewedAt: "2026-11-07",
+    unsupportedMethods: [
+      "eth_newFilter",
+      "eth_newBlockFilter",
+      "eth_newPendingTransactionFilter",
+      "eth_getFilterChanges",
+      "eth_getFilterLogs",
+      "eth_uninstallFilter",
+    ],
     capabilities: {
       archive: false,
       pinning: false,
@@ -48,24 +57,6 @@ export const ROBINHOOD_MAINNET_REGISTRY = [
     sourceUrls: [
       "https://chainlist.org/chain/4663",
       "https://www.publicnode.com/",
-    ],
-    reviewedAt: "2026-11-07",
-    capabilities: {
-      archive: false,
-      pinning: false,
-      batch: false,
-      debug: false,
-      trace: false,
-      subscriptions: false,
-      blockTags: ["latest", "pending"],
-    },
-  },
-  {
-    url: "https://robinhood.api.pocket.network",
-    provider: "POKT Network",
-    sourceUrls: [
-      "https://chainlist.org/chain/4663",
-      "https://www.pokt.network/",
     ],
     reviewedAt: "2026-11-07",
     capabilities: {
@@ -97,22 +88,31 @@ export const ROBINHOOD_MAINNET_REGISTRY = [
     },
   },
   {
-    url: "https://robinhood.drpc.org",
-    provider: "dRPC",
+    url: "https://robinhood.api.pocket.network",
+    provider: "POKT Network",
     sourceUrls: [
-      "https://drpc.org/chainlist/robinhood-mainnet-rpc",
-      "https://docs.robinhood.com/chain/connecting/",
-      "https://drpc.org/docs/howitworks/ratelimiting",
+      "https://chainlist.org/chain/4663",
+      "https://www.pokt.network/",
     ],
     reviewedAt: "2026-11-07",
-    unsupportedMethods: [
-      "eth_newFilter",
-      "eth_newBlockFilter",
-      "eth_newPendingTransactionFilter",
-      "eth_getFilterChanges",
-      "eth_getFilterLogs",
-      "eth_uninstallFilter",
+    capabilities: {
+      archive: false,
+      pinning: false,
+      batch: false,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      blockTags: ["latest", "pending"],
+    },
+  },
+  {
+    url: ROBINHOOD_RPC_URL,
+    provider: "Robinhood Chain",
+    sourceUrls: [
+      "https://docs.robinhood.com/chain/connecting/",
+      "https://chainlist.org/chain/4663",
     ],
+    reviewedAt: "2026-11-07",
     capabilities: {
       archive: false,
       pinning: false,

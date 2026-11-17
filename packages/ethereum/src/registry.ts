@@ -12,15 +12,6 @@ import type { PublicRpcEndpoint } from "@smart-rpc/core";
 /** Public HTTP endpoints eligible for the default Ethereum mainnet pool. */
 export const ETHEREUM_MAINNET_REGISTRY: readonly PublicRpcEndpoint[] = [
   {
-    id: "ethereum-publicnode",
-    url: "https://ethereum-rpc.publicnode.com",
-    provider: "PublicNode",
-    sourceUrls: ["https://ethereum.publicnode.com/"],
-    reviewedAt: "2026-11-07",
-    rps: 2,
-    burst: 3,
-  },
-  {
     id: "ethereum-drpc",
     url: "https://eth.drpc.org",
     provider: "dRPC",
@@ -39,6 +30,15 @@ export const ETHEREUM_MAINNET_REGISTRY: readonly PublicRpcEndpoint[] = [
       "eth_getFilterLogs",
       "eth_uninstallFilter",
     ],
+  },
+  {
+    id: "ethereum-publicnode",
+    url: "https://ethereum-rpc.publicnode.com",
+    provider: "PublicNode",
+    sourceUrls: ["https://ethereum.publicnode.com/"],
+    reviewedAt: "2026-11-07",
+    rps: 2,
+    burst: 3,
   },
   {
     id: "ethereum-nownodes",

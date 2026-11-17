@@ -51,6 +51,7 @@ export function createPoolScope(): PoolShareScope {
       const owned = [...entries.values()];
       entries.clear();
       for (const entry of owned) {
+        /* v8 ignore next -- @preserve closed entries are removed from the map first */
         if (entry.closed) continue;
         entry.closed = true;
         entry.pool.close();

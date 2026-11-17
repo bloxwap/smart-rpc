@@ -44,7 +44,7 @@ describe("Robinhood mainnet", () => {
       expect(ROBINHOOD_MAINNET_ENDPOINTS).toEqual(ROBINHOOD_MAINNET_REGISTRY.map(({ url }) => url));
       expect(pool.endpoints.length).toBeLessThanOrEqual(5);
       expect(pool.snapshot()[0]?.tokens).toBeNull();
-      expect(ROBINHOOD_MAINNET_REGISTRY[0].sourceUrls).toContain("https://docs.robinhood.com/chain/connecting/");
+      expect(ROBINHOOD_MAINNET_REGISTRY.find(({ url }) => url === ROBINHOOD_RPC_URL)?.sourceUrls).toContain("https://docs.robinhood.com/chain/connecting/");
       expect(ROBINHOOD_MAINNET_REGISTRY[0].capabilities).toMatchObject({ archive: false, pinning: false, batch: false });
       expect(mock.calls).toEqual([]);
     } finally { pool.close(); }

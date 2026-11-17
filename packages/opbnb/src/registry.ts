@@ -43,22 +43,6 @@ export const OPBNB_MAINNET_REGISTRY: readonly OpBnbPublicRpcEndpoint[] = [
     capabilities: { ...conservativeCapabilities },
   },
   {
-    id: "opbnb-drpc",
-    url: "https://opbnb.drpc.org",
-    provider: "dRPC",
-    sourceUrls: [networkDocs, chainList, "https://drpc.org/chainlist/opbnb"],
-    reviewedAt: "2026-11-07",
-    unsupportedMethods: [
-      "eth_newFilter",
-      "eth_newBlockFilter",
-      "eth_newPendingTransactionFilter",
-      "eth_getFilterChanges",
-      "eth_getFilterLogs",
-      "eth_uninstallFilter",
-    ],
-    capabilities: { ...conservativeCapabilities },
-  },
-  {
     id: "opbnb-thirdweb",
     url: "https://204.rpc.thirdweb.com",
     provider: "thirdweb",

@@ -24,23 +24,6 @@ const sources = [
  */
 export const INK_MAINNET_REGISTRY = [
   {
-    url: INK_RPC_URL,
-    provider: "Gelato",
-    sourceUrls: [...sources, "https://chainlist.org/chain/57073"],
-    reviewedAt: "2026-11-07",
-    // The RPC guide and network table document different Gelato WS hostnames.
-    websocketUrls: ["wss://ws-gel.inkonchain.com", "wss://rpc-gel.inkonchain.com"],
-    capabilities: {
-      archive: false,
-      debug: false,
-      trace: false,
-      subscriptions: false,
-      pinning: false,
-      batch: false,
-      blockTags: ["latest", "pending"],
-    },
-  },
-  {
     url: INK_SECONDARY_RPC_URL,
     provider: "QuickNode",
     sourceUrls: [...sources, "https://chainlist.org/chain/57073"],
@@ -62,6 +45,22 @@ export const INK_MAINNET_REGISTRY = [
     sourceUrls: sources,
     reviewedAt: "2026-11-07",
     websocketUrls: ["wss://rpc-ten.inkonchain.com"],
+    capabilities: {
+      archive: false,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+      batch: false,
+      blockTags: ["latest", "pending"],
+    },
+  },
+  {
+    url: "https://ink-rpc.publicnode.com",
+    provider: "PublicNode",
+    sourceUrls: ["https://ink.publicnode.com/", "https://chainlist.org/chain/57073"],
+    reviewedAt: "2026-11-07",
+    websocketUrls: ["wss://ink-rpc.publicnode.com"],
     capabilities: {
       archive: false,
       debug: false,
@@ -97,11 +96,12 @@ export const INK_MAINNET_REGISTRY = [
     },
   },
   {
-    url: "https://ink-rpc.publicnode.com",
-    provider: "PublicNode",
-    sourceUrls: ["https://ink.publicnode.com/", "https://chainlist.org/chain/57073"],
+    url: INK_RPC_URL,
+    provider: "Gelato",
+    sourceUrls: [...sources, "https://chainlist.org/chain/57073"],
     reviewedAt: "2026-11-07",
-    websocketUrls: ["wss://ink-rpc.publicnode.com"],
+    // The RPC guide and network table document different Gelato WS hostnames.
+    websocketUrls: ["wss://ws-gel.inkonchain.com", "wss://rpc-gel.inkonchain.com"],
     capabilities: {
       archive: false,
       debug: false,

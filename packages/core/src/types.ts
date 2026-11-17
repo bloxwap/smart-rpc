@@ -216,6 +216,11 @@ export interface PoolOptions {
   race?: boolean | RaceOptions | undefined;
   /** `"best"` always uses the lowest score. `"p2c"` draws two and keeps the better one. Default: `"p2c"`. */
   routing?: "best" | "p2c" | undefined;
+  /**
+   * Before any request-latency sample or restored score, use endpoint order with neutral weights.
+   * Health, capabilities, budgets, and identity checks still apply. Default: "weighted".
+   */
+  coldStart?: "weighted" | "ordered" | undefined;
   /** Eject an endpoint after consecutive failures, or for a `Retry-After`. Default: enabled. */
   breaker?: boolean | BreakerOptions | undefined;
   /**

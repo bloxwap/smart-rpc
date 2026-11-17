@@ -134,6 +134,7 @@ export const HYPEREVM_MAINNET_REGISTRY: readonly HyperEvmPublicEndpoint[] = main
   if (b.rank === null) return -1;
   return a.rank - b.rank;
 });
+/* v8 ignore next -- @preserve unknown URLs are rejected while merging */
 if (rankingByUrl.size !== 0) throw new Error("HyperEVM ranking data contains an unknown endpoint URL.");
 
 type TestnetEndpointSource = Omit<HyperEvmPublicEndpoint, keyof RegistryRanking>;

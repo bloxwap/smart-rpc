@@ -45,6 +45,8 @@ interface EndpointState extends ScoreboardEndpoint {
 
 export interface ScoreboardOptions {
   perMethod: boolean;
+  /** Prefer curated order with neutral weights until a latency sample or restored book exists. */
+  coldStart?: "weighted" | "ordered" | undefined;
   headLag: boolean;
   maxLag: number;
   staleMs: number;
@@ -66,6 +68,7 @@ export class Scoreboard {
   readonly #byId: ReadonlyMap<string, EndpointState>;
   readonly #options: ScoreboardOptions;
   #headRevision = 0;
+  #hasSamples = false;
   #headView: { revision: number; at: number; value: HeadView } | undefined;
   /** Books seeded from a stored snapshot, with when they were measured. The first live sample replaces one. */
   readonly #priors = new WeakMap<MethodStat, number>();
@@ -103,7 +106,7 @@ export class Scoreboard {
     const chosen =
       candidates.length === 0
         ? undefined
-        : candidates.length === 1 || mode === "best"
+        : candidates.length === 1 || mode === "best" || this.#orderedStart()
           ? this.#best(candidates, method)
           : this.#p2c(candidates, method, random);
     if (!chosen) return undefined;
@@ -131,6 +134,7 @@ export class Scoreboard {
       observeLiveness(endpoint.global, true, 0, config);
       return;
     }
+    this.#hasSamples = true;
     observe(this.#live(endpoint.global), latencyMs, true, config);
     observe(this.#live(this.#method(endpoint, method)), latencyMs, true, config);
   }
@@ -143,6 +147,7 @@ export class Scoreboard {
       observeLiveness(this.#method(endpoint, method), false, penaltyMs, config);
       return;
     }
+    this.#hasSamples = true;
     observe(this.#live(endpoint.global), latencyMs, false, config);
     observe(this.#live(this.#method(endpoint, method)), latencyMs, false, config);
   }
@@ -157,6 +162,7 @@ export class Scoreboard {
     const book = method === "*" ? endpoint.global : this.#method(endpoint, method);
     if (book.n > 0) return false;
     Object.assign(book, copyStat(stat));
+    if (stat.n > 0) this.#hasSamples = true;
     this.#priors.set(book, at);
     return true;
   }
@@ -256,6 +262,10 @@ export class Scoreboard {
     return stat;
   }
 
+  #orderedStart(): boolean {
+    return this.#options.coldStart === "ordered" && !this.#hasSamples;
+  }
+
   #score(endpoint: EndpointState, method: string): number {
     return endpointScore({
       global: endpoint.global,
@@ -263,7 +273,7 @@ export class Scoreboard {
       perMethod: this.#options.perMethod,
       inflight: this.#inflight(endpoint),
       lagPenalty: this.#lagPenalty(endpoint),
-      weight: endpoint.weight,
+      weight: this.#orderedStart() ? 1 : endpoint.weight,
       config: this.#options.config ?? defaultScoreConfig,
     });
   }
@@ -359,10 +369,11 @@ export class Scoreboard {
 
   #p2c(candidates: readonly EndpointState[], method: string, random: () => number): EndpointState | undefined {
     const first = candidates[draw(random, candidates.length)];
+    /* v8 ignore next -- @preserve p2c is only called with two or more candidates */
     if (!first) return undefined;
     let secondIndex = draw(random, candidates.length);
     if (candidates[secondIndex] === first) secondIndex = (candidates.indexOf(first) + 1) % candidates.length;
-    const second = candidates[secondIndex] ?? first;
+    const second = /* v8 ignore next -- @preserve the second index is always in range */ candidates[secondIndex] ?? first;
     return this.#better(first, second, method);
   }
 }
@@ -393,6 +404,7 @@ function copyStat(stat: MethodStat): MethodStat {
 
 function draw(random: () => number, length: number): number {
   const scaled = Math.floor(unitRandom(random) * length);
+  /* v8 ignore next -- @preserve the sample is never negative */
   if (scaled < 0) return 0;
   if (scaled >= length) return length - 1;
   return scaled;

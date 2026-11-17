@@ -21,8 +21,8 @@ function configureEndpoint(endpoint: EthereumEndpoint): EthereumEndpoint {
   if (/^(?:sequencer|feed|delayed-feed)\.(?:mainnet|testnet)\.chain\.robinhood\.com$/.test(parsed.hostname)) {
     throw new Error("Robinhood sequencer and feed URLs are not general JSON-RPC endpoints. Use a full RPC provider.");
   }
-  if (parsed.origin === ROBINHOOD_RPC_URL && (parsed.pathname === "/" || parsed.pathname === "")) {
-    const defaults = ROBINHOOD_MAINNET_REGISTRY[0];
+  if (parsed.origin === ROBINHOOD_RPC_URL && parsed.pathname === "/") {
+    const defaults = ROBINHOOD_MAINNET_REGISTRY.find(({ url }) => url === ROBINHOOD_RPC_URL)!;
     return { ...defaults, ...config, capabilities: { ...defaults.capabilities, ...config.capabilities } };
   }
   return config;

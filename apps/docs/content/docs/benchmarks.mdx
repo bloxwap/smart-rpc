@@ -10,7 +10,9 @@ The core benchmark measures independent worker-thread workloads for cache hits, 
 ```sh
 pnpm install
 pnpm benchmark:core -- --scenario cache --threads 1,2,4,8 --iterations 1000000
+pnpm benchmark:core -- --scenario cache-mixed --threads 1,2,4,8 --iterations 1000000
 pnpm benchmark:core -- --scenario logs --threads 1,2,4,8
+pnpm benchmark:core -- --scenario logs-cache --threads 1,2,4,8
 pnpm benchmark:core -- --scenario plan --threads 1,2,4,8
 ```
 
@@ -18,7 +20,7 @@ Options:
 
 | Option | Meaning |
 | --- | --- |
-| `--scenario cache\|logs\|plan` | Selects the workload. |
+| `--scenario cache\|cache-mixed\|logs\|logs-cache\|plan` | Selects one hot key, 64 rotating keys, direct log-index reads, log reads through the cache, or cache-plan generation. |
 | `--threads 1,2,4` | Runs each comma-separated worker count. |
 | `--iterations n` | Sets measured operations per worker. |
 | `--warmup n` | Sets unmeasured warmup operations per worker. |
@@ -27,3 +29,21 @@ Options:
 Run scenarios separately and avoid concurrent builds or tests while collecting numbers. Each worker owns independent state, so results measure parallel CPU scaling rather than shared-cache contention. Local throughput is not a provider latency or uptime guarantee.
 
 For end-to-end public endpoint checks, run `pnpm check:rpcs --protocol base` or omit `--protocol` to check every registry. These checks make live read-only identity and head requests and are intentionally separate from deterministic CI.
+
+To audit latency and state-method access as well:
+
+```sh
+pnpm build
+node scripts/check-rpcs.mjs --samples 5 --state --concurrency 4 > rpc-performance.json
+```
+
+The checker verifies chain identity before sending repeated head and balance requests. EVM state checks also send an empty `eth_call` to the zero address. Requests reuse HTTP connections and respect conservative provider-wide pacing; pacing time is excluded from the per-request p50/p95 metrics. Identity latency includes cold connection setup. Failed reads are counted separately and cannot produce a passing endpoint. Small samples describe this run, not long-term uptime or production tail latency. No transactions are submitted.
+
+For HyperEVM startup, compare weighted and ordered routing in fresh Node processes, with two seconds between samples:
+
+```sh
+node scripts/benchmark-hyperevm-startup.mjs --runs 5
+node scripts/benchmark-hyperevm-startup.mjs --runs 5 --method eth_call
+```
+
+This includes pool construction and live identity verification in the first-read latency. Every sample has a fresh HTTP connection pool; module import and process startup are excluded. The comparison uses the same eligible endpoints, budgets, and capabilities in both modes.

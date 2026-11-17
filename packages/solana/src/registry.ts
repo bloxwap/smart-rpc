@@ -32,35 +32,21 @@ export interface SolanaEndpointConfig {
  */
 export const MAINNET_REGISTRY: readonly PublicRpcEndpoint[] = [
   {
-    id: "publicnode",
-    url: "https://solana-rpc.publicnode.com",
-    provider: "PublicNode",
-    sourceUrls: ["https://solana.publicnode.com/"],
-    reviewedAt: "2026-11-07",
-    rps: 3,
-    burst: 3,
-  },
-  {
-    id: "pocket",
-    url: "https://solana.api.pocket.network",
-    provider: "Pocket Network",
-    sourceUrls: [
-      "https://docs.pocket.network/developers/supported-chains/",
-      "https://docs.pocket.network/developers/integration-examples/",
-    ],
-    reviewedAt: "2026-11-07",
-    rps: 3,
-    burst: 3,
-    // Pocket documents this method as unreliable on its public Solana gateway.
-    unsupportedMethods: ["getTokenAccountsByOwner"],
-  },
-  {
     id: "solana",
     url: "https://api.mainnet.solana.com",
     provider: "Solana",
     sourceUrls: ["https://solana.com/docs/references/clusters"],
     reviewedAt: "2026-11-07",
     // The public cluster limits each method to 40 requests per 10 seconds.
+    rps: 3,
+    burst: 3,
+  },
+  {
+    id: "publicnode",
+    url: "https://solana-rpc.publicnode.com",
+    provider: "PublicNode",
+    sourceUrls: ["https://solana.publicnode.com/"],
+    reviewedAt: "2026-11-07",
     rps: 3,
     burst: 3,
   },
@@ -78,16 +64,18 @@ export const MAINNET_REGISTRY: readonly PublicRpcEndpoint[] = [
     burst: 1,
   },
   {
-    id: "tatum",
-    url: "https://solana-mainnet.gateway.tatum.io",
-    provider: "Tatum",
+    id: "pocket",
+    url: "https://solana.api.pocket.network",
+    provider: "Pocket Network",
     sourceUrls: [
-      "https://docs.tatum.io/reference/rpc-solana",
-      "https://www.comparenodes.com/library/public-endpoints/solana/",
+      "https://docs.pocket.network/developers/supported-chains/",
+      "https://docs.pocket.network/developers/integration-examples/",
     ],
     reviewedAt: "2026-11-07",
-    rps: 2,
-    burst: 2,
+    rps: 3,
+    burst: 3,
+    // Pocket documents this method as unreliable on its public Solana gateway.
+    unsupportedMethods: ["getTokenAccountsByOwner"],
   },
 ];
 
@@ -101,18 +89,6 @@ export const DEVNET_REGISTRY: readonly PublicRpcEndpoint[] = [
     reviewedAt: "2026-11-07",
     rps: 3,
     burst: 3,
-  },
-  {
-    id: "tatum-devnet",
-    url: "https://solana-devnet.gateway.tatum.io",
-    provider: "Tatum",
-    sourceUrls: [
-      "https://docs.tatum.io/reference/rpc-solana",
-      "https://www.comparenodes.com/library/public-endpoints/solana/",
-    ],
-    reviewedAt: "2026-11-07",
-    rps: 2,
-    burst: 2,
   },
 ];
 
@@ -138,18 +114,6 @@ export const TESTNET_REGISTRY: readonly PublicRpcEndpoint[] = [
     reviewedAt: "2026-11-07",
     rps: 3,
     burst: 3,
-  },
-  {
-    id: "web3cdn-testnet",
-    url: "https://solana-testnet.web3cdn.rest",
-    provider: "Web3CDN",
-    sourceUrls: [
-      "https://web3cdn.network/rpc/solana",
-      "https://www.comparenodes.com/library/public-endpoints/solana/",
-    ],
-    reviewedAt: "2026-11-07",
-    rps: 0.025,
-    burst: 2,
   },
 ];
 

@@ -242,6 +242,7 @@ function publicId(url: string, index: number): string {
     if (parsed.username !== "" || parsed.password !== "" || parsed.search !== "") return parsed.origin;
     return url;
   } catch {
+    /* v8 ignore next -- @preserve connectViem rejects an unparseable URL first */
     return `endpoint:${index}`;
   }
 }

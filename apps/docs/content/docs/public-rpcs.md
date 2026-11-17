@@ -4,11 +4,13 @@ title: Public RPC registry
 
 # Public RPC registry
 
-Reviewed on 2026-11-07. The built-in transports cover 25 networks with 111 keyless public HTTPS endpoints. Each network has at most five defaults; smaller lists are intentional where fewer services could be substantiated. The registry is a researched snapshot, not a claim that every public RPC has been found or will remain available.
+Audited on 2026-11-17. The built-in transports cover 25 networks with 103 registry candidates and 102 eligible default endpoints. Each network has at most five defaults; smaller lists are intentional where fewer services could be verified. The registry is a measured snapshot, not a claim that every public RPC has been found or will remain available. See the [performance audit](/docs/performance-audit) for measurements and excluded providers.
 
 ## How the defaults work
 
 Each chain package supplies endpoint data to the shared pool. EVM pools check `eth_chainId`, and Solana pools check `getGenesisHash`, before admitting an endpoint. The pool scores responses, races safe reads, fails over on eligible errors, observes request budgets, and ejects failing providers with the circuit breaker. Every network has its own pool; a testnet RPC cannot serve a mainnet request.
+
+Initial endpoint order favors providers that performed well in the latest head and state-read audit. Runtime scores still adapt to the caller's location and workload; one location's measurements do not establish a globally fastest provider. HyperEVM starts fresh default pools in curated order, then applies historical reliability weights after a request-latency sample or restored score exists.
 
 Candidates were collected from [Chainlist](https://chainlist.org), official network documentation, and provider documentation. `sourceUrls` records the exact sources and `reviewedAt` records the documentation review date. Documentation review establishes intended public access. Live identity/head checks establish only what a service returned from one location at one time; they do not establish archive depth, every RPC method, every precompile, or future uptime.
 
@@ -30,22 +32,22 @@ The exact URLs, providers, sources, budgets, capabilities, and method restrictio
 | `@bloxwap/smart-rpc/celo` | `CELO_MAINNET_REGISTRY` | Celo, `eip155:42220` | 5 |
 | `@bloxwap/smart-rpc/celo` | `CELO_SEPOLIA_REGISTRY` | Celo Sepolia, `eip155:11142220` | 4 |
 | `@bloxwap/smart-rpc/ethereum` | `ETHEREUM_MAINNET_REGISTRY` | Ethereum, `eip155:1` | 5 |
-| `@bloxwap/smart-rpc/etherlink` | `ETHERLINK_MAINNET_REGISTRY` | Etherlink, `eip155:42793` | 4 |
+| `@bloxwap/smart-rpc/etherlink` | `ETHERLINK_MAINNET_REGISTRY` | Etherlink, `eip155:42793` | 3 |
 | `@bloxwap/smart-rpc/flare` | `FLARE_MAINNET_REGISTRY` | Flare, `eip155:14` | 4 |
 | `@bloxwap/smart-rpc/gnosis` | `GNOSIS_MAINNET_REGISTRY` | Gnosis, `eip155:100` | 5 |
-| `@bloxwap/smart-rpc/hyperevm` | `HYPEREVM_MAINNET_REGISTRY` | HyperEVM, `eip155:999` | 5 |
+| `@bloxwap/smart-rpc/hyperevm` | `HYPEREVM_MAINNET_REGISTRY` | HyperEVM, `eip155:999` | 4 eligible / 5 retained |
 | `@bloxwap/smart-rpc/hyperevm` | `HYPEREVM_TESTNET_REGISTRY` | HyperEVM testnet, `eip155:998` | 2 |
 | `@bloxwap/smart-rpc/ink` | `INK_MAINNET_REGISTRY` | Ink, `eip155:57073` | 5 |
-| `@bloxwap/smart-rpc/mantle` | `MANTLE_MAINNET_REGISTRY` | Mantle, `eip155:5000` | 5 |
+| `@bloxwap/smart-rpc/mantle` | `MANTLE_MAINNET_REGISTRY` | Mantle, `eip155:5000` | 4 |
 | `@bloxwap/smart-rpc/monad` | `MONAD_MAINNET_REGISTRY` | Monad, `eip155:143` | 5 |
-| `@bloxwap/smart-rpc/opbnb` | `OPBNB_MAINNET_REGISTRY` | opBNB, `eip155:204` | 5 |
+| `@bloxwap/smart-rpc/opbnb` | `OPBNB_MAINNET_REGISTRY` | opBNB, `eip155:204` | 4 |
 | `@bloxwap/smart-rpc/optimism` | `OPTIMISM_MAINNET_REGISTRY` | OP Mainnet, `eip155:10` | 5 |
-| `@bloxwap/smart-rpc/plasma` | `PLASMA_MAINNET_REGISTRY` | Plasma, `eip155:9745` | 3 |
-| `@bloxwap/smart-rpc/polygon` | `POLYGON_MAINNET_REGISTRY` | Polygon, `eip155:137` | 5 |
+| `@bloxwap/smart-rpc/plasma` | `PLASMA_MAINNET_REGISTRY` | Plasma, `eip155:9745` | 2 |
+| `@bloxwap/smart-rpc/polygon` | `POLYGON_MAINNET_REGISTRY` | Polygon, `eip155:137` | 4 |
 | `@bloxwap/smart-rpc/robinhood` | `ROBINHOOD_MAINNET_REGISTRY` | Robinhood Chain, `eip155:4663` | 5 |
-| `@bloxwap/smart-rpc/solana` | `MAINNET_REGISTRY` | Solana mainnet | 5 |
-| `@bloxwap/smart-rpc/solana` | `DEVNET_REGISTRY` | Solana devnet | 2 |
-| `@bloxwap/smart-rpc/solana` | `TESTNET_REGISTRY` | Solana testnet | 3 |
+| `@bloxwap/smart-rpc/solana` | `MAINNET_REGISTRY` | Solana mainnet | 4 |
+| `@bloxwap/smart-rpc/solana` | `DEVNET_REGISTRY` | Solana devnet | 1 |
+| `@bloxwap/smart-rpc/solana` | `TESTNET_REGISTRY` | Solana testnet | 2 |
 | `@bloxwap/smart-rpc/xlayer` | `XLAYER_MAINNET_REGISTRY` | X Layer, `eip155:196` | 5 |
 
 The corresponding `*_ENDPOINTS` exports retain the existing public APIs. Ethereum and most EVM chains export URL arrays; Solana exports endpoint configuration arrays including labels and budgets. Use a registry when its metadata must be retained.
@@ -56,6 +58,7 @@ The corresponding `*_ENDPOINTS` exports retain the existing public APIs. Ethereu
 - Ethereum's Tenderly endpoint excludes `eth_getLogs`: its [public log-result limit](https://docs.tenderly.co/node-rpc/overview#public-endpoint-limits) can make a valid large query look like invalid parameters.
 - BNB dataseeds retain their shared provider budget, `eth_getLogs` exclusion, and BSC extension-method exclusions. Other chain-specific unsupported methods and conservative capabilities remain in their registries.
 - Solana's official public clusters retain conservative budgets based on the [published cluster limits](https://solana.com/docs/references/clusters). Pocket excludes `getTokenAccountsByOwner`, which its public gateway documents as unreliable.
+- Tatum is excluded from keyless defaults: its [gateway method restrictions](https://docs.tatum.io/docs/gateway-limits) require a paid plan for Solana balance/account methods and EVM `eth_call`. Configure an authenticated provider explicitly when those features are needed.
 
 ## HyperEVM ranking
 

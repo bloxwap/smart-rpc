@@ -1,0 +1,3451 @@
+{
+  "checkedAt": "2026-11-17T10:53:39.136Z",
+  "completedAt": "2026-11-17T10:54:18.506Z",
+  "scope": "chain-identity-and-head",
+  "protocol": "all",
+  "note": "A passing check confirms these methods at this time only. Network errors may be local; provider availability and limits can change.",
+  "timeoutMs": 5000,
+  "concurrency": 4,
+  "total": 111,
+  "passed": 109,
+  "failed": 2,
+  "results": [
+    {
+      "protocol": "ethereum",
+      "network": "mainnet",
+      "chainId": "eip155:1",
+      "id": "ethereum-publicnode",
+      "url": "https://ethereum-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://ethereum.publicnode.com/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1",
+          "durationMs": 202
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1935af6",
+          "durationMs": 102
+        }
+      ],
+      "durationMs": 1103
+    },
+    {
+      "protocol": "ethereum",
+      "network": "mainnet",
+      "chainId": "eip155:1",
+      "id": "ethereum-drpc",
+      "url": "https://eth.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://drpc.org/docs/ethereum-api",
+        "https://drpc.org/docs/howitworks/ratelimiting"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1",
+          "durationMs": 129
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1935af6",
+          "durationMs": 39
+        }
+      ],
+      "durationMs": 1040
+    },
+    {
+      "protocol": "ethereum",
+      "network": "mainnet",
+      "chainId": "eip155:1",
+      "id": "ethereum-nownodes",
+      "url": "https://public-eth.nownodes.io",
+      "provider": "NOWNodes",
+      "sourceUrls": [
+        "https://nownodes.io/public-endpoints"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1",
+          "durationMs": 347
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1935af6",
+          "durationMs": 219
+        }
+      ],
+      "durationMs": 720
+    },
+    {
+      "protocol": "ethereum",
+      "network": "mainnet",
+      "chainId": "eip155:1",
+      "id": "ethereum-tenderly",
+      "url": "https://mainnet.gateway.tenderly.co",
+      "provider": "Tenderly",
+      "sourceUrls": [
+        "https://docs.tenderly.co/node-rpc/rpc-reference",
+        "https://docs.tenderly.co/node-rpc/overview#public-endpoint-limits"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1",
+          "durationMs": 217
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1935af6",
+          "durationMs": 100
+        }
+      ],
+      "durationMs": 1101
+    },
+    {
+      "protocol": "ethereum",
+      "network": "mainnet",
+      "chainId": "eip155:1",
+      "id": "ethereum-pocket",
+      "url": "https://eth.api.pocket.network",
+      "provider": "Pocket Network",
+      "sourceUrls": [
+        "https://docs.pocket.network/developers/supported-chains/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1",
+          "durationMs": 750
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1935af6",
+          "durationMs": 195
+        }
+      ],
+      "durationMs": 1195
+    },
+    {
+      "protocol": "hyperevm",
+      "network": "mainnet",
+      "chainId": "eip155:999",
+      "id": "hypurrscan-mainnet",
+      "url": "https://rpc.hypurrscan.io",
+      "provider": "Hypurrscan",
+      "sourceUrls": [
+        "https://hyperliquid.gitbook.io/hyperliquid-docs/builder-tools/hyperevm-tools"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 1,
+        "burst": 2
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x3e7",
+          "durationMs": 636
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x311d460",
+          "durationMs": 127
+        }
+      ],
+      "durationMs": 1127
+    },
+    {
+      "protocol": "hyperevm",
+      "network": "mainnet",
+      "chainId": "eip155:999",
+      "id": "hyperliquid-mainnet",
+      "url": "https://rpc.hyperliquid.xyz/evm",
+      "provider": "Hyperliquid",
+      "sourceUrls": [
+        "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm",
+        "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/json-rpc"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 1.5,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x3e7",
+          "durationMs": 177
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x311d460",
+          "durationMs": 134
+        }
+      ],
+      "durationMs": 801
+    },
+    {
+      "protocol": "hyperevm",
+      "network": "mainnet",
+      "chainId": "eip155:999",
+      "id": "drpc-mainnet",
+      "url": "https://hyperliquid.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://blog.drpc.org/drpc-adds-support-for-hyperliquid-rpc/",
+        "https://drpc.org/docs/howitworks/ratelimiting"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 1,
+        "burst": 2
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x3e7",
+          "durationMs": 82
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x311d461",
+          "durationMs": 40
+        }
+      ],
+      "durationMs": 1936
+    },
+    {
+      "protocol": "hyperevm",
+      "network": "mainnet",
+      "chainId": "eip155:999",
+      "id": "stakely-mainnet",
+      "url": "https://hyperliquid-json-rpc.stakely.io",
+      "provider": "Stakely",
+      "sourceUrls": [
+        "https://stakely.io/web3-api-load-balancer/hyperliquid"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 1,
+        "burst": 2
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x3e7",
+          "durationMs": 469
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x311d461",
+          "durationMs": 413
+        }
+      ],
+      "durationMs": 1413
+    },
+    {
+      "protocol": "hyperevm",
+      "network": "mainnet",
+      "chainId": "eip155:999",
+      "id": "publicnode-mainnet",
+      "url": "https://hyperliquid-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://publicnode.com/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 1,
+        "burst": 2
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x3e7",
+          "durationMs": 321
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x311d461",
+          "durationMs": 93
+        }
+      ],
+      "durationMs": 1176
+    },
+    {
+      "protocol": "hyperevm",
+      "network": "testnet",
+      "chainId": "eip155:998",
+      "id": "hyperliquid-testnet",
+      "url": "https://rpc.hyperliquid-testnet.xyz/evm",
+      "provider": "Hyperliquid",
+      "sourceUrls": [
+        "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm",
+        "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/json-rpc"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 1.5,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x3e6",
+          "durationMs": 195
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x429f02a",
+          "durationMs": 125
+        }
+      ],
+      "durationMs": 1061
+    },
+    {
+      "protocol": "hyperevm",
+      "network": "testnet",
+      "chainId": "eip155:998",
+      "id": "drpc-testnet",
+      "url": "https://hyperliquid-testnet.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://drpc.org/chainlist/hyperliquid-testnet-rpc",
+        "https://drpc.org/docs/howitworks/ratelimiting"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 1,
+        "burst": 2
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x3e6",
+          "durationMs": 101
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x429f02c",
+          "durationMs": 43
+        }
+      ],
+      "durationMs": 2004
+    },
+    {
+      "protocol": "solana",
+      "network": "mainnet",
+      "chainId": "solana:mainnet",
+      "id": "publicnode",
+      "url": "https://solana-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://solana.publicnode.com/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 3,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "passed",
+          "result": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+          "durationMs": 207
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 470507365,
+          "durationMs": 101
+        }
+      ],
+      "durationMs": 2010
+    },
+    {
+      "protocol": "solana",
+      "network": "mainnet",
+      "chainId": "solana:mainnet",
+      "id": "pocket",
+      "url": "https://solana.api.pocket.network",
+      "provider": "Pocket Network",
+      "sourceUrls": [
+        "https://docs.pocket.network/developers/supported-chains/",
+        "https://docs.pocket.network/developers/integration-examples/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 3,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "passed",
+          "result": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+          "durationMs": 766
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 470507367,
+          "durationMs": 225
+        }
+      ],
+      "durationMs": 1226
+    },
+    {
+      "protocol": "solana",
+      "network": "mainnet",
+      "chainId": "solana:mainnet",
+      "id": "solana",
+      "url": "https://api.mainnet.solana.com",
+      "provider": "Solana",
+      "sourceUrls": [
+        "https://solana.com/docs/references/clusters"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 3,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "passed",
+          "result": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+          "durationMs": 168
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 470507364,
+          "durationMs": 69
+        }
+      ],
+      "durationMs": 404
+    },
+    {
+      "protocol": "solana",
+      "network": "mainnet",
+      "chainId": "solana:mainnet",
+      "id": "solanavibestation",
+      "url": "https://public.rpc.solanavibestation.com",
+      "provider": "Solana Vibe Station",
+      "sourceUrls": [
+        "https://solanavibestation.com/",
+        "https://docs.solanavibestation.com/services/solana-node-services/rpc-services"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 1,
+        "burst": 1
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "passed",
+          "result": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+          "durationMs": 282
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 470507369,
+          "durationMs": 67
+        }
+      ],
+      "durationMs": 1068
+    },
+    {
+      "protocol": "solana",
+      "network": "mainnet",
+      "chainId": "solana:mainnet",
+      "id": "tatum",
+      "url": "https://solana-mainnet.gateway.tatum.io",
+      "provider": "Tatum",
+      "sourceUrls": [
+        "https://docs.tatum.io/reference/rpc-solana",
+        "https://www.comparenodes.com/library/public-endpoints/solana/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 2
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "passed",
+          "result": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+          "durationMs": 237
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 470507372,
+          "durationMs": 102
+        }
+      ],
+      "durationMs": 1101
+    },
+    {
+      "protocol": "solana",
+      "network": "devnet",
+      "chainId": "solana:devnet",
+      "id": "solana-devnet",
+      "url": "https://api.devnet.solana.com",
+      "provider": "Solana",
+      "sourceUrls": [
+        "https://solana.com/docs/references/clusters"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 3,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "passed",
+          "result": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+          "durationMs": 266
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 523245151,
+          "durationMs": 85
+        }
+      ],
+      "durationMs": 419
+    },
+    {
+      "protocol": "solana",
+      "network": "devnet",
+      "chainId": "solana:devnet",
+      "id": "tatum-devnet",
+      "url": "https://solana-devnet.gateway.tatum.io",
+      "provider": "Tatum",
+      "sourceUrls": [
+        "https://docs.tatum.io/reference/rpc-solana",
+        "https://www.comparenodes.com/library/public-endpoints/solana/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 2
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "passed",
+          "result": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+          "durationMs": 413
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 523245159,
+          "durationMs": 276
+        }
+      ],
+      "durationMs": 2686
+    },
+    {
+      "protocol": "solana",
+      "network": "testnet",
+      "chainId": "solana:testnet",
+      "id": "solana-testnet",
+      "url": "https://api.testnet.solana.com",
+      "provider": "Solana",
+      "sourceUrls": [
+        "https://solana.com/docs/references/clusters"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 3,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "passed",
+          "result": "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY",
+          "durationMs": 283
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 465632348,
+          "durationMs": 82
+        }
+      ],
+      "durationMs": 770
+    },
+    {
+      "protocol": "solana",
+      "network": "testnet",
+      "chainId": "solana:testnet",
+      "id": "publicnode-testnet",
+      "url": "https://solana-testnet-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://solana.publicnode.com/",
+        "https://www.comparenodes.com/library/public-endpoints/solana/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 3,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "passed",
+          "result": "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY",
+          "durationMs": 268
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 465632354,
+          "durationMs": 208
+        }
+      ],
+      "durationMs": 2003
+    },
+    {
+      "protocol": "solana",
+      "network": "testnet",
+      "chainId": "solana:testnet",
+      "id": "web3cdn-testnet",
+      "url": "https://solana-testnet.web3cdn.rest",
+      "provider": "Web3CDN",
+      "sourceUrls": [
+        "https://web3cdn.network/rpc/solana",
+        "https://www.comparenodes.com/library/public-endpoints/solana/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 0.025,
+        "burst": 2
+      },
+      "status": "failed",
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "failed",
+          "category": "timeout",
+          "message": "Request exceeded 5000 ms.",
+          "durationMs": 5002
+        }
+      ],
+      "durationMs": 5002
+    },
+    {
+      "protocol": "bsc",
+      "network": "mainnet",
+      "chainId": "eip155:56",
+      "id": "bnb-dataseed",
+      "url": "https://bsc-dataseed.bnbchain.org",
+      "provider": "BNB Chain public dataseeds",
+      "sourceUrls": [
+        "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/",
+        "https://chainlist.org/chain/56"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 5,
+        "burst": 10
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x38",
+          "durationMs": 357
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x7fe4f34",
+          "durationMs": 80
+        }
+      ],
+      "durationMs": 437
+    },
+    {
+      "protocol": "bsc",
+      "network": "mainnet",
+      "chainId": "eip155:56",
+      "id": "bnb-public-dataseed",
+      "url": "https://bsc-dataseed-public.bnbchain.org",
+      "provider": "BNB Chain public dataseeds",
+      "sourceUrls": [
+        "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/",
+        "https://chainlist.org/chain/56"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 5,
+        "burst": 10
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x38",
+          "durationMs": 347
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x7fe4f35",
+          "durationMs": 75
+        }
+      ],
+      "durationMs": 541
+    },
+    {
+      "protocol": "bsc",
+      "network": "mainnet",
+      "chainId": "eip155:56",
+      "id": "bsc-publicnode",
+      "url": "https://bsc-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/",
+        "https://chainlist.org/chain/56",
+        "https://bsc.publicnode.com/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x38",
+          "durationMs": 169
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x7fe4f3a",
+          "durationMs": 102
+        }
+      ],
+      "durationMs": 2252
+    },
+    {
+      "protocol": "bsc",
+      "network": "mainnet",
+      "chainId": "eip155:56",
+      "id": "bsc-thirdweb",
+      "url": "https://56.rpc.thirdweb.com",
+      "provider": "thirdweb",
+      "sourceUrls": [
+        "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/",
+        "https://chainlist.org/chain/56",
+        "https://portal.thirdweb.com/infrastructure/rpc-edge/overview"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x38",
+          "durationMs": 109
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x7fe4f39",
+          "durationMs": 73
+        }
+      ],
+      "durationMs": 1073
+    },
+    {
+      "protocol": "bsc",
+      "network": "mainnet",
+      "chainId": "eip155:56",
+      "id": "bsc-pocket",
+      "url": "https://bsc.api.pocket.network",
+      "provider": "Pocket Network",
+      "sourceUrls": [
+        "https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/",
+        "https://chainlist.org/chain/56",
+        "https://api.pocket.network/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x38",
+          "durationMs": 729
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x7fe4f39",
+          "durationMs": 179
+        }
+      ],
+      "durationMs": 1180
+    },
+    {
+      "protocol": "polygon",
+      "network": "mainnet",
+      "chainId": "eip155:137",
+      "id": "polygon-drpc",
+      "url": "https://polygon.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://drpc.org/chainlist/polygon-mainnet-rpc",
+        "https://chainlist.org/chain/137"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x89",
+          "durationMs": 88
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x5cf4c55",
+          "durationMs": 34
+        }
+      ],
+      "durationMs": 1034
+    },
+    {
+      "protocol": "polygon",
+      "network": "mainnet",
+      "chainId": "eip155:137",
+      "id": "polygon-publicnode",
+      "url": "https://polygon-bor-rpc.publicnode.com",
+      "provider": "Allnodes / PublicNode",
+      "sourceUrls": [
+        "https://polygon.publicnode.com/",
+        "https://chainlist.org/chain/137"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x89",
+          "durationMs": 149
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x5cf4c55",
+          "durationMs": 107
+        }
+      ],
+      "durationMs": 1107
+    },
+    {
+      "protocol": "polygon",
+      "network": "mainnet",
+      "chainId": "eip155:137",
+      "id": "polygon-tenderly",
+      "url": "https://polygon.gateway.tenderly.co",
+      "provider": "Tenderly",
+      "sourceUrls": [
+        "https://docs.tenderly.co/node-rpc/rpc-reference",
+        "https://chainlist.org/chain/137"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x89",
+          "durationMs": 206
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x5cf4c56",
+          "durationMs": 89
+        }
+      ],
+      "durationMs": 1089
+    },
+    {
+      "protocol": "polygon",
+      "network": "mainnet",
+      "chainId": "eip155:137",
+      "id": "polygon-zan",
+      "url": "https://api.zan.top/polygon-mainnet",
+      "provider": "ZAN",
+      "sourceUrls": [
+        "https://zan.top/blockchain/polygon",
+        "https://chainlist.org/chain/137"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x89",
+          "durationMs": 825
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x5cf4c56",
+          "durationMs": 188
+        }
+      ],
+      "durationMs": 1188
+    },
+    {
+      "protocol": "polygon",
+      "network": "mainnet",
+      "chainId": "eip155:137",
+      "id": "polygon-pocket",
+      "url": "https://poly.api.pocket.network",
+      "provider": "Pocket Network",
+      "sourceUrls": [
+        "https://api.pocket.network/docs/polygon",
+        "https://chainlist.org/chain/137"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x89",
+          "durationMs": 777
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x5cf4c56",
+          "durationMs": 185
+        }
+      ],
+      "durationMs": 1185
+    },
+    {
+      "protocol": "base",
+      "network": "mainnet",
+      "chainId": "eip155:8453",
+      "id": "base-mainnet",
+      "url": "https://mainnet.base.org",
+      "provider": "Base",
+      "sourceUrls": [
+        "https://docs.base.org/get-started/connect-to-base",
+        "https://chainlist.org/chain/8453"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x2105",
+          "durationMs": 141
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x37e5a32",
+          "durationMs": 86
+        }
+      ],
+      "durationMs": 1088
+    },
+    {
+      "protocol": "base",
+      "network": "mainnet",
+      "chainId": "eip155:8453",
+      "id": "base-publicnode",
+      "url": "https://base-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://base.publicnode.com/",
+        "https://chainlist.org/chain/8453"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x2105",
+          "durationMs": 165
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x37e5a33",
+          "durationMs": 102
+        }
+      ],
+      "durationMs": 1102
+    },
+    {
+      "protocol": "base",
+      "network": "mainnet",
+      "chainId": "eip155:8453",
+      "id": "base-drpc",
+      "url": "https://base.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://drpc.org/chainlist/base-mainnet-rpc",
+        "https://chainlist.org/chain/8453"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x2105",
+          "durationMs": 104
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x37e5a33",
+          "durationMs": 37
+        }
+      ],
+      "durationMs": 1038
+    },
+    {
+      "protocol": "base",
+      "network": "mainnet",
+      "chainId": "eip155:8453",
+      "id": "base-tenderly",
+      "url": "https://base.gateway.tenderly.co",
+      "provider": "Tenderly",
+      "sourceUrls": [
+        "https://docs.tenderly.co/node-rpc/rpc-reference",
+        "https://chainlist.org/chain/8453"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x2105",
+          "durationMs": 182
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x37e5a37",
+          "durationMs": 94
+        }
+      ],
+      "durationMs": 1094
+    },
+    {
+      "protocol": "base",
+      "network": "mainnet",
+      "chainId": "eip155:8453",
+      "id": "base-pocket",
+      "url": "https://base.api.pocket.network",
+      "provider": "Pocket Network",
+      "sourceUrls": [
+        "https://docs.pocket.network/developers/supported-chains/",
+        "https://chainlist.org/chain/8453"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x2105",
+          "durationMs": 764
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x37e5a40",
+          "durationMs": 203
+        }
+      ],
+      "durationMs": 2941
+    },
+    {
+      "protocol": "arbitrum",
+      "network": "mainnet",
+      "chainId": "eip155:42161",
+      "id": "arbitrum-public",
+      "url": "https://arb1.arbitrum.io/rpc",
+      "provider": "Offchain Labs",
+      "sourceUrls": [
+        "https://docs.arbitrum.io/chain-info"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa4b1",
+          "durationMs": 167
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1f4b134b",
+          "durationMs": 103
+        }
+      ],
+      "durationMs": 1103
+    },
+    {
+      "protocol": "arbitrum",
+      "network": "mainnet",
+      "chainId": "eip155:42161",
+      "id": "arbitrum-publicnode",
+      "url": "https://arbitrum-one-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://chainlist.org/chain/42161",
+        "https://www.publicnode.com/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa4b1",
+          "durationMs": 171
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1f4b1352",
+          "durationMs": 99
+        }
+      ],
+      "durationMs": 1997
+    },
+    {
+      "protocol": "arbitrum",
+      "network": "mainnet",
+      "chainId": "eip155:42161",
+      "id": "arbitrum-drpc",
+      "url": "https://arbitrum.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://chainlist.org/chain/42161",
+        "https://drpc.org/chainlist/arbitrum-mainnet-rpc"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa4b1",
+          "durationMs": 109
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1f4b1352",
+          "durationMs": 37
+        }
+      ],
+      "durationMs": 1299
+    },
+    {
+      "protocol": "arbitrum",
+      "network": "mainnet",
+      "chainId": "eip155:42161",
+      "id": "arbitrum-pocket",
+      "url": "https://arb-one.api.pocket.network",
+      "provider": "Pocket Network",
+      "sourceUrls": [
+        "https://docs.pocket.network/developers/supported-chains/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa4b1",
+          "durationMs": 743
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1f4b1358",
+          "durationMs": 180
+        }
+      ],
+      "durationMs": 2498
+    },
+    {
+      "protocol": "arbitrum",
+      "network": "mainnet",
+      "chainId": "eip155:42161",
+      "id": "arbitrum-tenderly",
+      "url": "https://arbitrum.gateway.tenderly.co",
+      "provider": "Tenderly",
+      "sourceUrls": [
+        "https://chainlist.org/chain/42161",
+        "https://docs.tenderly.co/node-rpc/rpc-reference"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa4b1",
+          "durationMs": 176
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1f4b1357",
+          "durationMs": 111
+        }
+      ],
+      "durationMs": 1111
+    },
+    {
+      "protocol": "monad",
+      "network": "mainnet",
+      "chainId": "eip155:143",
+      "id": "monad-mf",
+      "url": "https://rpc.monad.xyz",
+      "provider": "Monad Foundation",
+      "sourceUrls": [
+        "https://docs.monad.xyz/developer-essentials/network-information",
+        "https://chainlist.org/chain/143",
+        "https://docs.monad.xyz/reference/json-rpc/overview"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x8f",
+          "durationMs": 172
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x754d7d0",
+          "durationMs": 102
+        }
+      ],
+      "durationMs": 603
+    },
+    {
+      "protocol": "monad",
+      "network": "mainnet",
+      "chainId": "eip155:143",
+      "id": "monad-mf-1",
+      "url": "https://rpc1.monad.xyz",
+      "provider": "Monad Foundation",
+      "sourceUrls": [
+        "https://docs.monad.xyz/developer-essentials/network-information",
+        "https://chainlist.org/chain/143",
+        "https://docs.monad.xyz/reference/json-rpc/overview"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x8f",
+          "durationMs": 188
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x754d7d5",
+          "durationMs": 107
+        }
+      ],
+      "durationMs": 1505
+    },
+    {
+      "protocol": "monad",
+      "network": "mainnet",
+      "chainId": "eip155:143",
+      "id": "monad-goldsky",
+      "url": "https://rpc2.monad.xyz",
+      "provider": "Goldsky Edge",
+      "sourceUrls": [
+        "https://docs.monad.xyz/developer-essentials/network-information",
+        "https://chainlist.org/chain/143"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 20,
+        "burst": 20
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x8f",
+          "durationMs": 127
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x754d7d0",
+          "durationMs": 96
+        }
+      ],
+      "durationMs": 223
+    },
+    {
+      "protocol": "monad",
+      "network": "mainnet",
+      "chainId": "eip155:143",
+      "id": "monad-ankr",
+      "url": "https://rpc3.monad.xyz",
+      "provider": "Ankr",
+      "sourceUrls": [
+        "https://docs.monad.xyz/developer-essentials/network-information",
+        "https://chainlist.org/chain/143",
+        "https://docs.monad.xyz/reference/json-rpc/overview"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 20,
+        "burst": 20
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x8f",
+          "durationMs": 281
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x754d7d2",
+          "durationMs": 78
+        }
+      ],
+      "durationMs": 360
+    },
+    {
+      "protocol": "monad",
+      "network": "mainnet",
+      "chainId": "eip155:143",
+      "id": "monad-mf-infra",
+      "url": "https://rpc-mainnet.monadinfra.com",
+      "provider": "Monad Foundation",
+      "sourceUrls": [
+        "https://docs.monad.xyz/developer-essentials/network-information",
+        "https://chainlist.org/chain/143",
+        "https://docs.monad.xyz/reference/json-rpc/overview"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x8f",
+          "durationMs": 205
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x754d7d6",
+          "durationMs": 99
+        }
+      ],
+      "durationMs": 1496
+    },
+    {
+      "protocol": "xlayer",
+      "network": "mainnet",
+      "chainId": "eip155:196",
+      "url": "https://rpc.xlayer.tech",
+      "provider": "OKX",
+      "sourceUrls": [
+        "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/build-on-xlayer/network-information",
+        "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/rpc-endpoints/rpc-endpoints"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xc4",
+          "durationMs": 263
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x489dcb6",
+          "durationMs": 179
+        }
+      ],
+      "durationMs": 680
+    },
+    {
+      "protocol": "xlayer",
+      "network": "mainnet",
+      "chainId": "eip155:196",
+      "url": "https://xlayerrpc.okx.com",
+      "provider": "OKX",
+      "sourceUrls": [
+        "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/build-on-xlayer/network-information",
+        "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/rpc-endpoints/rpc-endpoints"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xc4",
+          "durationMs": 258
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x489dcb7",
+          "durationMs": 183
+        }
+      ],
+      "durationMs": 1290
+    },
+    {
+      "protocol": "xlayer",
+      "network": "mainnet",
+      "chainId": "eip155:196",
+      "url": "https://xlayer.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://chainlist.org/chain/196",
+        "https://drpc.org/chainlist/xlayer-mainnet-rpc",
+        "https://drpc.org/docs/howitworks/ratelimiting"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xc4",
+          "durationMs": 98
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x489dcb5",
+          "durationMs": 33
+        }
+      ],
+      "durationMs": 1034
+    },
+    {
+      "protocol": "xlayer",
+      "network": "mainnet",
+      "chainId": "eip155:196",
+      "url": "https://xlayer-mainnet.rpc.sentio.xyz",
+      "provider": "Sentio",
+      "sourceUrls": [
+        "https://chainlist.org/chain/196",
+        "https://docs.sentio.xyz/docs/supported-network"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xc4",
+          "durationMs": 124
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x489dcb5",
+          "durationMs": 68
+        }
+      ],
+      "durationMs": 569
+    },
+    {
+      "protocol": "xlayer",
+      "network": "mainnet",
+      "chainId": "eip155:196",
+      "url": "https://196.rpc.thirdweb.com",
+      "provider": "thirdweb",
+      "sourceUrls": [
+        "https://chainlist.org/chain/196",
+        "https://portal.thirdweb.com/infrastructure/rpc-edge/overview"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 2,
+        "burst": 3
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xc4",
+          "durationMs": 176
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x489dcb8",
+          "durationMs": 234
+        }
+      ],
+      "durationMs": 1235
+    },
+    {
+      "protocol": "robinhood",
+      "network": "mainnet",
+      "chainId": "eip155:4663",
+      "url": "https://rpc.mainnet.chain.robinhood.com",
+      "provider": "Robinhood Chain",
+      "sourceUrls": [
+        "https://docs.robinhood.com/chain/connecting/",
+        "https://chainlist.org/chain/4663"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1237",
+          "durationMs": 1007
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x6f1fc5e",
+          "durationMs": 1029
+        }
+      ],
+      "durationMs": 2036
+    },
+    {
+      "protocol": "robinhood",
+      "network": "mainnet",
+      "chainId": "eip155:4663",
+      "url": "https://robinhood-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://chainlist.org/chain/4663",
+        "https://www.publicnode.com/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1237",
+          "durationMs": 171
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x6f1fc60",
+          "durationMs": 100
+        }
+      ],
+      "durationMs": 1101
+    },
+    {
+      "protocol": "robinhood",
+      "network": "mainnet",
+      "chainId": "eip155:4663",
+      "url": "https://robinhood.api.pocket.network",
+      "provider": "POKT Network",
+      "sourceUrls": [
+        "https://chainlist.org/chain/4663",
+        "https://www.pokt.network/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1237",
+          "durationMs": 770
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x6f1fc61",
+          "durationMs": 181
+        }
+      ],
+      "durationMs": 1181
+    },
+    {
+      "protocol": "robinhood",
+      "network": "mainnet",
+      "chainId": "eip155:4663",
+      "url": "https://4663.rpc.thirdweb.com",
+      "provider": "thirdweb",
+      "sourceUrls": [
+        "https://chainlist.org/chain/4663",
+        "https://thirdweb.com/robinhood-chain"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1237",
+          "durationMs": 122
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x6f1fc71",
+          "durationMs": 126
+        }
+      ],
+      "durationMs": 2893
+    },
+    {
+      "protocol": "robinhood",
+      "network": "mainnet",
+      "chainId": "eip155:4663",
+      "url": "https://robinhood.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://drpc.org/chainlist/robinhood-mainnet-rpc",
+        "https://docs.robinhood.com/chain/connecting/",
+        "https://drpc.org/docs/howitworks/ratelimiting"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1237",
+          "durationMs": 126
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x6f1fc6a",
+          "durationMs": 125
+        }
+      ],
+      "durationMs": 1127
+    },
+    {
+      "protocol": "plasma",
+      "network": "mainnet",
+      "chainId": "eip155:9745",
+      "url": "https://rpc.plasma.to",
+      "provider": "Plasma",
+      "sourceUrls": [
+        "https://docs.plasma.org/docs/guides/network-configuration/mainnet-details",
+        "https://www.plasma.org/docs/plasma-chain/tools/rpc-providers",
+        "https://chainlist.org/chain/9745"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x2611",
+          "durationMs": 294
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x2435e15",
+          "durationMs": 76
+        }
+      ],
+      "durationMs": 1077
+    },
+    {
+      "protocol": "plasma",
+      "network": "mainnet",
+      "chainId": "eip155:9745",
+      "url": "https://9745.rpc.thirdweb.com",
+      "provider": "thirdweb",
+      "sourceUrls": [
+        "https://chainlist.org/chain/9745",
+        "https://www.plasma.org/docs/plasma-chain/tools/rpc-providers"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x2611",
+          "durationMs": 169
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x2435e18",
+          "durationMs": 128
+        }
+      ],
+      "durationMs": 3014
+    },
+    {
+      "protocol": "plasma",
+      "network": "mainnet",
+      "chainId": "eip155:9745",
+      "url": "https://plasma-mainnet.gateway.tatum.io",
+      "provider": "Tatum",
+      "sourceUrls": [
+        "https://chainlist.org/chain/9745",
+        "https://docs.tatum.io/reference/rpc-plasma"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x2611",
+          "durationMs": 147
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x2435e15",
+          "durationMs": 57
+        }
+      ],
+      "durationMs": 1056
+    },
+    {
+      "protocol": "ink",
+      "network": "mainnet",
+      "chainId": "eip155:57073",
+      "url": "https://rpc-gel.inkonchain.com",
+      "provider": "Gelato",
+      "sourceUrls": [
+        "https://docs.inkonchain.com/general/network-information",
+        "https://docs.inkonchain.com/tools/rpc",
+        "https://chainlist.org/chain/57073"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xdef1",
+          "durationMs": 546
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x3a91c1a",
+          "durationMs": 162
+        }
+      ],
+      "durationMs": 1163
+    },
+    {
+      "protocol": "ink",
+      "network": "mainnet",
+      "chainId": "eip155:57073",
+      "url": "https://rpc-qnd.inkonchain.com",
+      "provider": "QuickNode",
+      "sourceUrls": [
+        "https://docs.inkonchain.com/general/network-information",
+        "https://docs.inkonchain.com/tools/rpc",
+        "https://chainlist.org/chain/57073"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xdef1",
+          "durationMs": 161
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x3a91c1c",
+          "durationMs": 99
+        }
+      ],
+      "durationMs": 1100
+    },
+    {
+      "protocol": "ink",
+      "network": "mainnet",
+      "chainId": "eip155:57073",
+      "url": "https://rpc-ten.inkonchain.com",
+      "provider": "Tenderly",
+      "sourceUrls": [
+        "https://docs.inkonchain.com/general/network-information",
+        "https://docs.inkonchain.com/tools/rpc"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xdef1",
+          "durationMs": 279
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x3a91c1d",
+          "durationMs": 120
+        }
+      ],
+      "durationMs": 1120
+    },
+    {
+      "protocol": "ink",
+      "network": "mainnet",
+      "chainId": "eip155:57073",
+      "url": "https://ink.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://docs.inkonchain.com/general/network-information",
+        "https://docs.inkonchain.com/tools/rpc",
+        "https://chainlist.org/chain/57073"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xdef1",
+          "durationMs": 105
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x3a91c1c",
+          "durationMs": 42
+        }
+      ],
+      "durationMs": 1042
+    },
+    {
+      "protocol": "ink",
+      "network": "mainnet",
+      "chainId": "eip155:57073",
+      "url": "https://ink-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://ink.publicnode.com/",
+        "https://chainlist.org/chain/57073"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xdef1",
+          "durationMs": 327
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x3a91c1e",
+          "durationMs": 106
+        }
+      ],
+      "durationMs": 1107
+    },
+    {
+      "protocol": "optimism",
+      "network": "mainnet",
+      "chainId": "eip155:10",
+      "id": "optimism-mainnet",
+      "url": "https://mainnet.optimism.io",
+      "provider": "Optimism",
+      "sourceUrls": [
+        "https://docs.optimism.io/op-mainnet/network-information/connecting-to-op"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa",
+          "durationMs": 253
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x9842c48",
+          "durationMs": 187
+        }
+      ],
+      "durationMs": 1187
+    },
+    {
+      "protocol": "optimism",
+      "network": "mainnet",
+      "chainId": "eip155:10",
+      "id": "optimism-publicnode",
+      "url": "https://optimism-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://chainlist.org/chain/10",
+        "https://www.publicnode.com/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa",
+          "durationMs": 157
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x9842c49",
+          "durationMs": 109
+        }
+      ],
+      "durationMs": 2649
+    },
+    {
+      "protocol": "optimism",
+      "network": "mainnet",
+      "chainId": "eip155:10",
+      "id": "optimism-drpc",
+      "url": "https://optimism.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://chainlist.org/chain/10",
+        "https://drpc.org/chainlist/optimism-mainnet-rpc"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa",
+          "durationMs": 98
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x9842c48",
+          "durationMs": 31
+        }
+      ],
+      "durationMs": 1989
+    },
+    {
+      "protocol": "optimism",
+      "network": "mainnet",
+      "chainId": "eip155:10",
+      "id": "optimism-pocket",
+      "url": "https://op.api.pocket.network",
+      "provider": "Pocket Network",
+      "sourceUrls": [
+        "https://docs.pocket.network/developers/supported-chains/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa",
+          "durationMs": 740
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x9842c48",
+          "durationMs": 181
+        }
+      ],
+      "durationMs": 1181
+    },
+    {
+      "protocol": "optimism",
+      "network": "mainnet",
+      "chainId": "eip155:10",
+      "id": "optimism-tenderly",
+      "url": "https://optimism.gateway.tenderly.co",
+      "provider": "Tenderly",
+      "sourceUrls": [
+        "https://chainlist.org/chain/10",
+        "https://docs.tenderly.co/node-rpc/rpc-reference"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa",
+          "durationMs": 171
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x9842c48",
+          "durationMs": 106
+        }
+      ],
+      "durationMs": 1106
+    },
+    {
+      "protocol": "opbnb",
+      "network": "mainnet",
+      "chainId": "eip155:204",
+      "id": "opbnb-bnbchain",
+      "url": "https://opbnb-mainnet-rpc.bnbchain.org",
+      "provider": "BNB Chain",
+      "sourceUrls": [
+        "https://docs.bnbchain.org/bnb-opbnb/get-started/network-info/",
+        "https://chainlist.org/chain/204"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xcc",
+          "durationMs": 351
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0xc595f21",
+          "durationMs": 79
+        }
+      ],
+      "durationMs": 1080
+    },
+    {
+      "protocol": "opbnb",
+      "network": "mainnet",
+      "chainId": "eip155:204",
+      "id": "opbnb-publicnode",
+      "url": "https://opbnb-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://docs.bnbchain.org/bnb-opbnb/get-started/network-info/",
+        "https://chainlist.org/chain/204",
+        "https://opbnb.publicnode.com/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xcc",
+          "durationMs": 173
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0xc595f26",
+          "durationMs": 99
+        }
+      ],
+      "durationMs": 2618
+    },
+    {
+      "protocol": "opbnb",
+      "network": "mainnet",
+      "chainId": "eip155:204",
+      "id": "opbnb-drpc",
+      "url": "https://opbnb.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://docs.bnbchain.org/bnb-opbnb/get-started/network-info/",
+        "https://chainlist.org/chain/204",
+        "https://drpc.org/chainlist/opbnb"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xcc",
+          "durationMs": 95
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0xc595f23",
+          "durationMs": 41
+        }
+      ],
+      "durationMs": 2011
+    },
+    {
+      "protocol": "opbnb",
+      "network": "mainnet",
+      "chainId": "eip155:204",
+      "id": "opbnb-thirdweb",
+      "url": "https://204.rpc.thirdweb.com",
+      "provider": "thirdweb",
+      "sourceUrls": [
+        "https://docs.bnbchain.org/bnb-opbnb/get-started/network-info/",
+        "https://chainlist.org/chain/204",
+        "https://thirdweb.com/opbnb"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xcc",
+          "durationMs": 165
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0xc595f24",
+          "durationMs": 116
+        }
+      ],
+      "durationMs": 1116
+    },
+    {
+      "protocol": "opbnb",
+      "network": "mainnet",
+      "chainId": "eip155:204",
+      "id": "opbnb-pocket",
+      "url": "https://opbnb.api.pocket.network",
+      "provider": "Pocket Network",
+      "sourceUrls": [
+        "https://docs.bnbchain.org/bnb-opbnb/get-started/network-info/",
+        "https://chainlist.org/chain/204",
+        "https://api.pocket.network/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xcc",
+          "durationMs": 738
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0xc595f25",
+          "durationMs": 189
+        }
+      ],
+      "durationMs": 1189
+    },
+    {
+      "protocol": "arc",
+      "network": "mainnet",
+      "chainId": "eip155:5042",
+      "id": "arc-primary",
+      "url": "https://rpc.mainnet.arc.io",
+      "provider": "Arc",
+      "sourceUrls": [
+        "https://docs.arc.io/arc/references/connect-to-arc",
+        "https://chainlist.org/chain/5042"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x13b2",
+          "durationMs": 109
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1e3b673",
+          "durationMs": 86
+        }
+      ],
+      "durationMs": 1086
+    },
+    {
+      "protocol": "arc",
+      "network": "mainnet",
+      "chainId": "eip155:5042",
+      "id": "arc-blockdaemon",
+      "url": "https://rpc.blockdaemon.mainnet.arc.io",
+      "provider": "Blockdaemon",
+      "sourceUrls": [
+        "https://docs.arc.io/arc/references/connect-to-arc",
+        "https://chainlist.org/chain/5042"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x13b2",
+          "durationMs": 544
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1e3b674",
+          "durationMs": 168
+        }
+      ],
+      "durationMs": 1168
+    },
+    {
+      "protocol": "arc",
+      "network": "mainnet",
+      "chainId": "eip155:5042",
+      "id": "arc-drpc",
+      "url": "https://rpc.drpc.mainnet.arc.io",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://docs.arc.io/arc/references/connect-to-arc",
+        "https://chainlist.org/chain/5042",
+        "https://drpc.org/docs/howitworks/ratelimiting"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x13b2",
+          "durationMs": 113
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1e3b676",
+          "durationMs": 33
+        }
+      ],
+      "durationMs": 1935
+    },
+    {
+      "protocol": "arc",
+      "network": "mainnet",
+      "chainId": "eip155:5042",
+      "id": "arc-quicknode",
+      "url": "https://rpc.quicknode.mainnet.arc.io",
+      "provider": "QuickNode",
+      "sourceUrls": [
+        "https://docs.arc.io/arc/references/connect-to-arc",
+        "https://chainlist.org/chain/5042"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x13b2",
+          "durationMs": 113
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1e3b675",
+          "durationMs": 42
+        }
+      ],
+      "durationMs": 1044
+    },
+    {
+      "protocol": "arc",
+      "network": "mainnet",
+      "chainId": "eip155:5042",
+      "id": "arc-publicnode",
+      "url": "https://arc-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://chainlist.org/chain/5042",
+        "https://arc.publicnode.com/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x13b2",
+          "durationMs": 188
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x1e3b677",
+          "durationMs": 103
+        }
+      ],
+      "durationMs": 1791
+    },
+    {
+      "protocol": "etherlink",
+      "network": "mainnet",
+      "chainId": "eip155:42793",
+      "id": "etherlink-mainnet",
+      "url": "https://node.mainnet.etherlink.com",
+      "provider": "Etherlink",
+      "sourceUrls": [
+        "https://docs.etherlink.com/evm/get-started/network-information/",
+        "https://docs.etherlink.com/evm/tools/node-providers/",
+        "https://chainlist.org/chain/42793"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 16,
+        "burst": 4
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa729",
+          "durationMs": 302
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x3789a71",
+          "durationMs": 102
+        }
+      ],
+      "durationMs": 404
+    },
+    {
+      "protocol": "etherlink",
+      "network": "mainnet",
+      "chainId": "eip155:42793",
+      "id": "etherlink-ankr-public",
+      "url": "https://rpc.ankr.com/etherlink_mainnet",
+      "provider": "Ankr",
+      "sourceUrls": [
+        "https://chainlist.org/chain/42793",
+        "https://www.ankr.com/docs/rpc-service/chains/chains-api/etherlink/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 16,
+        "burst": 4
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa729",
+          "durationMs": 261
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x3789a71",
+          "durationMs": 95
+        }
+      ],
+      "durationMs": 356
+    },
+    {
+      "protocol": "etherlink",
+      "network": "mainnet",
+      "chainId": "eip155:42793",
+      "id": "etherlink-drpc-public",
+      "url": "https://etherlink.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://chainlist.org/chain/42793",
+        "https://drpc.org/chainlist/etherlink-mainnet-rpc",
+        "https://drpc.org/docs/howitworks/ratelimiting"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 16,
+        "burst": 4
+      },
+      "status": "failed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa729",
+          "durationMs": 143
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "failed",
+          "category": "http_error",
+          "message": "HTTP 400 Bad Request",
+          "httpStatus": 400,
+          "durationMs": 38
+        }
+      ],
+      "durationMs": 181
+    },
+    {
+      "protocol": "etherlink",
+      "network": "mainnet",
+      "chainId": "eip155:42793",
+      "id": "etherlink-thirdweb-public",
+      "url": "https://42793.rpc.thirdweb.com",
+      "provider": "thirdweb",
+      "sourceUrls": [
+        "https://thirdweb.com/etherlink",
+        "https://portal.thirdweb.com/infrastructure/rpc-edge/overview"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {
+        "rps": 16,
+        "burst": 4
+      },
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa729",
+          "durationMs": 121
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x3789a71",
+          "durationMs": 201
+        }
+      ],
+      "durationMs": 321
+    },
+    {
+      "protocol": "avalanche",
+      "network": "mainnet",
+      "chainId": "eip155:43114",
+      "id": "avalanche-public-c-chain",
+      "url": "https://api.avax.network/ext/bc/C/rpc",
+      "provider": "Avalanche",
+      "sourceUrls": [
+        "https://build.avax.network/docs/rpcs/c-chain",
+        "https://chainlist.org/chain/43114"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa86a",
+          "durationMs": 104
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x5fe5f93",
+          "durationMs": 53
+        }
+      ],
+      "durationMs": 1054
+    },
+    {
+      "protocol": "avalanche",
+      "network": "mainnet",
+      "chainId": "eip155:43114",
+      "id": "avalanche-publicnode",
+      "url": "https://avalanche-c-chain-rpc.publicnode.com",
+      "provider": "Allnodes / PublicNode",
+      "sourceUrls": [
+        "https://avalanche.publicnode.com/",
+        "https://chainlist.org/chain/43114"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa86a",
+          "durationMs": 172
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x5fe5f96",
+          "durationMs": 103
+        }
+      ],
+      "durationMs": 1103
+    },
+    {
+      "protocol": "avalanche",
+      "network": "mainnet",
+      "chainId": "eip155:43114",
+      "id": "avalanche-drpc",
+      "url": "https://avalanche.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://drpc.org/chainlist/avalanche-mainnet-rpc",
+        "https://chainlist.org/chain/43114"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa86a",
+          "durationMs": 129
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x5fe5f97",
+          "durationMs": 48
+        }
+      ],
+      "durationMs": 1863
+    },
+    {
+      "protocol": "avalanche",
+      "network": "mainnet",
+      "chainId": "eip155:43114",
+      "id": "avalanche-tenderly",
+      "url": "https://avalanche.gateway.tenderly.co",
+      "provider": "Tenderly",
+      "sourceUrls": [
+        "https://docs.tenderly.co/node-rpc/rpc-reference",
+        "https://chainlist.org/chain/43114"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa86a",
+          "durationMs": 187
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x5fe5f97",
+          "durationMs": 108
+        }
+      ],
+      "durationMs": 1107
+    },
+    {
+      "protocol": "celo",
+      "network": "mainnet",
+      "chainId": "eip155:42220",
+      "id": "celo-forno-mainnet",
+      "url": "https://forno.celo.org",
+      "provider": "cLabs Forno",
+      "sourceUrls": [
+        "https://docs.celo.org/learn/network/overview",
+        "https://docs.celo.org/build/tools/nodes/forno",
+        "https://chainlist.org/chain/42220"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa4ec",
+          "durationMs": 148
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x4f2a9f8",
+          "durationMs": 61
+        }
+      ],
+      "durationMs": 1061
+    },
+    {
+      "protocol": "celo",
+      "network": "mainnet",
+      "chainId": "eip155:42220",
+      "id": "celo-publicnode-mainnet",
+      "url": "https://celo-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://celo.publicnode.com/",
+        "https://chainlist.org/chain/42220"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa4ec",
+          "durationMs": 165
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x4f2a9fa",
+          "durationMs": 100
+        }
+      ],
+      "durationMs": 1505
+    },
+    {
+      "protocol": "celo",
+      "network": "mainnet",
+      "chainId": "eip155:42220",
+      "id": "celo-ankr-mainnet",
+      "url": "https://rpc.ankr.com/celo",
+      "provider": "Ankr",
+      "sourceUrls": [
+        "https://www.ankr.com/docs/rpc-service/chains/chains-list/c-i/",
+        "https://chainlist.org/chain/42220"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa4ec",
+          "durationMs": 88
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x4f2a9fb",
+          "durationMs": 75
+        }
+      ],
+      "durationMs": 1075
+    },
+    {
+      "protocol": "celo",
+      "network": "mainnet",
+      "chainId": "eip155:42220",
+      "id": "celo-drpc-mainnet",
+      "url": "https://celo.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://drpc.org/chainlist/celo-mainnet-rpc",
+        "https://drpc.org/docs/howitworks/ratelimiting",
+        "https://chainlist.org/chain/42220"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa4ec",
+          "durationMs": 96
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x4f2a9fa",
+          "durationMs": 38
+        }
+      ],
+      "durationMs": 1989
+    },
+    {
+      "protocol": "celo",
+      "network": "mainnet",
+      "chainId": "eip155:42220",
+      "id": "celo-tenderly-mainnet",
+      "url": "https://celo.gateway.tenderly.co",
+      "provider": "Tenderly",
+      "sourceUrls": [
+        "https://docs.tenderly.co/node-rpc/rpc-reference",
+        "https://chainlist.org/chain/42220"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa4ec",
+          "durationMs": 265
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x4f2a9fc",
+          "durationMs": 180
+        }
+      ],
+      "durationMs": 1737
+    },
+    {
+      "protocol": "celo",
+      "network": "sepolia",
+      "chainId": "eip155:11142220",
+      "id": "celo-forno-sepolia",
+      "url": "https://forno.celo-sepolia.celo-testnet.org",
+      "provider": "cLabs Forno",
+      "sourceUrls": [
+        "https://docs.celo.org/learn/network/overview",
+        "https://docs.celo.org/build/tools/nodes/forno",
+        "https://chainlist.org/chain/11142220"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xaa044c",
+          "durationMs": 210
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x27b34bc",
+          "durationMs": 33
+        }
+      ],
+      "durationMs": 1417
+    },
+    {
+      "protocol": "celo",
+      "network": "sepolia",
+      "chainId": "eip155:11142220",
+      "id": "celo-ankr-sepolia",
+      "url": "https://rpc.ankr.com/celo_sepolia",
+      "provider": "Ankr",
+      "sourceUrls": [
+        "https://www.ankr.com/docs/rpc-service/chains/chains-list/c-i/",
+        "https://chainlist.org/chain/11142220"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xaa044c",
+          "durationMs": 148
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x27b34bf",
+          "durationMs": 157
+        }
+      ],
+      "durationMs": 2083
+    },
+    {
+      "protocol": "celo",
+      "network": "sepolia",
+      "chainId": "eip155:11142220",
+      "id": "celo-drpc-sepolia",
+      "url": "https://celo-sepolia.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://drpc.org/chainlist/celo-sepolia-rpc",
+        "https://drpc.org/docs/howitworks/ratelimiting",
+        "https://chainlist.org/chain/11142220"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xaa044c",
+          "durationMs": 155
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x27b34c0",
+          "durationMs": 42
+        }
+      ],
+      "durationMs": 2219
+    },
+    {
+      "protocol": "celo",
+      "network": "sepolia",
+      "chainId": "eip155:11142220",
+      "id": "celo-tenderly-sepolia",
+      "url": "https://celo-sepolia.gateway.tenderly.co",
+      "provider": "Tenderly",
+      "sourceUrls": [
+        "https://docs.tenderly.co/node-rpc/rpc-reference",
+        "https://chainlist.org/chain/11142220"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xaa044c",
+          "durationMs": 271
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x27b34c0",
+          "durationMs": 183
+        }
+      ],
+      "durationMs": 1789
+    },
+    {
+      "protocol": "gnosis",
+      "network": "mainnet",
+      "chainId": "eip155:100",
+      "id": "gnosis-starter",
+      "url": "https://rpc.gnosischain.com",
+      "provider": "Gnosis",
+      "sourceUrls": [
+        "https://docs.gnosischain.com/about/networks/mainnet",
+        "https://docs.gnosischain.com/tools/RPC%20Providers/",
+        "https://chainlist.org/chain/100"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x64",
+          "durationMs": 348
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x2f0a40b",
+          "durationMs": 193
+        }
+      ],
+      "durationMs": 1193
+    },
+    {
+      "protocol": "gnosis",
+      "network": "mainnet",
+      "chainId": "eip155:100",
+      "id": "gnosis-gateway",
+      "url": "https://rpc.gnosis.gateway.fm",
+      "provider": "Gateway.fm",
+      "sourceUrls": [
+        "https://docs.gnosischain.com/about/networks/mainnet",
+        "https://chainlist.org/chain/100"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x64",
+          "durationMs": 731
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x2f0a40b",
+          "durationMs": 193
+        }
+      ],
+      "durationMs": 1198
+    },
+    {
+      "protocol": "gnosis",
+      "network": "mainnet",
+      "chainId": "eip155:100",
+      "id": "gnosis-pocket",
+      "url": "https://gnosis.api.pocket.network",
+      "provider": "Pocket Network",
+      "sourceUrls": [
+        "https://docs.pocket.network/developers/supported-chains/",
+        "https://chainlist.org/chain/100"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x64",
+          "durationMs": 852
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x2f0a40b",
+          "durationMs": 301
+        }
+      ],
+      "durationMs": 1302
+    },
+    {
+      "protocol": "gnosis",
+      "network": "mainnet",
+      "chainId": "eip155:100",
+      "id": "gnosis-drpc",
+      "url": "https://gnosis.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://drpc.org/chainlist/gnosis-mainnet-rpc",
+        "https://drpc.org/docs/howitworks/ratelimiting",
+        "https://docs.gnosischain.com/tools/RPC%20Providers/",
+        "https://chainlist.org/chain/100"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x64",
+          "durationMs": 150
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x2f0a40b",
+          "durationMs": 35
+        }
+      ],
+      "durationMs": 2209
+    },
+    {
+      "protocol": "gnosis",
+      "network": "mainnet",
+      "chainId": "eip155:100",
+      "id": "gnosis-publicnode",
+      "url": "https://gnosis-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://gnosis.publicnode.com/",
+        "https://chainlist.org/chain/100"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x64",
+          "durationMs": 172
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x2f0a40b",
+          "durationMs": 110
+        }
+      ],
+      "durationMs": 1111
+    },
+    {
+      "protocol": "mantle",
+      "network": "mainnet",
+      "chainId": "eip155:5000",
+      "id": "mantle-mainnet",
+      "url": "https://rpc.mantle.xyz",
+      "provider": "Mantle",
+      "sourceUrls": [
+        "https://docs.mantle.xyz/network/for-developers/quick-access",
+        "https://docs.mantle.xyz/network/for-developers/resources-and-tooling/mantle-api"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1388",
+          "durationMs": 274
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x629a026",
+          "durationMs": 187
+        }
+      ],
+      "durationMs": 1188
+    },
+    {
+      "protocol": "mantle",
+      "network": "mainnet",
+      "chainId": "eip155:5000",
+      "id": "mantle-publicnode",
+      "url": "https://mantle-rpc.publicnode.com",
+      "provider": "PublicNode",
+      "sourceUrls": [
+        "https://chainlist.org/chain/5000",
+        "https://mantle.publicnode.com/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1388",
+          "durationMs": 160
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x629a027",
+          "durationMs": 98
+        }
+      ],
+      "durationMs": 2588
+    },
+    {
+      "protocol": "mantle",
+      "network": "mainnet",
+      "chainId": "eip155:5000",
+      "id": "mantle-drpc",
+      "url": "https://mantle.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://chainlist.org/chain/5000",
+        "https://drpc.org/chainlist/mantle-mainnet-rpc",
+        "https://drpc.org/docs/howitworks/ratelimiting"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1388",
+          "durationMs": 136
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x629a028",
+          "durationMs": 69
+        }
+      ],
+      "durationMs": 2917
+    },
+    {
+      "protocol": "mantle",
+      "network": "mainnet",
+      "chainId": "eip155:5000",
+      "id": "mantle-pocket",
+      "url": "https://mantle.api.pocket.network",
+      "provider": "Pocket Network",
+      "sourceUrls": [
+        "https://chainlist.org/chain/5000",
+        "https://pocket.network/foundation-partnerships/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1388",
+          "durationMs": 787
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x629a027",
+          "durationMs": 178
+        }
+      ],
+      "durationMs": 1178
+    },
+    {
+      "protocol": "mantle",
+      "network": "mainnet",
+      "chainId": "eip155:5000",
+      "id": "mantle-thirdweb",
+      "url": "https://5000.rpc.thirdweb.com",
+      "provider": "thirdweb",
+      "sourceUrls": [
+        "https://chainlist.org/chain/5000",
+        "https://portal.thirdweb.com/infrastructure/rpc-edge/overview"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1388",
+          "durationMs": 162
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x629a026",
+          "durationMs": 213
+        }
+      ],
+      "durationMs": 1213
+    },
+    {
+      "protocol": "flare",
+      "network": "mainnet",
+      "chainId": "eip155:14",
+      "id": "flare-public",
+      "url": "https://flare-api.flare.network/ext/C/rpc",
+      "provider": "Flare",
+      "sourceUrls": [
+        "https://dev.flare.network/network/overview",
+        "https://chainlist.org/chain/14"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xe",
+          "durationMs": 245
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x4746040",
+          "durationMs": 167
+        }
+      ],
+      "durationMs": 1166
+    },
+    {
+      "protocol": "flare",
+      "network": "mainnet",
+      "chainId": "eip155:14",
+      "id": "flare-quicknode-public",
+      "url": "https://stylish-light-theorem.flare-mainnet.quiknode.pro/ext/bc/C/rpc",
+      "provider": "QuickNode",
+      "sourceUrls": [
+        "https://dev.flare.network/network/overview"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xe",
+          "durationMs": 259
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x4746041",
+          "durationMs": 79
+        }
+      ],
+      "durationMs": 1081
+    },
+    {
+      "protocol": "flare",
+      "network": "mainnet",
+      "chainId": "eip155:14",
+      "id": "flare-drpc-public",
+      "url": "https://flare.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://chainlist.org/chain/14",
+        "https://drpc.org/chainlist/flare-mainnet-rpc",
+        "https://drpc.org/docs/howitworks/ratelimiting"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xe",
+          "durationMs": 135
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x4746043",
+          "durationMs": 36
+        }
+      ],
+      "durationMs": 2788
+    },
+    {
+      "protocol": "flare",
+      "network": "mainnet",
+      "chainId": "eip155:14",
+      "id": "flare-tenderly-public",
+      "url": "https://flare.gateway.tenderly.co",
+      "provider": "Tenderly",
+      "sourceUrls": [
+        "https://docs.tenderly.co/node-rpc/rpc-reference",
+        "https://docs.tenderly.co/node-rpc/overview#public-endpoint-limits"
+      ],
+      "reviewedAt": "2026-11-07",
+      "budget": {},
+      "status": "passed",
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xe",
+          "durationMs": 178
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x4746042",
+          "durationMs": 111
+        }
+      ],
+      "durationMs": 1111
+    }
+  ]
+}

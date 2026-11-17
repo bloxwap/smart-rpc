@@ -1,0 +1,82 @@
+[
+  {
+    "scenario": "logs-cache",
+    "rep": 0,
+    "version": "before",
+    "ops": 4903.430710254893,
+    "cpuOps": 4860.621673512042,
+    "checksum": 10000000
+  },
+  {
+    "scenario": "logs-cache",
+    "rep": 0,
+    "version": "after",
+    "ops": 9528.254154913377,
+    "cpuOps": 9443.120309129987,
+    "checksum": 10000000
+  },
+  {
+    "scenario": "logs-cache",
+    "rep": 1,
+    "version": "after",
+    "ops": 9711.207310956564,
+    "cpuOps": 9597.159240864705,
+    "checksum": 10000000
+  },
+  {
+    "scenario": "logs-cache",
+    "rep": 1,
+    "version": "before",
+    "ops": 5027.5229633066565,
+    "cpuOps": 4978.649063491218,
+    "checksum": 10000000
+  },
+  {
+    "scenario": "logs-cache",
+    "rep": 2,
+    "version": "before",
+    "ops": 5018.580876644273,
+    "cpuOps": 5000.845142829138,
+    "checksum": 10000000
+  },
+  {
+    "scenario": "logs-cache",
+    "rep": 2,
+    "version": "after",
+    "ops": 10487.993665260223,
+    "cpuOps": 10485.477613505294,
+    "checksum": 10000000
+  },
+  {
+    "scenario": "logs-cache",
+    "rep": 3,
+    "version": "after",
+    "ops": 9698.98394433497,
+    "cpuOps": 10013.267579542895,
+    "checksum": 10000000
+  },
+  {
+    "scenario": "logs-cache",
+    "rep": 3,
+    "version": "before",
+    "ops": 5029.202694093592,
+    "cpuOps": 5003.114438738115,
+    "checksum": 10000000
+  },
+  {
+    "scenario": "logs-cache",
+    "rep": 4,
+    "version": "before",
+    "ops": 4882.383186420236,
+    "cpuOps": 4870.87552526304,
+    "checksum": 10000000
+  },
+  {
+    "scenario": "logs-cache",
+    "rep": 4,
+    "version": "after",
+    "ops": 9877.344782013539,
+    "cpuOps": 9843.323814839205,
+    "checksum": 10000000
+  }
+]

@@ -116,6 +116,7 @@ export function connectViem(url: string, options: ViemConnectionOptions): ViemCo
         await owned.unsubscribe();
         throw new Error("Connection closed while subscribing.");
       }
+      /* v8 ignore else -- @preserve nothing can unsubscribe before this line */
       if (!released) subscriptions.add(owned);
       return owned;
     },
@@ -211,7 +212,7 @@ class BatchCancellation {
         }
       };
       const onAbort = (): void => {
-        reject(signal ? abortError(signal) : new Error("This operation was aborted"));
+        reject(signal ? abortError(signal) : /* v8 ignore next -- @preserve the listener is only registered on a defined signal */ new Error("This operation was aborted"));
         release();
       };
       signal?.addEventListener("abort", onAbort, { once: true });

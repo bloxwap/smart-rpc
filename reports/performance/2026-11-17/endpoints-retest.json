@@ -1,0 +1,643 @@
+{
+  "checkedAt": "2026-11-17T11:06:31.873Z",
+  "results": [
+    {
+      "protocol": "solana",
+      "network": "mainnet",
+      "chainId": "solana:mainnet",
+      "id": "tatum",
+      "url": "https://solana-mainnet.gateway.tatum.io",
+      "provider": "Tatum",
+      "sourceUrls": [
+        "https://docs.tatum.io/reference/rpc-solana",
+        "https://www.comparenodes.com/library/public-endpoints/solana/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "defaultEligible": true,
+      "budget": {
+        "rps": 0.06666666666666667,
+        "burst": 2
+      },
+      "status": "failed",
+      "latency": {
+        "getGenesisHash": {
+          "attempts": 1,
+          "successes": 1,
+          "failures": 0,
+          "p50Ms": 268,
+          "p95Ms": 268,
+          "minMs": 268,
+          "maxMs": 268
+        },
+        "getSlot": {
+          "attempts": 3,
+          "successes": 3,
+          "failures": 0,
+          "p50Ms": 187,
+          "p95Ms": 189,
+          "minMs": 180,
+          "maxMs": 189
+        },
+        "getBalance": {
+          "attempts": 3,
+          "successes": 0,
+          "failures": 3,
+          "p50Ms": null,
+          "p95Ms": null,
+          "minMs": null,
+          "maxMs": null
+        }
+      },
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "passed",
+          "result": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+          "durationMs": 268
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 470509546,
+          "durationMs": 189
+        },
+        {
+          "method": "getBalance",
+          "status": "failed",
+          "category": "rpc_error",
+          "message": "Method 'getBalance' is available for paid plans only. To access this feature, please upgrade your subscription at https://co.tatum.io/upgrade.",
+          "rpcCode": -16401,
+          "durationMs": 102
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 470509681,
+          "durationMs": 187
+        },
+        {
+          "method": "getBalance",
+          "status": "failed",
+          "category": "rpc_error",
+          "message": "Method 'getBalance' is available for paid plans only. To access this feature, please upgrade your subscription at https://co.tatum.io/upgrade.",
+          "rpcCode": -16401,
+          "durationMs": 113
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 470509823,
+          "durationMs": 180
+        },
+        {
+          "method": "getBalance",
+          "status": "failed",
+          "category": "rpc_error",
+          "message": "Method 'getBalance' is available for paid plans only. To access this feature, please upgrade your subscription at https://co.tatum.io/upgrade.",
+          "rpcCode": -16401,
+          "durationMs": 177
+        }
+      ],
+      "durationMs": 90178
+    },
+    {
+      "protocol": "solana",
+      "network": "devnet",
+      "chainId": "solana:devnet",
+      "id": "tatum-devnet",
+      "url": "https://solana-devnet.gateway.tatum.io",
+      "provider": "Tatum",
+      "sourceUrls": [
+        "https://docs.tatum.io/reference/rpc-solana",
+        "https://www.comparenodes.com/library/public-endpoints/solana/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "defaultEligible": true,
+      "budget": {
+        "rps": 0.06666666666666667,
+        "burst": 2
+      },
+      "status": "failed",
+      "latency": {
+        "getGenesisHash": {
+          "attempts": 1,
+          "successes": 1,
+          "failures": 0,
+          "p50Ms": 387,
+          "p95Ms": 387,
+          "minMs": 387,
+          "maxMs": 387
+        },
+        "getSlot": {
+          "attempts": 3,
+          "successes": 3,
+          "failures": 0,
+          "p50Ms": 391,
+          "p95Ms": 397,
+          "minMs": 347,
+          "maxMs": 397
+        },
+        "getBalance": {
+          "attempts": 3,
+          "successes": 0,
+          "failures": 3,
+          "p50Ms": null,
+          "p95Ms": null,
+          "minMs": null,
+          "maxMs": null
+        }
+      },
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "passed",
+          "result": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+          "durationMs": 387
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 523247544,
+          "durationMs": 347
+        },
+        {
+          "method": "getBalance",
+          "status": "failed",
+          "category": "rpc_error",
+          "message": "Method 'getBalance' is available for paid plans only. To access this feature, please upgrade your subscription at https://co.tatum.io/upgrade.",
+          "rpcCode": -16401,
+          "durationMs": 109
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 523247668,
+          "durationMs": 391
+        },
+        {
+          "method": "getBalance",
+          "status": "failed",
+          "category": "rpc_error",
+          "message": "Method 'getBalance' is available for paid plans only. To access this feature, please upgrade your subscription at https://co.tatum.io/upgrade.",
+          "rpcCode": -16401,
+          "durationMs": 111
+        },
+        {
+          "method": "getSlot",
+          "status": "passed",
+          "result": 523247794,
+          "durationMs": 397
+        },
+        {
+          "method": "getBalance",
+          "status": "failed",
+          "category": "rpc_error",
+          "message": "Method 'getBalance' is available for paid plans only. To access this feature, please upgrade your subscription at https://co.tatum.io/upgrade.",
+          "rpcCode": -16401,
+          "durationMs": 149
+        }
+      ],
+      "durationMs": 104973
+    },
+    {
+      "protocol": "solana",
+      "network": "testnet",
+      "chainId": "solana:testnet",
+      "id": "web3cdn-testnet",
+      "url": "https://solana-testnet.web3cdn.rest",
+      "provider": "Web3CDN",
+      "sourceUrls": [
+        "https://web3cdn.network/rpc/solana",
+        "https://www.comparenodes.com/library/public-endpoints/solana/"
+      ],
+      "reviewedAt": "2026-11-07",
+      "defaultEligible": true,
+      "budget": {
+        "rps": 0.025,
+        "burst": 2
+      },
+      "status": "failed",
+      "latency": {
+        "getGenesisHash": {
+          "attempts": 1,
+          "successes": 0,
+          "failures": 1,
+          "p50Ms": null,
+          "p95Ms": null,
+          "minMs": null,
+          "maxMs": null
+        },
+        "getSlot": {
+          "attempts": 0,
+          "successes": 0,
+          "failures": 0,
+          "p50Ms": null,
+          "p95Ms": null,
+          "minMs": null,
+          "maxMs": null
+        },
+        "getBalance": {
+          "attempts": 0,
+          "successes": 0,
+          "failures": 0,
+          "p50Ms": null,
+          "p95Ms": null,
+          "minMs": null,
+          "maxMs": null
+        }
+      },
+      "checks": [
+        {
+          "method": "getGenesisHash",
+          "status": "failed",
+          "category": "network_error",
+          "message": "fetch failed",
+          "networkCode": "UND_ERR_CONNECT_TIMEOUT",
+          "durationMs": 10357
+        }
+      ],
+      "durationMs": 10357
+    },
+    {
+      "protocol": "plasma",
+      "network": "mainnet",
+      "chainId": "eip155:9745",
+      "url": "https://plasma-mainnet.gateway.tatum.io",
+      "provider": "Tatum",
+      "sourceUrls": [
+        "https://chainlist.org/chain/9745",
+        "https://docs.tatum.io/reference/rpc-plasma"
+      ],
+      "reviewedAt": "2026-11-07",
+      "defaultEligible": true,
+      "budget": {
+        "rps": 0.06666666666666667
+      },
+      "status": "passed",
+      "latency": {
+        "eth_chainId": {
+          "attempts": 1,
+          "successes": 1,
+          "failures": 0,
+          "p50Ms": 163,
+          "p95Ms": 163,
+          "minMs": 163,
+          "maxMs": 163
+        },
+        "eth_blockNumber": {
+          "attempts": 3,
+          "successes": 3,
+          "failures": 0,
+          "p50Ms": 115,
+          "p95Ms": 194,
+          "minMs": 113,
+          "maxMs": 194
+        },
+        "eth_getBalance": {
+          "attempts": 3,
+          "successes": 3,
+          "failures": 0,
+          "p50Ms": 197,
+          "p95Ms": 260,
+          "minMs": 191,
+          "maxMs": 260
+        }
+      },
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x2611",
+          "durationMs": 163
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x24360ac",
+          "durationMs": 113
+        },
+        {
+          "method": "eth_getBalance",
+          "status": "passed",
+          "result": "0x4c5c4b2833862b305a9",
+          "durationMs": 191
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x24360cb",
+          "durationMs": 115
+        },
+        {
+          "method": "eth_getBalance",
+          "status": "passed",
+          "result": "0x4c5c4b2833862b305a9",
+          "durationMs": 260
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x24360e9",
+          "durationMs": 194
+        },
+        {
+          "method": "eth_getBalance",
+          "status": "passed",
+          "result": "0x4c5c4b2833862b305a9",
+          "durationMs": 197
+        }
+      ],
+      "durationMs": 94691
+    },
+    {
+      "protocol": "opbnb",
+      "network": "mainnet",
+      "chainId": "eip155:204",
+      "id": "opbnb-drpc",
+      "url": "https://opbnb.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://docs.bnbchain.org/bnb-opbnb/get-started/network-info/",
+        "https://chainlist.org/chain/204",
+        "https://drpc.org/chainlist/opbnb"
+      ],
+      "reviewedAt": "2026-11-07",
+      "defaultEligible": true,
+      "budget": {},
+      "status": "failed",
+      "latency": {
+        "eth_chainId": {
+          "attempts": 1,
+          "successes": 1,
+          "failures": 0,
+          "p50Ms": 116,
+          "p95Ms": 116,
+          "minMs": 116,
+          "maxMs": 116
+        },
+        "eth_blockNumber": {
+          "attempts": 3,
+          "successes": 3,
+          "failures": 0,
+          "p50Ms": 45,
+          "p95Ms": 68,
+          "minMs": 40,
+          "maxMs": 68
+        },
+        "eth_getBalance": {
+          "attempts": 3,
+          "successes": 2,
+          "failures": 1,
+          "p50Ms": 393,
+          "p95Ms": 399,
+          "minMs": 393,
+          "maxMs": 399
+        }
+      },
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xcc",
+          "durationMs": 116
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0xc596a9b",
+          "durationMs": 45
+        },
+        {
+          "method": "eth_getBalance",
+          "status": "failed",
+          "category": "http_error",
+          "message": "HTTP 408 Request Timeout",
+          "httpStatus": 408,
+          "durationMs": 2034
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0xc596aa7",
+          "durationMs": 68
+        },
+        {
+          "method": "eth_getBalance",
+          "status": "passed",
+          "result": "0x3c91fbbb343b8bb4",
+          "durationMs": 393
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0xc596aaf",
+          "durationMs": 40
+        },
+        {
+          "method": "eth_getBalance",
+          "status": "passed",
+          "result": "0x3c91fbbb343b8bb4",
+          "durationMs": 399
+        }
+      ],
+      "durationMs": 7433
+    },
+    {
+      "protocol": "etherlink",
+      "network": "mainnet",
+      "chainId": "eip155:42793",
+      "id": "etherlink-drpc-public",
+      "url": "https://etherlink.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://chainlist.org/chain/42793",
+        "https://drpc.org/chainlist/etherlink-mainnet-rpc",
+        "https://drpc.org/docs/howitworks/ratelimiting"
+      ],
+      "reviewedAt": "2026-11-07",
+      "defaultEligible": true,
+      "budget": {
+        "rps": 16,
+        "burst": 4
+      },
+      "status": "failed",
+      "latency": {
+        "eth_chainId": {
+          "attempts": 1,
+          "successes": 1,
+          "failures": 0,
+          "p50Ms": 145,
+          "p95Ms": 145,
+          "minMs": 145,
+          "maxMs": 145
+        },
+        "eth_blockNumber": {
+          "attempts": 3,
+          "successes": 0,
+          "failures": 3,
+          "p50Ms": null,
+          "p95Ms": null,
+          "minMs": null,
+          "maxMs": null
+        },
+        "eth_getBalance": {
+          "attempts": 3,
+          "successes": 0,
+          "failures": 3,
+          "p50Ms": null,
+          "p95Ms": null,
+          "minMs": null,
+          "maxMs": null
+        }
+      },
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0xa729",
+          "durationMs": 145
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "failed",
+          "category": "http_error",
+          "message": "HTTP 400 Bad Request",
+          "httpStatus": 400,
+          "durationMs": 49
+        },
+        {
+          "method": "eth_getBalance",
+          "status": "failed",
+          "category": "http_error",
+          "message": "HTTP 400 Bad Request",
+          "httpStatus": 400,
+          "durationMs": 41
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "failed",
+          "category": "http_error",
+          "message": "HTTP 400 Bad Request",
+          "httpStatus": 400,
+          "durationMs": 34
+        },
+        {
+          "method": "eth_getBalance",
+          "status": "failed",
+          "category": "http_error",
+          "message": "HTTP 400 Bad Request",
+          "httpStatus": 400,
+          "durationMs": 39
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "failed",
+          "category": "http_error",
+          "message": "HTTP 400 Bad Request",
+          "httpStatus": 400,
+          "durationMs": 38
+        },
+        {
+          "method": "eth_getBalance",
+          "status": "failed",
+          "category": "http_error",
+          "message": "HTTP 400 Bad Request",
+          "httpStatus": 400,
+          "durationMs": 38
+        }
+      ],
+      "durationMs": 497
+    },
+    {
+      "protocol": "mantle",
+      "network": "mainnet",
+      "chainId": "eip155:5000",
+      "id": "mantle-drpc",
+      "url": "https://mantle.drpc.org",
+      "provider": "dRPC",
+      "sourceUrls": [
+        "https://chainlist.org/chain/5000",
+        "https://drpc.org/chainlist/mantle-mainnet-rpc",
+        "https://drpc.org/docs/howitworks/ratelimiting"
+      ],
+      "reviewedAt": "2026-11-07",
+      "defaultEligible": true,
+      "budget": {},
+      "status": "passed",
+      "latency": {
+        "eth_chainId": {
+          "attempts": 1,
+          "successes": 1,
+          "failures": 0,
+          "p50Ms": 108,
+          "p95Ms": 108,
+          "minMs": 108,
+          "maxMs": 108
+        },
+        "eth_blockNumber": {
+          "attempts": 3,
+          "successes": 3,
+          "failures": 0,
+          "p50Ms": 39,
+          "p95Ms": 71,
+          "minMs": 37,
+          "maxMs": 71
+        },
+        "eth_getBalance": {
+          "attempts": 3,
+          "successes": 3,
+          "failures": 0,
+          "p50Ms": 376,
+          "p95Ms": 398,
+          "minMs": 371,
+          "maxMs": 398
+        }
+      },
+      "checks": [
+        {
+          "method": "eth_chainId",
+          "status": "passed",
+          "result": "0x1388",
+          "durationMs": 108
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x629a195",
+          "durationMs": 71
+        },
+        {
+          "method": "eth_getBalance",
+          "status": "passed",
+          "result": "0x6f1b0f9f3cc824b0b587c",
+          "durationMs": 371
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x629a196",
+          "durationMs": 37
+        },
+        {
+          "method": "eth_getBalance",
+          "status": "passed",
+          "result": "0x6f1b0f9f3cc824b0b587c",
+          "durationMs": 376
+        },
+        {
+          "method": "eth_blockNumber",
+          "status": "passed",
+          "result": "0x629a197",
+          "durationMs": 39
+        },
+        {
+          "method": "eth_getBalance",
+          "status": "passed",
+          "result": "0x6f1b0f9f3cc824b0b587c",
+          "durationMs": 398
+        }
+      ],
+      "durationMs": 6503
+    }
+  ]
+}

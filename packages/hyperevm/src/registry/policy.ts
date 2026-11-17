@@ -74,7 +74,7 @@ function median(values: readonly number[]): number | null {
   const left = sorted[middle - 1];
   const right = sorted[middle];
   if (sorted.length % 2 === 0 && left !== undefined && right !== undefined) return (left + right) / 2;
-  return right ?? null;
+  return /* v8 ignore next -- @preserve the array is non-empty here */ right ?? null;
 }
 
 /** Equivalent host-root URLs with and without a trailing slash share history. Host case is ignored. */
@@ -107,6 +107,7 @@ function methodMedians(observations: readonly ProbeObservation[]): { typical: nu
   const medians: number[] = [];
   for (const list of byMethod.values()) {
     const value = median(list);
+    /* v8 ignore else -- @preserve every method list has at least one sample */
     if (value !== null) medians.push(value);
   }
   return {
@@ -140,8 +141,8 @@ function latestPrecompile(observations: readonly ProbeObservation[]): boolean | 
 }
 
 function scoreRow(stats: RegistryEndpointStats): number {
-  const typical = stats.latencyMs ?? Number.POSITIVE_INFINITY;
-  const tail = stats.tailMs ?? typical;
+  const typical = /* v8 ignore next -- @preserve only eligible rows are scored, and they have a latency */ stats.latencyMs ?? Number.POSITIVE_INFINITY;
+  const tail = /* v8 ignore next -- @preserve a row with a latency sample has a tail */ stats.tailMs ?? typical;
   const latency = 0.6 * typical + 0.4 * tail;
   const lagPenalty = 1 + Math.max(0, (stats.medianLag ?? 0) - LAG_GRACE_BLOCKS);
   return latency * lagPenalty * (1 + (1 - stats.uptime) * 4);

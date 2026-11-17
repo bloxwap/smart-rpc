@@ -49,8 +49,8 @@ describe("Ink mainnet", () => {
       expect(INK_MAINNET_ENDPOINTS).toEqual(INK_MAINNET_REGISTRY.map(({ url }) => url));
       expect(INK_NATIVE_CURRENCY).toEqual({ name: "Ether", symbol: "ETH", decimals: 18 });
       expect(mock.calls).toEqual([]);
-      expect(INK_MAINNET_REGISTRY[0].websocketUrls).toContain("wss://ws-gel.inkonchain.com");
-      expect(INK_MAINNET_REGISTRY[1].websocketUrls).toEqual(["wss://rpc-qnd.inkonchain.com"]);
+      expect(INK_MAINNET_REGISTRY.find(({ url }) => url === INK_RPC_URL)?.websocketUrls).toContain("wss://ws-gel.inkonchain.com");
+      expect(INK_MAINNET_REGISTRY[0].websocketUrls).toEqual(["wss://rpc-qnd.inkonchain.com"]);
       expect(client.snapshot().every(({ tokens }) => tokens === null)).toBe(true);
     } finally { client.close(); }
   });

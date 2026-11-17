@@ -21,6 +21,29 @@ export interface BasePublicRpcEndpoint extends EthereumEndpointConfig {
  */
 export const BASE_MAINNET_REGISTRY: readonly BasePublicRpcEndpoint[] = [
   {
+    id: "base-drpc",
+    url: "https://base.drpc.org",
+    provider: "dRPC",
+    sourceUrls: ["https://drpc.org/chainlist/base-mainnet-rpc", "https://chainlist.org/chain/8453"],
+    reviewedAt: "2026-11-07",
+    unsupportedMethods: [
+      "eth_newFilter",
+      "eth_newBlockFilter",
+      "eth_newPendingTransactionFilter",
+      "eth_getFilterChanges",
+      "eth_getFilterLogs",
+      "eth_uninstallFilter",
+    ],
+    capabilities: {
+      batch: false,
+      archive: false,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+    },
+  },
+  {
     id: "base-mainnet",
     url: BASE_RPC_URL,
     provider: "Base",
@@ -41,29 +64,6 @@ export const BASE_MAINNET_REGISTRY: readonly BasePublicRpcEndpoint[] = [
     provider: "PublicNode",
     sourceUrls: ["https://base.publicnode.com/", "https://chainlist.org/chain/8453"],
     reviewedAt: "2026-11-07",
-    capabilities: {
-      batch: false,
-      archive: false,
-      debug: false,
-      trace: false,
-      subscriptions: false,
-      pinning: false,
-    },
-  },
-  {
-    id: "base-drpc",
-    url: "https://base.drpc.org",
-    provider: "dRPC",
-    sourceUrls: ["https://drpc.org/chainlist/base-mainnet-rpc", "https://chainlist.org/chain/8453"],
-    reviewedAt: "2026-11-07",
-    unsupportedMethods: [
-      "eth_newFilter",
-      "eth_newBlockFilter",
-      "eth_newPendingTransactionFilter",
-      "eth_getFilterChanges",
-      "eth_getFilterLogs",
-      "eth_uninstallFilter",
-    ],
     capabilities: {
       batch: false,
       archive: false,

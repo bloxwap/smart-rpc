@@ -1,7 +1,7 @@
 import type { RpcPool } from "@smart-rpc/core";
 import { ethereum, type EthereumEndpoint, type EthereumOptions } from "@smart-rpc/ethereum";
 
-import { MANTLE_MAINNET_REGISTRY, MANTLE_MAINNET_WS_URL } from "./registry.js";
+import { MANTLE_MAINNET_REGISTRY, MANTLE_MAINNET_WS_URL, MANTLE_RPC_URL } from "./registry.js";
 
 export const MANTLE_CHAIN_ID = 5000;
 export const MANTLE_MAINNET_CAIP = "eip155:5000";
@@ -25,7 +25,7 @@ function configurePublic(endpoint: EthereumEndpoint): EthereumEndpoint {
   const parsed = new URL(config.url);
   const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
   if (host !== "rpc.mantle.xyz" && host !== new URL(MANTLE_MAINNET_WS_URL).hostname) return endpoint;
-  const known = MANTLE_MAINNET_REGISTRY[0]!;
+  const known = MANTLE_MAINNET_REGISTRY.find(({ url }) => url === MANTLE_RPC_URL)!;
   return {
     ...known,
     ...config,

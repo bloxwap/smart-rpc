@@ -4,6 +4,8 @@
  * Run `pnpm build` first. This script is intentionally outside the test suite.
  */
 
+import { pathToFileURL } from "node:url";
+
 const EVM_CHAINS = {
   bsc: 56, polygon: 137, base: 8453, arbitrum: 42161, monad: 143,
   xlayer: 196, robinhood: 4663, plasma: 9745, ink: 57073, optimism: 10,
@@ -21,6 +23,8 @@ Options:
   --protocol <name>   A transport subpath (default: all)
   --timeout <ms>      Deadline per HTTP request, 100–60000 (default: 10000)
   --concurrency <n>   Concurrent endpoint checks, 1–4 (default: 2)
+  --samples <n>       Head/state samples per endpoint, 1–20 (default: 1)
+  --state            Also measure balance reads and EVM eth_call
   --help             Show this help without importing packages or making requests
 
 JSON is written to stdout. Exit status: 0 = all checks passed, 1 = an endpoint
@@ -39,12 +43,13 @@ class CheckFailure extends Error {
   }
 }
 
-function parseOptions(args) {
-  const options = { protocol: undefined, timeout: 10000, concurrency: 2 };
+export function parseOptions(args) {
+  const options = { protocol: undefined, timeout: 10000, concurrency: 2, samples: 1, state: false };
   for (let index = 0; index < args.length; index += 1) {
     const flag = args[index];
     if (flag === "--help" || flag === "-h") return { help: true };
-    if (!["--protocol", "--timeout", "--concurrency"].includes(flag)) {
+    if (flag === "--state") { options.state = true; continue; }
+    if (!["--protocol", "--timeout", "--concurrency", "--samples"].includes(flag)) {
       throw new Error(`Unknown argument: ${flag}`);
     }
     const value = args[++index];
@@ -57,7 +62,7 @@ function parseOptions(args) {
     } else {
       const key = flag.slice(2);
       const number = Number(value);
-      const [minimum, maximum] = key === "timeout" ? [100, 60000] : [1, 4];
+      const [minimum, maximum] = key === "timeout" ? [100, 60000] : key === "samples" ? [1, 20] : [1, 4];
       if (!/^\d+$/.test(value) || !Number.isInteger(number) || number < minimum || number > maximum) {
         throw new Error(`${flag} must be an integer from ${minimum} to ${maximum}.`);
       }
@@ -67,7 +72,7 @@ function parseOptions(args) {
   return options;
 }
 
-async function loadRegistries(protocol) {
+export async function loadRegistries(protocol) {
   const groups = [];
   if (!protocol || protocol === "ethereum") {
     const ethereum = await import("../packages/smart-rpc/dist/ethereum.js");
@@ -129,7 +134,7 @@ async function loadRegistries(protocol) {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Pace requests across all networks belonging to a provider; do not spend bursts. */
-function providerPacer(groups) {
+export function providerPacer(groups) {
   const providers = new Map();
   for (const group of groups) {
     for (const entry of group.entries) {
@@ -175,6 +180,9 @@ async function readBody(response) {
 }
 
 function rpcErrorCategory(error) {
+  if (error.code === -16401 || /paid plans? only|restricted by plan|upgrade your subscription/i.test(error.message)) {
+    return "plan_restricted";
+  }
   if (/rate.?limit|too many requests|quota|capacity|credits? exceeded/i.test(error.message) || error.code === -32005) {
     return "rate_limited";
   }
@@ -241,13 +249,34 @@ function hexQuantity(value) {
   return typeof value === "string" && /^0x[\da-f]+$/i.test(value) ? BigInt(value) : undefined;
 }
 
-async function checkEndpoint(group, entry, options, pace) {
+export function latencySummary(checks) {
+  const times = checks.filter((check) => check.status === "passed").map((check) => check.durationMs).sort((a, b) => a - b);
+  return {
+    attempts: checks.length, successes: times.length, failures: checks.length - times.length,
+    p50Ms: times.length ? times[Math.ceil(times.length * 0.5) - 1] : null,
+    p95Ms: times.length ? times[Math.ceil(times.length * 0.95) - 1] : null,
+    minMs: times[0] ?? null, maxMs: times.at(-1) ?? null,
+  };
+}
+
+export async function checkEndpoint(group, entry, options, pace) {
   const started = performance.now();
   const isSolana = group.protocol === "solana";
   const checks = [];
+  const reads = [
+    { method: isSolana ? "getSlot" : "eth_blockNumber", params: isSolana ? [{ commitment: "processed" }] : [] },
+    ...(options.state ? [{
+      method: isSolana ? "getBalance" : "eth_getBalance",
+      params: isSolana ? ["11111111111111111111111111111111", { commitment: "processed" }]
+        : ["0x0000000000000000000000000000000000000000", "latest"],
+    }] : []),
+    ...(options.state && !isSolana ? [{
+      method: "eth_call", params: [{ to: "0x0000000000000000000000000000000000000000", data: "0x" }, "latest"],
+    }] : []),
+  ];
   const methods = [
     { method: isSolana ? "getGenesisHash" : "eth_chainId", params: [] },
-    { method: isSolana ? "getSlot" : "eth_blockNumber", params: isSolana ? [{ commitment: "processed" }] : [] },
+    ...Array.from({ length: options.samples }, () => reads).flat(),
   ];
   for (const [index, spec] of methods.entries()) {
     await pace(entry);
@@ -264,8 +293,18 @@ async function checkEndpoint(group, entry, options, pace) {
             expectedIdentity: group.identity, reportedIdentity: result,
           });
         }
-      } else if (isSolana ? !Number.isSafeInteger(result) || result < 0 : hexQuantity(result) === undefined) {
-        throw new CheckFailure("malformed_response", "RPC returned an invalid block or slot.");
+      } else if (spec.method === "eth_call") {
+        if (typeof result !== "string" || !/^0x(?:[\da-f]{2})*$/i.test(result)) {
+          throw new CheckFailure("malformed_response", "RPC returned invalid call data.");
+        }
+      } else {
+        const value = spec.method === "getBalance" ? result?.value : result;
+        if (isSolana ? !Number.isSafeInteger(value) || value < 0 : hexQuantity(value) === undefined) {
+          throw new CheckFailure("malformed_response", "RPC returned an invalid block, slot, or balance.");
+        }
+        if (spec.method === "getBalance" && (!Number.isSafeInteger(result?.context?.slot) || result.context.slot < 0)) {
+          throw new CheckFailure("malformed_response", "RPC returned an invalid balance context.");
+        }
       }
       checks.push({ method: spec.method, status: "passed", result, durationMs: Math.round(performance.now() - requestStarted) });
     } catch (error) {
@@ -273,15 +312,20 @@ async function checkEndpoint(group, entry, options, pace) {
         method: spec.method, status: "failed", category: error.category ?? "network_error",
         message: error.message, ...error.details, durationMs: Math.round(performance.now() - requestStarted),
       });
-      break;
+      // Never send reads to an unverified chain or keep probing a quota/access denial.
+      if (index === 0 || ["rate_limited", "authentication_required", "access_denied", "plan_restricted"].includes(error.category)) break;
     }
   }
   return {
     protocol: group.protocol, network: group.network, chainId: group.chainId,
     id: entry.id, url: entry.url, provider: entry.provider,
     sourceUrls: entry.sourceUrls, reviewedAt: entry.reviewedAt,
+    defaultEligible: entry.eligible !== false && entry.weight !== 0,
     budget: { rps: entry.rps, burst: entry.burst },
-    status: checks.length === 2 && checks.every((check) => check.status === "passed") ? "passed" : "failed",
+    status: checks.length === methods.length && checks.every((check) => check.status === "passed") ? "passed" : "failed",
+    latency: Object.fromEntries([...new Set(methods.map(({ method }) => method))].map((method) => [
+      method, latencySummary(checks.filter((check) => check.method === method)),
+    ])),
     checks, durationMs: Math.round(performance.now() - started),
   };
 }
@@ -309,15 +353,17 @@ async function main() {
   const passed = results.filter((result) => result.status === "passed").length;
   process.stdout.write(`${JSON.stringify({
     checkedAt, completedAt: new Date().toISOString(),
-    scope: "chain-identity-and-head", protocol: options.protocol ?? "all",
+    scope: options.state ? "chain-identity-head-and-state" : "chain-identity-and-head", protocol: options.protocol ?? "all",
     note: "A passing check confirms these methods at this time only. Network errors may be local; provider availability and limits can change.",
     timeoutMs: options.timeout, concurrency: options.concurrency,
+    samples: options.samples,
+    latencyNote: "Per-request latency includes HTTP and body validation, excludes provider pacing. Identity is the cold request; read samples reuse connections. Percentiles cover successful samples only; inspect failures and sample counts too.",
     total: results.length, passed, failed: results.length - passed, results,
   }, null, 2)}\n`);
   process.exitCode = passed === results.length ? 0 : 1;
 }
 
-main().catch((error) => {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((error) => {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   if (error?.code === "ERR_MODULE_NOT_FOUND") process.stderr.write("Run pnpm install and pnpm build before checking RPCs.\n");
   process.exitCode = 2;

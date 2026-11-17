@@ -60,7 +60,7 @@ export function resolveEndpointBudget(
   if (endpoint.rps === undefined && endpoint.burst === undefined) return fallback;
   const rps = endpoint.rps ?? fallback?.rps;
   if (rps === undefined) throw new Error(`${where}.burst needs an rps, on the endpoint or in budget.`);
-  const burst = endpoint.burst ?? (endpoint.rps === undefined ? fallback?.burst : undefined);
+  const burst = endpoint.burst;
   return validBudget(rps, burst, where);
 }
 

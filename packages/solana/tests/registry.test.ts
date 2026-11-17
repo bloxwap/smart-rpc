@@ -18,11 +18,10 @@ const clusters = [
     endpoints: MAINNET_ENDPOINTS,
     registry: MAINNET_REGISTRY,
     urls: [
-      "https://solana-rpc.publicnode.com",
-      "https://solana.api.pocket.network",
       "https://api.mainnet.solana.com",
+      "https://solana-rpc.publicnode.com",
       "https://public.rpc.solanavibestation.com",
-      "https://solana-mainnet.gateway.tatum.io",
+      "https://solana.api.pocket.network",
     ],
   },
   {
@@ -31,7 +30,6 @@ const clusters = [
     registry: DEVNET_REGISTRY,
     urls: [
       "https://api.devnet.solana.com",
-      "https://solana-devnet.gateway.tatum.io",
     ],
   },
   {
@@ -41,7 +39,6 @@ const clusters = [
     urls: [
       "https://api.testnet.solana.com",
       "https://solana-testnet-rpc.publicnode.com",
-      "https://solana-testnet.web3cdn.rest",
     ],
   },
 ] as const;

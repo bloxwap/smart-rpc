@@ -1,0 +1,405 @@
+{
+  "checkedAt": "2026-11-17T11:13:30.230Z",
+  "results": [
+    {
+      "protocol": "ethereum",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 168.08762499999997,
+      "hotMs": 0.13920899999999392,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://eth.drpc.org",
+          "method": "eth_getBalance",
+          "latencyMs": 49
+        }
+      ]
+    },
+    {
+      "protocol": "hyperevm",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 1296.27,
+      "hotMs": 0.04087500000014188,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://rpc.hypurrscan.io",
+          "method": "eth_getBalance",
+          "latencyMs": 653
+        }
+      ]
+    },
+    {
+      "protocol": "hyperevm",
+      "network": "testnet",
+      "status": "passed",
+      "coldMs": 346.1460420000003,
+      "hotMs": 0.045834000000013475,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://rpc.hyperliquid-testnet.xyz/evm",
+          "method": "eth_getBalance",
+          "latencyMs": 166
+        }
+      ]
+    },
+    {
+      "protocol": "solana",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 291.31258400000024,
+      "hotMs": 0.08441599999969185,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://api.mainnet.solana.com",
+          "method": "getBalance",
+          "latencyMs": 64
+        }
+      ]
+    },
+    {
+      "protocol": "solana",
+      "network": "devnet",
+      "status": "passed",
+      "coldMs": 347.72250000000076,
+      "hotMs": 0.03966599999967002,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://api.devnet.solana.com",
+          "method": "getBalance",
+          "latencyMs": 82
+        }
+      ]
+    },
+    {
+      "protocol": "solana",
+      "network": "testnet",
+      "status": "passed",
+      "coldMs": 362.30804200000057,
+      "hotMs": 0.02979200000027049,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://api.testnet.solana.com",
+          "method": "getBalance",
+          "latencyMs": 87
+        }
+      ]
+    },
+    {
+      "protocol": "bsc",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 419.49825000000055,
+      "hotMs": 0.029667000000699772,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://bsc-dataseed.bnbchain.org",
+          "method": "eth_getBalance",
+          "latencyMs": 77
+        }
+      ]
+    },
+    {
+      "protocol": "polygon",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 138.39649999999892,
+      "hotMs": 0.04295799999999872,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://polygon.drpc.org",
+          "method": "eth_getBalance",
+          "latencyMs": 42
+        }
+      ]
+    },
+    {
+      "protocol": "base",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 137.8038749999996,
+      "hotMs": 0.05345800000031886,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://base.drpc.org",
+          "method": "eth_getBalance",
+          "latencyMs": 42
+        }
+      ]
+    },
+    {
+      "protocol": "arbitrum",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 249.33708300000035,
+      "hotMs": 0.0571669999990263,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://arb1.arbitrum.io/rpc",
+          "method": "eth_getBalance",
+          "latencyMs": 96
+        }
+      ]
+    },
+    {
+      "protocol": "monad",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 268.6247910000002,
+      "hotMs": 0.11212499999965075,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://rpc.monad.xyz",
+          "method": "eth_getBalance",
+          "latencyMs": 106
+        }
+      ]
+    },
+    {
+      "protocol": "xlayer",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 186.96562500000073,
+      "hotMs": 0.0485419999986334,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://xlayer-mainnet.rpc.sentio.xyz",
+          "method": "eth_getBalance",
+          "latencyMs": 67
+        }
+      ]
+    },
+    {
+      "protocol": "robinhood",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 182.10241699999824,
+      "hotMs": 0.03450000000157161,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://robinhood.drpc.org",
+          "method": "eth_getBalance",
+          "latencyMs": 84
+        }
+      ]
+    },
+    {
+      "protocol": "plasma",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 489.67754200000127,
+      "hotMs": 0.05062499999985448,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://rpc.plasma.to",
+          "method": "eth_getBalance",
+          "latencyMs": 237
+        }
+      ]
+    },
+    {
+      "protocol": "ink",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 310.86699999999837,
+      "hotMs": 0.04799999999886495,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://rpc-qnd.inkonchain.com",
+          "method": "eth_getBalance",
+          "latencyMs": 160
+        }
+      ]
+    },
+    {
+      "protocol": "optimism",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 290.1215000000011,
+      "hotMs": 0.04650000000037835,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://optimism-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "latencyMs": 146
+        }
+      ]
+    },
+    {
+      "protocol": "opbnb",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 440.37950000000274,
+      "hotMs": 0.05249999999796273,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://opbnb-mainnet-rpc.bnbchain.org",
+          "method": "eth_getBalance",
+          "latencyMs": 88
+        }
+      ]
+    },
+    {
+      "protocol": "arc",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 174.5255419999994,
+      "hotMs": 0.04912500000136788,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://rpc.mainnet.arc.io",
+          "method": "eth_getBalance",
+          "latencyMs": 86
+        }
+      ]
+    },
+    {
+      "protocol": "etherlink",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 410.1075830000009,
+      "hotMs": 0.05250000000160071,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://node.mainnet.etherlink.com",
+          "method": "eth_getBalance",
+          "latencyMs": 98
+        }
+      ]
+    },
+    {
+      "protocol": "avalanche",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 167.8853339999987,
+      "hotMs": 0.042832999999518506,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://api.avax.network/ext/bc/C/rpc",
+          "method": "eth_getBalance",
+          "latencyMs": 105
+        }
+      ]
+    },
+    {
+      "protocol": "celo",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 208.5609579999982,
+      "hotMs": 0.02275000000008731,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://forno.celo.org",
+          "method": "eth_getBalance",
+          "latencyMs": 111
+        }
+      ]
+    },
+    {
+      "protocol": "celo",
+      "network": "sepolia",
+      "status": "passed",
+      "coldMs": 212.0044170000001,
+      "hotMs": 0.028374999998050043,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://forno.celo-sepolia.celo-testnet.org",
+          "method": "eth_getBalance",
+          "latencyMs": 105
+        }
+      ]
+    },
+    {
+      "protocol": "gnosis",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 284.9388749999998,
+      "hotMs": 0.042291000001569046,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://gnosis-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "latencyMs": 143
+        }
+      ]
+    },
+    {
+      "protocol": "mantle",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 296.58283400000073,
+      "hotMs": 0.04216599999926984,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://mantle-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "latencyMs": 152
+        }
+      ]
+    },
+    {
+      "protocol": "flare",
+      "network": "mainnet",
+      "status": "passed",
+      "coldMs": 215.73899999999776,
+      "hotMs": 0.04824999999982538,
+      "upstreamRequests": 1,
+      "cacheHits": 1,
+      "winners": [
+        {
+          "url": "https://flare.drpc.org",
+          "method": "eth_getBalance",
+          "latencyMs": 92
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+---
+title: Performance audit — November 17, 2026
+description: Built-in endpoint verification, measured startup improvements, CPU benchmarks, and remaining slow providers.
+---
+
+**The final registries retain 102 active endpoints across all 25 supported networks.** All 102 passed identity, head, and state checks in this audit. One additional HyperEVM candidate passed these narrow checks but remains disabled by its broader historical capability policy. Eight unsuitable defaults were removed, startup order was improved on ten mainnets, and HyperEVM’s rolling history was refreshed.
+
+The original 111 candidates produced 109 passes with the old identity/head check. Adding repeated balance reads reduced that to 104. Adding EVM `eth_call` exposed further method-specific failures. The final membership was selected from the complete expanded audit, without discarding any failed sample for a retained endpoint. Raw successful and failed observations are preserved under `reports/performance/2026-11-17/`.
+
+**Library CPU improvements.** Cache keys now avoid intermediate fragment arrays; repeated access to the newest cache entry avoids redundant Map updates; cached logs are copied once on return while preserving input/output isolation.
+
+| Workload | Before, ops/CPU-second | After, ops/CPU-second | Change |
+| --- | ---: | ---: | ---: |
+| One hot cache key | 579,882 | 704,800 | +21.5% |
+| 64 rotating cache keys | 955,797 | 998,594 | +4.5% |
+| EVM cache-plan generation | 1,447,486 | 1,676,241 | +15.8% |
+| Cached queries returning 1,000 logs | 4,979 | 9,843 | +97.7% |
+
+Node 24.22.1, macOS arm64, one process with alternating before/after implementations: nine pairs for cache and plans, seven for mixed keys, five for cached logs. These are medians normalized by process CPU time, not network requests per second. Other applications were building concurrently on this Mac, so wall-clock throughput was noisy; the small mixed-key change should be treated as approximately neutral. The unchanged direct log-index workload also varied with machine load. Baselines include the pre-existing workspace edits, identified in `metadata.json`.
+
+**Observed cold requests through the actual default pools.** Every pool passed an account-balance read and an immediate cached repeat. These are single cold samples per pool, including identity verification, connection setup, and routing; they are not statistically established production p95 improvements.
+
+| Network | Before | After endpoint ordering |
+| --- | ---: | ---: |
+| ethereum | 343 ms | 181 ms |
+| base | 294 ms | 124 ms |
+| xlayer | 453 ms | 149 ms |
+| robinhood | 1545 ms | 231 ms |
+| ink | 966 ms | 295 ms |
+| optimism | 487 ms | 313 ms |
+| gnosis | 1022 ms | 412 ms |
+| flare | 897 ms | 232 ms |
+| hyperevm | 1299 ms | 1271 ms |
+
+All 25 immediate repeated reads completed in under 1 ms in that run. Reordering only changes initial preference among equal scores; runtime latency, budget, failure, and freshness scoring still adapt to the caller. No live identity verification or conservative provider limits were bypassed.
+
+**Network-by-network endpoint results.** For each network, the table selects the eligible provider with the lowest *worst median* across head, balance, and EVM call methods. Each retained provider had five successful samples per method. This is an audit winner for this location and workload, not a permanent global rank or necessarily the initial route.
+
+| Network | Active defaults | Best measured provider | Head p50 | Balance p50 | Empty call p50 |
+| --- | ---: | --- | ---: | ---: | ---: |
+| ethereum | 5 | [dRPC](https://eth.drpc.org) | 44 ms | 46 ms | 96 ms |
+| hyperevm | 4 | [PublicNode](https://hyperliquid-rpc.publicnode.com) | 107 ms | 108 ms | 117 ms |
+| hyperevm testnet | 2 | [dRPC](https://hyperliquid-testnet.drpc.org) | 33 ms | 96 ms | 86 ms |
+| solana | 4 | [Solana](https://api.mainnet.solana.com) | 52 ms | 53 ms | — |
+| solana devnet | 1 | [Solana](https://api.devnet.solana.com) | 77 ms | 77 ms | — |
+| solana testnet | 2 | [Solana](https://api.testnet.solana.com) | 82 ms | 81 ms | — |
+| bsc | 5 | [BNB Chain public dataseeds](https://bsc-dataseed.bnbchain.org) | 79 ms | 79 ms | 77 ms |
+| polygon | 4 | [dRPC](https://polygon.drpc.org) | 33 ms | 41 ms | 54 ms |
+| base | 5 | [Tenderly](https://base.gateway.tenderly.co) | 92 ms | 90 ms | 92 ms |
+| arbitrum | 5 | [Offchain Labs](https://arb1.arbitrum.io/rpc) | 91 ms | 90 ms | 91 ms |
+| monad | 5 | [Goldsky Edge](https://rpc2.monad.xyz) | 54 ms | 74 ms | 73 ms |
+| xlayer | 5 | [Sentio](https://xlayer-mainnet.rpc.sentio.xyz) | 52 ms | 58 ms | 54 ms |
+| robinhood | 5 | [PublicNode](https://robinhood-rpc.publicnode.com) | 100 ms | 99 ms | 101 ms |
+| plasma | 2 | [Plasma](https://rpc.plasma.to) | 75 ms | 81 ms | 79 ms |
+| ink | 5 | [QuickNode](https://rpc-qnd.inkonchain.com) | 95 ms | 101 ms | 103 ms |
+| optimism | 5 | [Tenderly](https://optimism.gateway.tenderly.co) | 93 ms | 93 ms | 105 ms |
+| opbnb | 4 | [BNB Chain](https://opbnb-mainnet-rpc.bnbchain.org) | 77 ms | 81 ms | 78 ms |
+| arc | 5 | [Arc](https://rpc.mainnet.arc.io) | 45 ms | 45 ms | 50 ms |
+| etherlink | 3 | [Etherlink](https://node.mainnet.etherlink.com) | 95 ms | 100 ms | 102 ms |
+| avalanche | 4 | [Avalanche](https://api.avax.network/ext/bc/C/rpc) | 55 ms | 53 ms | 53 ms |
+| celo | 5 | [cLabs Forno](https://forno.celo.org) | 62 ms | 60 ms | 67 ms |
+| celo sepolia | 4 | [cLabs Forno](https://forno.celo-sepolia.celo-testnet.org) | 29 ms | 31 ms | 52 ms |
+| gnosis | 5 | [PublicNode](https://gnosis-rpc.publicnode.com) | 101 ms | 106 ms | 102 ms |
+| mantle | 4 | [PublicNode](https://mantle-rpc.publicnode.com) | 96 ms | 106 ms | 108 ms |
+| flare | 4 | [QuickNode](https://stylish-light-theorem.flare-mainnet.quiknode.pro/ext/bc/C/rpc) | 73 ms | 80 ms | 84 ms |
+
+**Removed defaults and evidence.** Explicit user-supplied endpoints remain supported.
+
+| Network / provider | Finding |
+| --- | --- |
+| Solana mainnet and devnet / Tatum | Both retested with slower pacing; `getBalance` repeatedly returned paid-plan errors. |
+| Plasma / Tatum | Public requests hit HTTP 429; anonymous EVM `eth_call` is restricted by plan. |
+| Solana testnet / Web3CDN | Two 5-second identity timeouts, followed by a network error on a 15-second retest. This establishes failure from this client, not a worldwide outage. |
+| Etherlink / dRPC | Identity succeeded, but head and balance reads repeatedly returned HTTP 400. |
+| opBNB / dRPC | Five of eight balance reads failed with HTTP 408 across the first two sampled rounds. A later round recovered; the endpoint stays excluded pending sustained health. |
+| Mantle / dRPC | Intermittent balance failures plus three of five empty calls timing out with HTTP 408 in the expanded round. |
+| Polygon / ZAN | Head and balance succeeded, but `eth_call` returned HTTP 403 in both independent rounds. |
+
+Tatum’s [published method restrictions](https://docs.tatum.io/docs/gateway-limits) confirm the paid-plan requirement for Solana balances/account queries and EVM calls. An authenticated endpoint with an appropriate plan is an explicit configuration choice.
+
+**HyperEVM cold-start follow-up.** The first optimization pass left HyperEVM’s cold request around 1.27 seconds: historical weights selected Hypurrscan ahead of the faster eligible registry leaders. Fresh default pools now use `coldStart: "ordered"` until a request-latency sample or restored score exists. This temporarily uses neutral weights and the curated order, while retaining identity verification, budgets, health, and capability checks. Normal historical weighting resumes after the first sampled request. Explicit endpoints retain weighted startup unless the caller opts in.
+
+An alternating A/B comparison with a fresh Node process and HTTP connection pool for every sample measured:
+
+| First request | Weighted startup p50 | Ordered startup p50 | Reduction |
+| --- | ---: | ---: | ---: |
+| `eth_getBalance` | 1,378 ms | 561 ms | 59% |
+| Empty `eth_call` | 1,352 ms | 390 ms | 71% |
+
+Each cell contains five live samples from one location. Timing includes pool construction, live identity verification, and the read, but excludes module import/process startup. Run `node scripts/benchmark-hyperevm-startup.mjs --runs 5` or add `--method eth_call` to repeat the comparison. Request timelines and full results are saved in `reports/performance/2026-11-17/hyperevm-startup/`. Set `coldStart: "weighted"` to retain the previous first-call policy.
+
+**Remaining performance limits.** The historical registry weights and eligibility rules still apply after startup. The registry refresh enabled PublicNode and disabled mainnet dRPC after another realistic log-range failure. HyperEVM Stakely measured 842 ms median balance latency in the initial sampled round and remains a slow alternative. Reuse a pool to retain its verified identities and connections across requests.
+
+Robinhood’s official endpoint measured roughly 1.14 seconds for balance reads; Gnosis’s official endpoint about 612 ms; Flare’s official endpoint about 592 ms. They remain lower-priority fallbacks behind measured faster providers. Pocket commonly measured around 180–220 ms for state and 700–770 ms for initial identity/TLS requests. Solana devnet now has one verified keyless default, so applications requiring redundancy need an explicitly configured additional provider.
+
+**Scope and reproduction.** The audit made no transactions. EVM reads used `eth_chainId`, `eth_blockNumber`, `eth_getBalance` at `latest`, and an empty `eth_call` to the zero address. Solana used `getGenesisHash`, `getSlot`, and `getBalance` at `processed`. An empty call verifies method access, not complex contract execution, archive queries, logs, WebSockets, batch support, or all precompiles. HyperEVM’s separate existing probe additionally checked logs and its HyperCore precompile.
+
+The expanded endpoint run was 2026-11-17T11:04:12.420Z through 2026-11-17T11:10:39.320Z. Request p50/p95 excludes provider pacing but includes HTTP/body validation. Identity is the cold connection request; later samples reuse connections. Five-sample p95 is effectively the slowest successful sample, not a reliable production tail estimate. Failures and attempt counts remain visible in the JSON. Single-location measurements do not establish global speed or future uptime.
+
+```sh
+pnpm build
+node scripts/check-rpcs.mjs --samples 5 --state --concurrency 4 > rpc-performance.json
+pnpm benchmark:core -- --scenario cache --threads 1,2,4 --iterations 1000000
+pnpm benchmark:core -- --scenario cache-mixed --threads 1,2,4 --iterations 1000000
+pnpm benchmark:core -- --scenario logs-cache --threads 1,2,4 --iterations 10000
+pnpm benchmark:core -- --scenario plan --threads 1,2,4 --iterations 1000000
+```
+
+The manual Public RPC smoke workflow now collects repeated head/state/call measurements. Deterministic validation includes the full test suite, 100% coverage, typechecking, release build, and documentation checks. Live endpoint audits remain separate from CI unit tests.

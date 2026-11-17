@@ -8,6 +8,11 @@ on:
         default: all
         required: true
         type: string
+      samples:
+        description: Head, balance, and EVM call samples per endpoint (1-20)
+        default: "5"
+        required: true
+        type: string
 
 permissions: {}
 
@@ -29,14 +34,15 @@ jobs:
           node-version: 22
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - name: Verify identity and head
+      - name: Verify identity and measure head and state reads
         env:
           RPC_PROTOCOL: ${{ inputs.protocol }}
+          RPC_SAMPLES: ${{ inputs.samples }}
         run: |
           if [ "$RPC_PROTOCOL" = all ]; then
-            node scripts/check-rpcs.mjs > rpc-smoke.json
+            node scripts/check-rpcs.mjs --samples "$RPC_SAMPLES" --state > rpc-smoke.json
           else
-            node scripts/check-rpcs.mjs --protocol "$RPC_PROTOCOL" > rpc-smoke.json
+            node scripts/check-rpcs.mjs --protocol "$RPC_PROTOCOL" --samples "$RPC_SAMPLES" --state > rpc-smoke.json
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()

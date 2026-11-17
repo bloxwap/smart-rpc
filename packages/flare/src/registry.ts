@@ -38,23 +38,6 @@ const drpcSupportedMethods = supportedMethods.filter((method) => !drpcUnsupporte
  */
 export const FLARE_MAINNET_REGISTRY: readonly FlarePublicRpcEndpoint[] = [
   {
-    id: "flare-public",
-    provider: "Flare",
-    url: FLARE_RPC_URL,
-    websocketUrl: FLARE_WS_URL,
-    sourceUrls: [
-      "https://dev.flare.network/network/overview",
-      "https://chainlist.org/chain/14",
-    ],
-  },
-  {
-    id: "flare-quicknode-public",
-    provider: "QuickNode",
-    url: FLARE_QUICKNODE_RPC_URL,
-    websocketUrl: FLARE_QUICKNODE_WS_URL,
-    sourceUrls: ["https://dev.flare.network/network/overview"],
-  },
-  {
     id: "flare-drpc-public",
     provider: "dRPC",
     url: "https://flare.drpc.org",
@@ -67,6 +50,13 @@ export const FLARE_MAINNET_REGISTRY: readonly FlarePublicRpcEndpoint[] = [
     unsupportedMethods: drpcUnsupportedMethods,
   },
   {
+    id: "flare-quicknode-public",
+    provider: "QuickNode",
+    url: FLARE_QUICKNODE_RPC_URL,
+    websocketUrl: FLARE_QUICKNODE_WS_URL,
+    sourceUrls: ["https://dev.flare.network/network/overview"],
+  },
+  {
     id: "flare-tenderly-public",
     provider: "Tenderly",
     url: "https://flare.gateway.tenderly.co",
@@ -74,6 +64,16 @@ export const FLARE_MAINNET_REGISTRY: readonly FlarePublicRpcEndpoint[] = [
     sourceUrls: [
       "https://docs.tenderly.co/node-rpc/rpc-reference",
       "https://docs.tenderly.co/node-rpc/overview#public-endpoint-limits",
+    ],
+  },
+  {
+    id: "flare-public",
+    provider: "Flare",
+    url: FLARE_RPC_URL,
+    websocketUrl: FLARE_WS_URL,
+    sourceUrls: [
+      "https://dev.flare.network/network/overview",
+      "https://chainlist.org/chain/14",
     ],
   },
 ].map((entry): FlarePublicRpcEndpoint => ({

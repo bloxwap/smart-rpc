@@ -16,10 +16,13 @@ export interface OptimismPublicRpcEndpoint extends EthereumEndpointConfig {
 /** Unknown provider quotas and optional capabilities are not inferred. */
 export const OPTIMISM_MAINNET_REGISTRY: readonly OptimismPublicRpcEndpoint[] = [
   {
-    id: "optimism-mainnet",
-    url: OPTIMISM_RPC_URL,
-    provider: "Optimism",
-    sourceUrls: ["https://docs.optimism.io/op-mainnet/network-information/connecting-to-op"],
+    id: "optimism-publicnode",
+    url: "https://optimism-rpc.publicnode.com",
+    provider: "PublicNode",
+    sourceUrls: [
+      "https://chainlist.org/chain/10",
+      "https://www.publicnode.com/",
+    ],
     reviewedAt: "2026-11-07",
     capabilities: {
       archive: false,
@@ -31,12 +34,12 @@ export const OPTIMISM_MAINNET_REGISTRY: readonly OptimismPublicRpcEndpoint[] = [
     },
   },
   {
-    id: "optimism-publicnode",
-    url: "https://optimism-rpc.publicnode.com",
-    provider: "PublicNode",
+    id: "optimism-tenderly",
+    url: "https://optimism.gateway.tenderly.co",
+    provider: "Tenderly",
     sourceUrls: [
       "https://chainlist.org/chain/10",
-      "https://www.publicnode.com/",
+      "https://docs.tenderly.co/node-rpc/rpc-reference",
     ],
     reviewedAt: "2026-11-07",
     capabilities: {
@@ -75,10 +78,10 @@ export const OPTIMISM_MAINNET_REGISTRY: readonly OptimismPublicRpcEndpoint[] = [
     },
   },
   {
-    id: "optimism-pocket",
-    url: "https://op.api.pocket.network",
-    provider: "Pocket Network",
-    sourceUrls: ["https://docs.pocket.network/developers/supported-chains/"],
+    id: "optimism-mainnet",
+    url: OPTIMISM_RPC_URL,
+    provider: "Optimism",
+    sourceUrls: ["https://docs.optimism.io/op-mainnet/network-information/connecting-to-op"],
     reviewedAt: "2026-11-07",
     capabilities: {
       archive: false,
@@ -90,13 +93,10 @@ export const OPTIMISM_MAINNET_REGISTRY: readonly OptimismPublicRpcEndpoint[] = [
     },
   },
   {
-    id: "optimism-tenderly",
-    url: "https://optimism.gateway.tenderly.co",
-    provider: "Tenderly",
-    sourceUrls: [
-      "https://chainlist.org/chain/10",
-      "https://docs.tenderly.co/node-rpc/rpc-reference",
-    ],
+    id: "optimism-pocket",
+    url: "https://op.api.pocket.network",
+    provider: "Pocket Network",
+    sourceUrls: ["https://docs.pocket.network/developers/supported-chains/"],
     reviewedAt: "2026-11-07",
     capabilities: {
       archive: false,

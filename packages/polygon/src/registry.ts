@@ -68,18 +68,6 @@ export const POLYGON_MAINNET_REGISTRY: readonly PolygonPublicEndpoint[] = [
     },
   },
   {
-    id: "polygon-zan",
-    provider: "ZAN",
-    url: "https://api.zan.top/polygon-mainnet",
-    sourceUrls: ["https://zan.top/blockchain/polygon", "https://chainlist.org/chain/137"],
-    reviewedAt: "2026-11-07",
-    supportedMethods: POLYGON_PUBLIC_METHODS,
-    capabilities: {
-      archive: false, debug: false, trace: false, subscriptions: false,
-      pinning: false, batch: false, blockTags: ["latest", "pending"],
-    },
-  },
-  {
     id: "polygon-pocket",
     provider: "Pocket Network",
     url: "https://poly.api.pocket.network",

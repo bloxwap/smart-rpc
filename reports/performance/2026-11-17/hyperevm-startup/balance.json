@@ -1,0 +1,520 @@
+{
+  "checkedAt": "2026-11-17T12:11:32.325Z",
+  "completedAt": "2026-11-17T12:12:08.059Z",
+  "node": "v24.22.1",
+  "method": "eth_getBalance",
+  "note": "Fresh process per sample; elapsed time includes construction, identity verification, budgets, and the first read, but excludes module import. One location and a small sample, not a production tail guarantee.",
+  "summary": {
+    "weighted": {
+      "samples": 5,
+      "p50Ms": 1377.877416,
+      "minMs": 1326.7475,
+      "maxMs": 1605.6622080000002
+    },
+    "ordered": {
+      "samples": 5,
+      "p50Ms": 561.1226669999999,
+      "minMs": 517.86825,
+      "maxMs": 758.175375
+    }
+  },
+  "results": [
+    {
+      "run": 0,
+      "mode": "weighted",
+      "method": "eth_getBalance",
+      "status": "passed",
+      "elapsedMs": 1561.973959,
+      "result": "0x438b90f5ce98fdc40ce2",
+      "requests": [
+        {
+          "url": "https://rpc.hypurrscan.io/",
+          "method": "eth_chainId",
+          "atMs": 8.760209000000032,
+          "headersAtMs": 911.0267090000001,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://rpc.hypurrscan.io/",
+          "method": "eth_getBalance",
+          "atMs": 915.8093749999999,
+          "headersAtMs": 1560.645834,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-json-rpc.stakely.io/",
+          "method": "eth_chainId",
+          "atMs": 916.7432090000001
+        }
+      ],
+      "events": [
+        {
+          "type": "request",
+          "endpoint": "https://rpc.hypurrscan.io",
+          "method": "eth_getBalance",
+          "atMs": 915.2507919999999
+        },
+        {
+          "type": "success",
+          "endpoint": "https://rpc.hypurrscan.io",
+          "method": "eth_getBalance",
+          "latencyMs": 646,
+          "hedged": false,
+          "atMs": 1561.31975
+        }
+      ]
+    },
+    {
+      "run": 0,
+      "mode": "ordered",
+      "method": "eth_getBalance",
+      "status": "passed",
+      "elapsedMs": 758.175375,
+      "result": "0x438b90f604d8ee8d62bf",
+      "requests": [
+        {
+          "url": "https://hyperliquid-rpc.publicnode.com/",
+          "method": "eth_chainId",
+          "atMs": 18.18775000000005,
+          "headersAtMs": 438.135166,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-rpc.publicnode.com/",
+          "method": "eth_getBalance",
+          "atMs": 443.6962500000001,
+          "headersAtMs": 754.1608329999999,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://rpc.hyperliquid.xyz/evm",
+          "method": "eth_chainId",
+          "atMs": 444.803666,
+          "headersAtMs": 626.678416,
+          "httpStatus": 200
+        }
+      ],
+      "events": [
+        {
+          "type": "request",
+          "endpoint": "https://hyperliquid-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "atMs": 442.712
+        },
+        {
+          "type": "success",
+          "endpoint": "https://hyperliquid-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "latencyMs": 314,
+          "hedged": false,
+          "atMs": 757.235375
+        }
+      ]
+    },
+    {
+      "run": 1,
+      "mode": "ordered",
+      "method": "eth_getBalance",
+      "status": "passed",
+      "elapsedMs": 517.86825,
+      "result": "0x438b90f6065e4deb5c65",
+      "requests": [
+        {
+          "url": "https://hyperliquid-rpc.publicnode.com/",
+          "method": "eth_chainId",
+          "atMs": 7.592375000000004,
+          "headersAtMs": 346.52983300000005,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-rpc.publicnode.com/",
+          "method": "eth_getBalance",
+          "atMs": 350.261208,
+          "headersAtMs": 515.1627500000001,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://rpc.hyperliquid.xyz/evm",
+          "method": "eth_chainId",
+          "atMs": 350.98125000000005
+        }
+      ],
+      "events": [
+        {
+          "type": "request",
+          "endpoint": "https://hyperliquid-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "atMs": 349.828708
+        },
+        {
+          "type": "success",
+          "endpoint": "https://hyperliquid-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "latencyMs": 167,
+          "hedged": false,
+          "atMs": 517.280542
+        }
+      ]
+    },
+    {
+      "run": 1,
+      "mode": "weighted",
+      "method": "eth_getBalance",
+      "status": "passed",
+      "elapsedMs": 1326.7475,
+      "result": "0x438b90f61d8c0213a97d",
+      "requests": [
+        {
+          "url": "https://rpc.hypurrscan.io/",
+          "method": "eth_chainId",
+          "atMs": 5.072584000000006,
+          "headersAtMs": 681.277917,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://rpc.hypurrscan.io/",
+          "method": "eth_getBalance",
+          "atMs": 684.657292,
+          "headersAtMs": 1325.62575,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-json-rpc.stakely.io/",
+          "method": "eth_chainId",
+          "atMs": 685.3860000000001,
+          "headersAtMs": 929.0112500000001,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-json-rpc.stakely.io/",
+          "method": "eth_getBlockByNumber",
+          "atMs": 1005.041542
+        }
+      ],
+      "events": [
+        {
+          "type": "request",
+          "endpoint": "https://rpc.hypurrscan.io",
+          "method": "eth_getBalance",
+          "atMs": 684.0516670000001
+        },
+        {
+          "type": "request",
+          "endpoint": "https://hyperliquid-json-rpc.stakely.io",
+          "method": "eth_getBlockByNumber",
+          "atMs": 1004.9400420000001
+        },
+        {
+          "type": "success",
+          "endpoint": "https://rpc.hypurrscan.io",
+          "method": "eth_getBalance",
+          "latencyMs": 642,
+          "hedged": false,
+          "atMs": 1326.2396669999998
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "mode": "weighted",
+      "method": "eth_getBalance",
+      "status": "passed",
+      "elapsedMs": 1363.8142079999998,
+      "result": "0x438b90f62d8d22193bfb",
+      "requests": [
+        {
+          "url": "https://rpc.hypurrscan.io/",
+          "method": "eth_chainId",
+          "atMs": 9.025374999999997,
+          "headersAtMs": 714.4812909999999,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://rpc.hypurrscan.io/",
+          "method": "eth_getBalance",
+          "atMs": 719.14675,
+          "headersAtMs": 1362.2967909999998,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-json-rpc.stakely.io/",
+          "method": "eth_chainId",
+          "atMs": 719.832375,
+          "headersAtMs": 1331.58225,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-json-rpc.stakely.io/",
+          "method": "eth_getBlockByNumber",
+          "atMs": 1353.7457909999998
+        }
+      ],
+      "events": [
+        {
+          "type": "request",
+          "endpoint": "https://rpc.hypurrscan.io",
+          "method": "eth_getBalance",
+          "atMs": 718.6497909999999
+        },
+        {
+          "type": "request",
+          "endpoint": "https://hyperliquid-json-rpc.stakely.io",
+          "method": "eth_getBlockByNumber",
+          "atMs": 1353.623208
+        },
+        {
+          "type": "success",
+          "endpoint": "https://rpc.hypurrscan.io",
+          "method": "eth_getBalance",
+          "latencyMs": 644,
+          "hedged": false,
+          "atMs": 1363.231041
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "mode": "ordered",
+      "method": "eth_getBalance",
+      "status": "passed",
+      "elapsedMs": 659.003375,
+      "result": "0x438b90f64e4e7ce4711d",
+      "requests": [
+        {
+          "url": "https://hyperliquid-rpc.publicnode.com/",
+          "method": "eth_chainId",
+          "atMs": 6.722959000000003,
+          "headersAtMs": 335.25337500000006,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-rpc.publicnode.com/",
+          "method": "eth_getBalance",
+          "atMs": 338.302667,
+          "headersAtMs": 656.8435420000001,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://rpc.hyperliquid.xyz/evm",
+          "method": "eth_chainId",
+          "atMs": 339.03575000000006,
+          "headersAtMs": 505.81187500000004,
+          "httpStatus": 200
+        }
+      ],
+      "events": [
+        {
+          "type": "request",
+          "endpoint": "https://hyperliquid-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "atMs": 337.947375
+        },
+        {
+          "type": "success",
+          "endpoint": "https://hyperliquid-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "latencyMs": 320,
+          "hedged": false,
+          "atMs": 658.6245000000001
+        }
+      ]
+    },
+    {
+      "run": 3,
+      "mode": "ordered",
+      "method": "eth_getBalance",
+      "status": "passed",
+      "elapsedMs": 527.539917,
+      "result": "0x438b90f87890ed4a9e98",
+      "requests": [
+        {
+          "url": "https://hyperliquid-rpc.publicnode.com/",
+          "method": "eth_chainId",
+          "atMs": 7.582209000000006,
+          "headersAtMs": 205.98562499999997,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-rpc.publicnode.com/",
+          "method": "eth_getBalance",
+          "atMs": 209.3295,
+          "headersAtMs": 525.575834,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://rpc.hyperliquid.xyz/evm",
+          "method": "eth_chainId",
+          "atMs": 210.163,
+          "headersAtMs": 384.116084,
+          "httpStatus": 200
+        }
+      ],
+      "events": [
+        {
+          "type": "request",
+          "endpoint": "https://hyperliquid-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "atMs": 208.920709
+        },
+        {
+          "type": "success",
+          "endpoint": "https://hyperliquid-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "latencyMs": 318,
+          "hedged": false,
+          "atMs": 527.10325
+        }
+      ]
+    },
+    {
+      "run": 3,
+      "mode": "weighted",
+      "method": "eth_getBalance",
+      "status": "passed",
+      "elapsedMs": 1377.877416,
+      "result": "0x438b90f87d909e8c2d7e",
+      "requests": [
+        {
+          "url": "https://rpc.hypurrscan.io/",
+          "method": "eth_chainId",
+          "atMs": 9.790415999999993,
+          "headersAtMs": 702.983375,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://rpc.hypurrscan.io/",
+          "method": "eth_getBalance",
+          "atMs": 706.370041,
+          "headersAtMs": 1376.133791,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-json-rpc.stakely.io/",
+          "method": "eth_chainId",
+          "atMs": 707.091916,
+          "headersAtMs": 968.5610409999999,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-json-rpc.stakely.io/",
+          "method": "eth_getBlockByNumber",
+          "atMs": 1006.983166
+        }
+      ],
+      "events": [
+        {
+          "type": "request",
+          "endpoint": "https://rpc.hypurrscan.io",
+          "method": "eth_getBalance",
+          "atMs": 705.9834579999999
+        },
+        {
+          "type": "request",
+          "endpoint": "https://hyperliquid-json-rpc.stakely.io",
+          "method": "eth_getBlockByNumber",
+          "atMs": 1006.826791
+        },
+        {
+          "type": "success",
+          "endpoint": "https://rpc.hypurrscan.io",
+          "method": "eth_getBalance",
+          "latencyMs": 671,
+          "hedged": false,
+          "atMs": 1377.187208
+        }
+      ]
+    },
+    {
+      "run": 4,
+      "mode": "weighted",
+      "method": "eth_getBalance",
+      "status": "passed",
+      "elapsedMs": 1605.6622080000002,
+      "result": "0x438b9109ffab5043a02f",
+      "requests": [
+        {
+          "url": "https://rpc.hypurrscan.io/",
+          "method": "eth_chainId",
+          "atMs": 13.703625000000102,
+          "headersAtMs": 943.7525,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://rpc.hypurrscan.io/",
+          "method": "eth_getBalance",
+          "atMs": 947.4697920000001,
+          "headersAtMs": 1601.6036250000002,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-json-rpc.stakely.io/",
+          "method": "eth_chainId",
+          "atMs": 948.307417
+        }
+      ],
+      "events": [
+        {
+          "type": "request",
+          "endpoint": "https://rpc.hypurrscan.io",
+          "method": "eth_getBalance",
+          "atMs": 947.0323330000001
+        },
+        {
+          "type": "success",
+          "endpoint": "https://rpc.hypurrscan.io",
+          "method": "eth_getBalance",
+          "latencyMs": 655,
+          "hedged": false,
+          "atMs": 1602.799958
+        }
+      ]
+    },
+    {
+      "run": 4,
+      "mode": "ordered",
+      "method": "eth_getBalance",
+      "status": "passed",
+      "elapsedMs": 561.1226669999999,
+      "result": "0x438b91122ddd532e7c74",
+      "requests": [
+        {
+          "url": "https://hyperliquid-rpc.publicnode.com/",
+          "method": "eth_chainId",
+          "atMs": 9.864874999999984,
+          "headersAtMs": 379.45029199999993,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://hyperliquid-rpc.publicnode.com/",
+          "method": "eth_getBalance",
+          "atMs": 385.09312499999993,
+          "headersAtMs": 556.2950000000001,
+          "httpStatus": 200
+        },
+        {
+          "url": "https://rpc.hyperliquid.xyz/evm",
+          "method": "eth_chainId",
+          "atMs": 385.98154199999993,
+          "headersAtMs": 558.055333,
+          "httpStatus": 200
+        }
+      ],
+      "events": [
+        {
+          "type": "request",
+          "endpoint": "https://hyperliquid-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "atMs": 384.5225
+        },
+        {
+          "type": "success",
+          "endpoint": "https://hyperliquid-rpc.publicnode.com",
+          "method": "eth_getBalance",
+          "latencyMs": 175,
+          "hedged": false,
+          "atMs": 560.155458
+        }
+      ]
+    }
+  ]
+}

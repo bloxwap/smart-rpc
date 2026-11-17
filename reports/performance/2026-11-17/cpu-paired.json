@@ -1,0 +1,254 @@
+[
+  {
+    "scenario": "cache",
+    "rep": 0,
+    "version": "before",
+    "ops": 284257.3315834308,
+    "cpuOps": 464221.950084999
+  },
+  {
+    "scenario": "cache",
+    "rep": 0,
+    "version": "after",
+    "ops": 664173.8746684358,
+    "cpuOps": 678334.4718046886
+  },
+  {
+    "scenario": "cache",
+    "rep": 1,
+    "version": "after",
+    "ops": 638951.3869248766,
+    "cpuOps": 653506.7827468981
+  },
+  {
+    "scenario": "cache",
+    "rep": 1,
+    "version": "before",
+    "ops": 553660.8435618134,
+    "cpuOps": 557828.7075387761
+  },
+  {
+    "scenario": "cache",
+    "rep": 2,
+    "version": "before",
+    "ops": 741731.7080384528,
+    "cpuOps": 724572.574638221
+  },
+  {
+    "scenario": "cache",
+    "rep": 2,
+    "version": "after",
+    "ops": 651589.0230808461,
+    "cpuOps": 761782.2963317897
+  },
+  {
+    "scenario": "cache",
+    "rep": 3,
+    "version": "after",
+    "ops": 687208.8076375226,
+    "cpuOps": 708200.752250839
+  },
+  {
+    "scenario": "cache",
+    "rep": 3,
+    "version": "before",
+    "ops": 743806.670514006,
+    "cpuOps": 722448.3485553201
+  },
+  {
+    "scenario": "cache",
+    "rep": 4,
+    "version": "before",
+    "ops": 499243.60425271594,
+    "cpuOps": 635500.0495690039
+  },
+  {
+    "scenario": "cache",
+    "rep": 4,
+    "version": "after",
+    "ops": 493031.39175835816,
+    "cpuOps": 731110.6594471926
+  },
+  {
+    "scenario": "cache",
+    "rep": 5,
+    "version": "after",
+    "ops": 357726.5955292011,
+    "cpuOps": 704799.6148974904
+  },
+  {
+    "scenario": "cache",
+    "rep": 5,
+    "version": "before",
+    "ops": 304834.07014613855,
+    "cpuOps": 563433.292033673
+  },
+  {
+    "scenario": "cache",
+    "rep": 6,
+    "version": "before",
+    "ops": 350995.19719828566,
+    "cpuOps": 560401.1575646311
+  },
+  {
+    "scenario": "cache",
+    "rep": 6,
+    "version": "after",
+    "ops": 406250.28923751065,
+    "cpuOps": 668274.088607798
+  },
+  {
+    "scenario": "cache",
+    "rep": 7,
+    "version": "after",
+    "ops": 372692.75238973,
+    "cpuOps": 685791.5646265968
+  },
+  {
+    "scenario": "cache",
+    "rep": 7,
+    "version": "before",
+    "ops": 268607.05415679043,
+    "cpuOps": 579882.2607057863
+  },
+  {
+    "scenario": "cache",
+    "rep": 8,
+    "version": "before",
+    "ops": 340668.66786797787,
+    "cpuOps": 581125.7335259571
+  },
+  {
+    "scenario": "cache",
+    "rep": 8,
+    "version": "after",
+    "ops": 420258.328650874,
+    "cpuOps": 755209.4346804256
+  },
+  {
+    "scenario": "plan",
+    "rep": 0,
+    "version": "before",
+    "ops": 1340656.521214473,
+    "cpuOps": 1323891.340294354
+  },
+  {
+    "scenario": "plan",
+    "rep": 0,
+    "version": "after",
+    "ops": 1649279.369809562,
+    "cpuOps": 1655393.437358257
+  },
+  {
+    "scenario": "plan",
+    "rep": 1,
+    "version": "after",
+    "ops": 1681314.5367120735,
+    "cpuOps": 1686590.9274900828
+  },
+  {
+    "scenario": "plan",
+    "rep": 1,
+    "version": "before",
+    "ops": 1455917.5472428508,
+    "cpuOps": 1460529.9094617509
+  },
+  {
+    "scenario": "plan",
+    "rep": 2,
+    "version": "before",
+    "ops": 1442752.3111139107,
+    "cpuOps": 1447485.9340554357
+  },
+  {
+    "scenario": "plan",
+    "rep": 2,
+    "version": "after",
+    "ops": 1658902.0814698923,
+    "cpuOps": 1664109.4850912432
+  },
+  {
+    "scenario": "plan",
+    "rep": 3,
+    "version": "after",
+    "ops": 1639066.7172469548,
+    "cpuOps": 1656638.4817239642
+  },
+  {
+    "scenario": "plan",
+    "rep": 3,
+    "version": "before",
+    "ops": 1469471.9055803001,
+    "cpuOps": 1473580.904749204
+  },
+  {
+    "scenario": "plan",
+    "rep": 4,
+    "version": "before",
+    "ops": 1441850.7878161692,
+    "cpuOps": 1446644.1472394413
+  },
+  {
+    "scenario": "plan",
+    "rep": 4,
+    "version": "after",
+    "ops": 1690101.0900841008,
+    "cpuOps": 1695119.2431631603
+  },
+  {
+    "scenario": "plan",
+    "rep": 5,
+    "version": "after",
+    "ops": 1678026.6751302727,
+    "cpuOps": 1682844.4109371423
+  },
+  {
+    "scenario": "plan",
+    "rep": 5,
+    "version": "before",
+    "ops": 1453122.1874138943,
+    "cpuOps": 1457640.9538802402
+  },
+  {
+    "scenario": "plan",
+    "rep": 6,
+    "version": "before",
+    "ops": 1431816.9669540324,
+    "cpuOps": 1436990.1379366834
+  },
+  {
+    "scenario": "plan",
+    "rep": 6,
+    "version": "after",
+    "ops": 1673465.4687721892,
+    "cpuOps": 1677886.1319355422
+  },
+  {
+    "scenario": "plan",
+    "rep": 7,
+    "version": "after",
+    "ops": 1671158.601724887,
+    "cpuOps": 1676240.7953427327
+  },
+  {
+    "scenario": "plan",
+    "rep": 7,
+    "version": "before",
+    "ops": 1432243.4285961015,
+    "cpuOps": 1437134.6983238698
+  },
+  {
+    "scenario": "plan",
+    "rep": 8,
+    "version": "before",
+    "ops": 1458809.5112477841,
+    "cpuOps": 1463505.3000844442
+  },
+  {
+    "scenario": "plan",
+    "rep": 8,
+    "version": "after",
+    "ops": 1670664.541855348,
+    "cpuOps": 1675103.605157979
+  }
+]

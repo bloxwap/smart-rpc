@@ -61,24 +61,6 @@ export const PLASMA_MAINNET_REGISTRY = [
       blockTags: ["latest", "pending"],
     },
   },
-  {
-    url: "https://plasma-mainnet.gateway.tatum.io",
-    provider: "Tatum",
-    sourceUrls: [
-      "https://chainlist.org/chain/9745",
-      "https://docs.tatum.io/reference/rpc-plasma",
-    ],
-    reviewedAt: "2026-11-07",
-    capabilities: {
-      archive: false,
-      pinning: false,
-      batch: false,
-      subscriptions: false,
-      debug: false,
-      trace: false,
-      blockTags: ["latest", "pending"],
-    },
-  },
 ] as const satisfies readonly PlasmaRpcEndpoint[];
 
 export const PLASMA_MAINNET_ENDPOINTS: readonly string[] = PLASMA_MAINNET_REGISTRY.map(({ url }) => url);

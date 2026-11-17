@@ -34,57 +34,45 @@ export function isCoalescableMethod(
  * `method` plus params serialized with sorted object keys. Undefined when the params cannot be serialized.
  */
 export function coalesceKey(method: string, params: unknown): string | undefined {
-  const parts: string[] = [];
-  return writeValue(params, parts, new Set()) ? `${method}:${parts.join("")}` : undefined;
+  const value = writeValue(params, new Set());
+  return value === undefined ? undefined : `${method}:${value}`;
 }
 
-function writeValue(value: unknown, out: string[], path: Set<object>): boolean {
-  if (value === undefined) {
-    out.push("u");
-    return true;
-  }
+function writeValue(value: unknown, path: Set<object>): string | undefined {
+  if (value === undefined) return "u";
   if (value === null || typeof value === "boolean" || typeof value === "string") {
-    out.push(JSON.stringify(value));
-    return true;
+    return JSON.stringify(value);
   }
-  if (typeof value === "number") {
-    out.push(String(value));
-    return true;
-  }
-  if (typeof value === "bigint") {
-    out.push(`${value}n`);
-    return true;
-  }
-  if (typeof value !== "object") {
-    out.push(`<${typeof value}>`);
-    return true;
-  }
-  if (path.has(value)) return false;
+  if (typeof value === "number") return String(value);
+  if (typeof value === "bigint") return `${value}n`;
+  if (typeof value !== "object") return `<${typeof value}>`;
+  if (path.has(value)) return undefined;
   path.add(value);
-  let ok = true;
+  let result: string | undefined;
   const toJson: unknown = (value as { toJSON?: unknown }).toJSON;
   if (typeof toJson === "function") {
-    ok = writeValue(toJson.call(value), out, path);
+    result = writeValue(toJson.call(value), path);
   } else if (Array.isArray(value)) {
-    out.push("[");
-    for (let index = 0; index < value.length && ok; index += 1) {
-      if (index > 0) out.push(",");
-      ok = writeValue(value[index], out, path);
+    result = "[";
+    for (let index = 0; index < value.length; index += 1) {
+      const item = writeValue(value[index], path);
+      if (item === undefined) { result = undefined; break; }
+      result += (index > 0 ? "," : "") + item;
     }
-    out.push("]");
+    if (result !== undefined) result += "]";
   } else {
-    out.push("{");
+    result = "{";
     const keys = Object.keys(value).sort();
-    for (let index = 0; index < keys.length && ok; index += 1) {
+    for (let index = 0; index < keys.length; index += 1) {
       const key = keys[index] as string;
-      if (index > 0) out.push(",");
-      out.push(JSON.stringify(key), ":");
-      ok = writeValue((value as Record<string, unknown>)[key], out, path);
+      const item = writeValue((value as Record<string, unknown>)[key], path);
+      if (item === undefined) { result = undefined; break; }
+      result += (index > 0 ? "," : "") + JSON.stringify(key) + ":" + item;
     }
-    out.push("}");
+    if (result !== undefined) result += "}";
   }
   path.delete(value);
-  return ok;
+  return result;
 }
 
 interface Entry {

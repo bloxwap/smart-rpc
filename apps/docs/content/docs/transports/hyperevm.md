@@ -16,6 +16,10 @@ await rpc.request({ chainId: "eip155:999", method: "eth_blockNumber" });
 
 The [official network documentation](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm) lists the mainnet URL `https://rpc.hyperliquid.xyz/evm` and testnet URL `https://rpc.hyperliquid-testnet.xyz/evm`. Both retain a conservative local budget of 1.5 requests/second, burst 3. This is the project's reference client setting, not a provider quota or service guarantee. Public alternatives and their sources remain exported in `HYPEREVM_MAINNET_REGISTRY` and `HYPEREVM_TESTNET_REGISTRY`.
 
+Fresh default pools use `coldStart: "ordered"`: the curated eligible registry order establishes the initial preference while weights are neutral. After the first sampled request finishes, normal historical weights and learned scores apply. Restored score books use weighted routing immediately. This avoids choosing a slow established node solely because faster eligible nodes have capped historical weights. Identity checks, failure penalties, capabilities, and request budgets remain enforced throughout.
+
+Set `coldStart: "weighted"` to retain weighted selection from the first call. Explicit endpoint configurations use that behavior by default. Reusing the same pool also retains verified identities and connection state across requests; constructing a pool for each request repeats those startup costs.
+
 ## Requested state and capabilities
 
 The official RPC supports latest state reads; historical block and transaction metadata do not imply archive state access. Its capability record disables numeric pinning of latest reads and historical state routing. A request for unsupported state fails or selects a configured capable endpoint; it is never rewritten to latest. The [JSON-RPC reference](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/json-rpc) documents these restrictions.

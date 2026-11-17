@@ -36,6 +36,26 @@ export interface XLayerPublicEndpoint extends EthereumEndpointConfig {
 
 /** Conservative client settings; unverified advanced features require explicit opt-in. */
 export const XLAYER_MAINNET_REGISTRY: readonly XLayerPublicEndpoint[] = [
+  {
+    url: "https://xlayer-mainnet.rpc.sentio.xyz",
+    provider: "Sentio",
+    sourceUrls: [
+      "https://chainlist.org/chain/196",
+      "https://docs.sentio.xyz/docs/supported-network",
+    ],
+    reviewedAt: "2026-11-07",
+    rps: 2,
+    burst: 3,
+    capabilities: {
+      archive: false,
+      blockTags: ["latest", "pending"] as const,
+      debug: false,
+      trace: false,
+      subscriptions: false,
+      pinning: false,
+      batch: false,
+    },
+  },
   ...[
     XLAYER_RPC_URL,
     XLAYER_ALTERNATE_RPC_URL,
@@ -80,26 +100,6 @@ export const XLAYER_MAINNET_REGISTRY: readonly XLayerPublicEndpoint[] = [
       "eth_getFilterLogs",
       "eth_uninstallFilter",
     ],
-    rps: 2,
-    burst: 3,
-    capabilities: {
-      archive: false,
-      blockTags: ["latest", "pending"] as const,
-      debug: false,
-      trace: false,
-      subscriptions: false,
-      pinning: false,
-      batch: false,
-    },
-  },
-  {
-    url: "https://xlayer-mainnet.rpc.sentio.xyz",
-    provider: "Sentio",
-    sourceUrls: [
-      "https://chainlist.org/chain/196",
-      "https://docs.sentio.xyz/docs/supported-network",
-    ],
-    reviewedAt: "2026-11-07",
     rps: 2,
     burst: 3,
     capabilities: {

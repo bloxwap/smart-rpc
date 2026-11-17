@@ -143,7 +143,7 @@ describe("OP Mainnet transport", () => {
       expect(OPTIMISM_MAINNET_ENDPOINTS).toEqual(OPTIMISM_MAINNET_REGISTRY.map(({ url }) => url));
       expect(OPTIMISM_MAINNET_ENDPOINTS.length).toBeGreaterThanOrEqual(1);
       expect(OPTIMISM_MAINNET_ENDPOINTS.length).toBeLessThanOrEqual(5);
-      expect(OPTIMISM_MAINNET_ENDPOINTS[0]).toBe(OPTIMISM_RPC_URL);
+      expect(OPTIMISM_MAINNET_ENDPOINTS).toContain(OPTIMISM_RPC_URL);
       expect(client.endpoints.map(({ url }) => url)).toEqual(OPTIMISM_MAINNET_ENDPOINTS);
       expect(OPTIMISM_MAINNET_REGISTRY[0]?.rps).toBeUndefined();
       expect(OPTIMISM_MAINNET_REGISTRY.every(({ capabilities }) => capabilities?.archive === false)).toBe(true);
@@ -290,8 +290,8 @@ describe("OP Mainnet transport", () => {
   });
 
   test.each([
-    { name: "official URL", endpoint: OPTIMISM_MAINNET_REGISTRY[0]! },
-    { name: "official URL with trailing slash", endpoint: { ...OPTIMISM_MAINNET_REGISTRY[0]!, url: `${OPTIMISM_RPC_URL}/` } },
+    { name: "official URL", endpoint: OPTIMISM_MAINNET_REGISTRY.find(({ url }) => url === OPTIMISM_RPC_URL)! },
+    { name: "official URL with trailing slash", endpoint: { ...OPTIMISM_MAINNET_REGISTRY.find(({ url }) => url === OPTIMISM_RPC_URL)!, url: `${OPTIMISM_RPC_URL}/` } },
   ])("does not degrade an unsupported public archive read to latest ($name)", async ({ endpoint }) => {
     const mock = mockRpc(({ method }) => method === "eth_chainId" ? "0xa" : "0x10");
     const client = optimism({ endpoints: [endpoint], fetchFn: mock.fetchFn, headLag: idle });
