@@ -11,14 +11,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    environment: npm-release
+  prepare:
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 20
+    outputs:
+      publish: ${{ steps.package.outputs.publish }}
     permissions:
-      contents: write # version commits, tags, and GitHub releases
+      contents: write # version commits
       pull-requests: write # changesets version pull request
-      id-token: write # npm provenance and trusted publishing
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -28,35 +28,115 @@ jobs:
         with:
           version: 10.18.2
 
-      # No registry-url here. setup-node would write an auth line that
-      # changesets/action treats as already configured, which blocks the
-      # OIDC trusted-publishing path.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
 
-      # npm trusted publishing requires npm 11.5.1 or newer on the runner.
-      - name: Use npm 11.6.1
-        run: npm install --global npm@11.6.1
-
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
+      # changesets/action writes GitHub credentials to ~/.netrc. Restore the
+      # runner's original file afterwards, including when the action fails.
+      - name: Preserve runner netrc
+        id: netrc
+        run: |
+          backup=$(mktemp -d "$RUNNER_TEMP/release-netrc.XXXXXX")
+          if [ -f "$HOME/.netrc" ]; then cp -p "$HOME/.netrc" "$backup/netrc"; fi
+          echo "backup=$backup" >> "$GITHUB_OUTPUT"
 
-      - name: Create release pull request or publish
+      - name: Create release pull request
+        id: changesets
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
-          publish: pnpm changeset publish
           version: pnpm changeset version
           commit: "chore: version packages"
           title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Do not pass NPM_TOKEN or NODE_AUTH_TOKEN. changesets/action writes a
-          # token into ~/.npmrc when either is set, which skips OIDC trusted
-          # publishing. npm 11.6.1 plus id-token: write is the publish path.
-          # changesets/cli 2.31 does not forward --provenance. pnpm publish reads
-          # this rc option, which is the same switch as --provenance.
-          NPM_CONFIG_PROVENANCE: "true"
+
+      - name: Restore runner netrc
+        if: always() && steps.netrc.outcome == 'success'
+        env:
+          NETRC_BACKUP: ${{ steps.netrc.outputs.backup }}
+        run: |
+          if [ -f "$NETRC_BACKUP/netrc" ]; then
+            cp -p "$NETRC_BACKUP/netrc" "$HOME/.netrc"
+          else
+            rm -f "$HOME/.netrc"
+          fi
+          rm -rf "$NETRC_BACKUP"
+
+      - name: Check for an unpublished version
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        id: package
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const { readRelease, needsPublish } = require('./scripts/release.cjs');
+            core.setOutput('publish', await needsPublish(readRelease()));
+
+      - name: Build published bundle
+        if: steps.package.outputs.publish == 'true'
+        run: pnpm --filter @bloxwap/smart-rpc build
+
+      - name: Pack published bundle
+        if: steps.package.outputs.publish == 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/npm-release"
+          pnpm --filter @bloxwap/smart-rpc pack --pack-destination "$RUNNER_TEMP/npm-release"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: steps.package.outputs.publish == 'true'
+        with:
+          name: npm-package
+          path: ${{ runner.temp }}/npm-release/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: prepare
+    if: needs.prepare.outputs.publish == 'true'
+    # npm OIDC trusted publishing requires a GitHub-hosted runner.
+    # https://docs.npmjs.com/trusted-publishers/
+    runs-on: ubuntu-latest
+    environment: npm-release
+    timeout-minutes: 5
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: npm-package
+          path: package
+
+      # No registry-url or auth token: npm authenticates using OIDC.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Use npm 11.6.1
+        run: npm install --global npm@11.6.1
+
+      - name: Publish prepared tarball
+        run: |
+          tarballs=(package/*.tgz)
+          test "${#tarballs[@]}" -eq 1
+          npm publish "${tarballs[0]}" --access public --provenance --ignore-scripts
+
+  github-release:
+    needs: publish
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Tag and create GitHub release
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const { createGithubRelease } = require('./scripts/release.cjs');
+            await createGithubRelease({ github, context });

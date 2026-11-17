@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   rank:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 20
     permissions:
       contents: write

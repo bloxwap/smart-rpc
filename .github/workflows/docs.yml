@@ -26,7 +26,9 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # Fork guard: never run fork PR code on self-hosted minis
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
     permissions:
       contents: read

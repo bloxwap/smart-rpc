@@ -10,7 +10,7 @@
   "scripts": {
     "build": "turbo run build --filter=!@bloxwap/smart-rpc-docs",
     "typecheck": "turbo run typecheck --filter=!@bloxwap/smart-rpc-docs",
-    "test": "turbo run test && node --test scripts/check-rpcs.test.mjs",
+    "test": "turbo run test && node --test scripts/check-rpcs.test.mjs scripts/release.test.cjs",
     "coverage": "vitest run --coverage",
     "docs:dev": "pnpm --filter @bloxwap/smart-rpc-docs dev",
     "docs:check": "pnpm --filter @bloxwap/smart-rpc-docs check",
