@@ -27,10 +27,15 @@ or gasless-transfer semantics to requests.
 | Public default | Policy |
 | --- | --- |
 | HTTPS execution RPC | Enabled; identity checked before user calls |
-| Batch, archive, debug/trace, subscriptions | Disabled pending provider verification |
+| Default providers | `rpc.plasma.to`, Tenderly's public gateway (`plasma.gateway.tenderly.co`) and thirdweb (`9745.rpc.thirdweb.com`) |
+| Historical state | Enabled on `rpc.plasma.to` and Tenderly, which served state at block 1 and head-100k in probes on 2026-11-08 |
+| Batch, debug/trace, subscriptions | Disabled pending provider verification |
 | State tags | `latest` and `pending`; advanced tags require an explicit capability |
-| Numeric state pinning | Disabled for the unverified public state capability |
+| Numeric state pinning | Disabled; `latest` is sent unchanged |
 | Numeric rate or batch ceiling | Unspecified; configure your provider's actual limit |
+
+Tatum's keyless gateway was removed on 2026-11-08. It answered "exceeded your limit of
+5 requests per minute" after four calls, which is too little for pool traffic.
 
 These disabled capabilities are conservative client policy, not evidence that
 the provider rejects every such method. No synthetic WebSocket URL is derived.
@@ -54,7 +59,11 @@ your provider's documentation and checks. Finality tags and historical state are
 never rewritten to `latest`. `PLASMA_MAINNET_REGISTRY` exposes sources and review
 date; `PLASMA_MAINNET` exposes native currency and network metadata.
 
-The local head policy allows four blocks of lag, discards observations after
+Plasma produces a block every second (measured 2026-11-08: 1,000 blocks in
+1,000s). The factory passes `blockTimeMs: 1000`, so the default lag tolerance is
+one block (it was four); an endpoint further behind does not lead, race or hedge
+head reads while a fresh endpoint can. `PLASMA_HEAD_LAG` no longer sets `maxLag`.
+The local head policy discards observations after
 12 seconds (three normal probe intervals), and rejects a lead exceeding 120 blocks
 when peer evidence is available. These are configurable routing thresholds,
 not consensus finality promises. The shared four-second probe cadence and

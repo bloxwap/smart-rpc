@@ -14,11 +14,18 @@ export {
 export {
   Budgets,
   defaultBurst,
+  RATE_LIMIT_COOLDOWN_MS,
+  RATE_LIMIT_DECREASE,
+  RATE_LIMIT_MAX_COOLDOWN_MS,
+  RATE_LIMIT_MAX_RETRY_AFTER_MS,
+  RATE_LIMIT_RECOVERY_PER_SECOND,
   resolveDefaultBudget,
   resolveEndpointBudget,
   type BudgetConfig,
   type BudgetOptions,
+  type RateLimitOutcome,
 } from "./budget.js";
+export { BLOCK_RATE_HEADROOM, blockCadence, type BlockCadence } from "./cadence.js";
 export {
   DEFAULT_CACHE_HOT_IDLE_MS,
   DEFAULT_CACHE_HOT_KEYS,
@@ -79,6 +86,7 @@ export {
   type LogValue,
 } from "./log-index.js";
 export {
+  DEFAULT_LAG_TOLERANCE_MS,
   DEFAULT_MAX_AHEAD,
   DEFAULT_MAX_LAG,
   DEFAULT_MAX_UNITS_PER_SECOND,
@@ -103,18 +111,23 @@ export {
   UnknownChainError,
 } from "./errors.js";
 export {
+  classifyRpcError,
   isAlreadyKnownError,
   isBlockNotHeldError,
   isIdempotentMethod,
+  isProviderRestriction,
+  isRateLimitError,
   isRebroadcastMethod,
   NON_IDEMPOTENT_METHODS,
   SAFE_EVM_METHODS,
   REBROADCAST_METHODS,
   shouldFailover,
+  type RpcErrorClass,
 } from "./evm-methods.js";
 export type { EndpointSnapshot, RpcEvent } from "./events.js";
 export {
   DEFAULT_PIN_FRESH_MS,
+  isHeadSensitiveRead,
   isPrecompileCall,
   LatestPin,
   pinParams,

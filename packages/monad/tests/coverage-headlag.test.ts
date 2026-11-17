@@ -23,13 +23,12 @@ function nodes(heads: Record<string, number>) {
 
 describe("Monad head-lag defaults", () => {
   test("an omitted headLag applies the Monad lag grace and lead limit", async () => {
-    const mock = nodes({ "b.example": HEAD - 10, "c.example": HEAD + 201 });
+    const mock = nodes({ "b.example": HEAD - 3, "c.example": HEAD + 201 });
     const pool = monad({ endpoints: urls, fetchFn: mock.fetchFn, cache: false, race: false });
     try {
       await pool.probe();
       const [leader, behind, ahead] = pool.snapshot();
-      // Ten blocks behind is inside MONAD_HEAD_LAG.maxLag, so the score is not penalized.
-      expect(behind).toMatchObject({ head: HEAD - 10, lag: 10 });
+      expect(behind).toMatchObject({ head: HEAD - 3, lag: 3 });
       expect(behind?.score).toBe(leader?.score);
       // 201 blocks ahead exceeds maxAhead 200 (the core default of 1000 would accept it as the tip).
       expect(leader).toMatchObject({ head: HEAD, lag: 0 });

@@ -361,13 +361,13 @@ describe("the cache's head probe", () => {
     return { a, log };
   }
 
-  test("spends its last token on the head, not on an identity refresh", async () => {
+  test("reserves its last token for a foreground caller", async () => {
     const { a } = await oneTick(3, () => "0x1");
-    expect(a.calls).toEqual(["eth_chainId", "eth_call", "eth_blockNumber"]);
+    expect(a.calls).toEqual(["eth_chainId", "eth_call"]);
   });
 
-  test("refreshes identity first when two tokens remain", async () => {
-    const { a, log } = await oneTick(4, () => "0x1");
+  test("refreshes identity and head when three tokens remain", async () => {
+    const { a, log } = await oneTick(5, () => "0x1");
     expect(a.calls).toEqual(["eth_chainId", "eth_call", "eth_chainId", "eth_blockNumber"]);
     expect(log.of("quarantine")).toEqual([]);
   });

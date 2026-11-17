@@ -111,9 +111,28 @@ describe("Solana public registry", () => {
     }
   });
 
+  test("PublicNode never receives token-gated indexed methods", () => {
+    const gated = [
+      "getProgramAccounts", "getTokenAccountsByOwner", "getTokenAccountsByDelegate", "getTokenAccountBalance",
+      "getTokenSupply", "getTokenLargestAccounts", "getSupply", "getLargestAccounts",
+    ];
+    for (const registry of [MAINNET_REGISTRY, TESTNET_REGISTRY]) {
+      const publicNode = registry.find((endpoint) => endpoint.provider === "PublicNode");
+      expect(publicNode?.unsupportedMethods).toEqual(gated);
+    }
+    expect(MAINNET_REGISTRY.find((endpoint) => endpoint.id === "pocket")?.unsupportedMethods)
+      .toEqual(["getTokenAccountsByOwner", "getProgramAccounts"]);
+  });
+
+  test("paid-only Tatum gateways stay out of all keyless defaults", () => {
+    for (const registry of [MAINNET_REGISTRY, DEVNET_REGISTRY, TESTNET_REGISTRY]) {
+      expect(registry.some((endpoint) => endpoint.provider === "Tatum")).toBe(false);
+    }
+  });
+
   test("known method restrictions skip Pocket during configured failover", async () => {
     const calls: { url: string; method: string }[] = [];
-    const first = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "publicnode")!;
+    const first = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "solanavibestation")!;
     const pocket = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "pocket")!;
     const fallback = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "solana")!;
     const pool = solana({

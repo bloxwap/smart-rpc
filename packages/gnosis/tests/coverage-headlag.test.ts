@@ -22,14 +22,14 @@ function nodes(heads: Record<string, number>) {
 }
 
 describe("Gnosis head-lag defaults", () => {
-  test("an omitted headLag tracks heads with a two-block lag grace", async () => {
-    const mock = nodes({ "b.example": HEAD - 2, "c.example": HEAD - 3 });
+  test("an omitted headLag tracks heads with a one-block lag grace", async () => {
+    const mock = nodes({ "b.example": HEAD - 1, "c.example": HEAD - 3 });
     const pool = gnosis({ endpoints: urls, fetchFn: mock.fetchFn, cache: false, race: false });
     try {
       await pool.probe();
       const [leader, graced, behind] = pool.snapshot();
       expect(leader).toMatchObject({ head: HEAD, lag: 0 });
-      expect(graced).toMatchObject({ head: HEAD - 2, lag: 2 });
+      expect(graced).toMatchObject({ head: HEAD - 1, lag: 1 });
       expect(graced?.score).toBe(leader?.score);
       expect(behind).toMatchObject({ head: HEAD - 3, lag: 3 });
       expect(behind?.score).toBeGreaterThan(leader?.score ?? Infinity);

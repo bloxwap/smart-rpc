@@ -25,6 +25,18 @@ export interface SolanaEndpointConfig {
   unsupportedMethods?: readonly string[] | undefined;
 }
 
+/** Methods PublicNode's keyless Solana gateways refuse without a personal token. */
+const PUBLICNODE_TOKEN_GATED_METHODS: readonly string[] = [
+  "getProgramAccounts",
+  "getTokenAccountsByOwner",
+  "getTokenAccountsByDelegate",
+  "getTokenAccountBalance",
+  "getTokenSupply",
+  "getTokenLargestAccounts",
+  "getSupply",
+  "getLargestAccounts",
+];
+
 /**
  * Public HTTP RPCs that do not require an account or API key. Source review does
  * not guarantee availability. Budgets are conservative local routing limits;
@@ -36,7 +48,7 @@ export const MAINNET_REGISTRY: readonly PublicRpcEndpoint[] = [
     url: "https://api.mainnet.solana.com",
     provider: "Solana",
     sourceUrls: ["https://solana.com/docs/references/clusters"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     // The public cluster limits each method to 40 requests per 10 seconds.
     rps: 3,
     burst: 3,
@@ -46,9 +58,13 @@ export const MAINNET_REGISTRY: readonly PublicRpcEndpoint[] = [
     url: "https://solana-rpc.publicnode.com",
     provider: "PublicNode",
     sourceUrls: ["https://solana.publicnode.com/"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     rps: 3,
     burst: 3,
+    // Live probes (2026-11-08) on mainnet and testnet: these return HTTP 403/-32602
+    // "Indexed requests require a personal token" (getLargestAccounts: 410 disabled).
+    // -32602 is terminal for callers, so the pool must never route them here.
+    unsupportedMethods: PUBLICNODE_TOKEN_GATED_METHODS,
   },
   {
     id: "solanavibestation",
@@ -58,8 +74,10 @@ export const MAINNET_REGISTRY: readonly PublicRpcEndpoint[] = [
       "https://solanavibestation.com/",
       "https://docs.solanavibestation.com/services/solana-node-services/rpc-services",
     ],
-    reviewedAt: "2026-11-07",
-    // This also respects the provider's stricter sendTransaction limit.
+    reviewedAt: "2026-11-08",
+    // Documented free tier: 5 r/s and 1 sendTransaction r/s. One budget covers every
+    // method, so the stricter sendTransaction limit applies; mixed reads near 2.5 r/s
+    // drew HTTP 429 in live probes (2026-11-08).
     rps: 1,
     burst: 1,
   },
@@ -71,11 +89,13 @@ export const MAINNET_REGISTRY: readonly PublicRpcEndpoint[] = [
       "https://docs.pocket.network/developers/supported-chains/",
       "https://docs.pocket.network/developers/integration-examples/",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     rps: 3,
     burst: 3,
-    // Pocket documents this method as unreliable on its public Solana gateway.
-    unsupportedMethods: ["getTokenAccountsByOwner"],
+    // Pocket documents getTokenAccountsByOwner as unreliable on its public Solana gateway.
+    // getProgramAccounts for the SPL Token program returns terminal -32602 "not served by
+    // this endpoint (multi-minute account-index scans)" (live probe 2026-11-08).
+    unsupportedMethods: ["getTokenAccountsByOwner", "getProgramAccounts"],
   },
 ];
 
@@ -86,7 +106,7 @@ export const DEVNET_REGISTRY: readonly PublicRpcEndpoint[] = [
     url: "https://api.devnet.solana.com",
     provider: "Solana",
     sourceUrls: ["https://solana.com/docs/references/clusters"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     rps: 3,
     burst: 3,
   },
@@ -99,7 +119,7 @@ export const TESTNET_REGISTRY: readonly PublicRpcEndpoint[] = [
     url: "https://api.testnet.solana.com",
     provider: "Solana",
     sourceUrls: ["https://solana.com/docs/references/clusters"],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     rps: 3,
     burst: 3,
   },
@@ -111,9 +131,13 @@ export const TESTNET_REGISTRY: readonly PublicRpcEndpoint[] = [
       "https://solana.publicnode.com/",
       "https://www.comparenodes.com/library/public-endpoints/solana/",
     ],
-    reviewedAt: "2026-11-07",
+    reviewedAt: "2026-11-08",
     rps: 3,
     burst: 3,
+    // Live probes (2026-11-08) on mainnet and testnet: these return HTTP 403/-32602
+    // "Indexed requests require a personal token" (getLargestAccounts: 410 disabled).
+    // -32602 is terminal for callers, so the pool must never route them here.
+    unsupportedMethods: PUBLICNODE_TOKEN_GATED_METHODS,
   },
 ];
 

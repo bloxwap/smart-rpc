@@ -50,7 +50,8 @@ Smart RPC is a TypeScript JSON-RPC router for EVM chains and Solana. It combines
 | Traffic control | Provider-group budgets | Shares one ceiling across URLs operated by the same provider, reducing rate-limit failures and throttled retries. |
 | Traffic control | Probe token reservation | Automatic probes preserve the final budgeted token for caller traffic whenever possible. |
 | Traffic control | Circuit breakers | Ejects repeatedly failing endpoints with exponential cooldown, keeping requests away from known-bad providers. |
-| Traffic control | `Retry-After` handling | Honors provider cooldown signals immediately instead of repeatedly probing a rate-limited endpoint. |
+| Traffic control | Rate-limit cooldowns | Honors `Retry-After` exactly, backs off a rate-limited endpoint and halves its request rate instead of ejecting it or harming its score. |
+| Traffic control | Provider-restriction failover | Fails over when a provider refuses a request shape (token-gated method, missing `address`, span or size limit) without counting the endpoint as unhealthy. |
 | Traffic control | Outlier-head rejection | Ignores implausibly far-ahead heads so a bad observation cannot distort endpoint selection. |
 | Traffic control | Idle probe shutdown | Stops health timers after an idle period, eliminating background traffic for unused pools. |
 | Warm start | Score snapshots | Restores global and per-method latency, tail, and error books so a new process does not rediscover every provider from zero. |

@@ -179,7 +179,7 @@ describe("cold backup hedges", () => {
     client.close();
   });
 
-  test("does not dispatch a cold hedge after its identity check spends the last endpoint token", async () => {
+  test("does not start a cold hedge or its identity check on the last endpoint token", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
     const backupCalls: string[] = [];
@@ -211,7 +211,7 @@ describe("cold backup hedges", () => {
     const pending = client.request(read);
     await vi.advanceTimersByTimeAsync(30);
     await expect(pending).resolves.toBe("0xprimary");
-    expect(backupCalls).toEqual(["eth_chainId"]);
+    expect(backupCalls).toEqual([]);
     client.close();
   });
 
@@ -262,7 +262,7 @@ describe("cold backup hedges", () => {
     client.close();
   });
 
-  test("does not dispatch a cold hedge after its identity check spends the last provider token", async () => {
+  test("does not start a cold hedge or its identity check on the last provider token", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
     const backupCalls: string[] = [];
@@ -295,7 +295,7 @@ describe("cold backup hedges", () => {
     const pending = client.request(read);
     await vi.advanceTimersByTimeAsync(30);
     await expect(pending).resolves.toBe("0xprimary");
-    expect(backupCalls).toEqual(["eth_chainId"]);
+    expect(backupCalls).toEqual([]);
     client.close();
   });
 });

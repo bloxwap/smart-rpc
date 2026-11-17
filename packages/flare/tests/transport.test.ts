@@ -87,7 +87,7 @@ describe("Flare execution transport", () => {
     } finally { pool.close(); }
   });
 
-  test("routes explicit finality and historical state only to opted-in capabilities without tag rewriting", async () => {
+  test("routes historical state only to archive capabilities and keeps finality tags unchanged", async () => {
     const mock = fixture(({ method }) => method === "eth_chainId" ? "0xe" : "0x0");
     const pool = flare({ ...offline, routing: "best", endpoints: [FLARE_RPC_URL, {
       url: "https://archive.example/rpc", capabilities: { archive: true, blockTags: ["latest", "safe", "finalized"] },
@@ -95,8 +95,27 @@ describe("Flare execution transport", () => {
     try {
       for (const tag of ["safe", "finalized", "0x1"]) await pool.request({ method: "eth_getBalance", params: [address, tag] });
       const reads = mock.calls.filter(({ method }) => method === "eth_getBalance");
-      expect(reads.map(({ url }) => url)).toEqual(Array(3).fill("https://archive.example/rpc"));
       expect(reads.map(({ params }) => params[1])).toEqual(["safe", "finalized", "0x1"]);
+      expect(reads.find(({ params }) => params[1] === "0x1")?.url).toBe("https://archive.example/rpc");
+    } finally { pool.close(); }
+  });
+
+  test("default records carry live-verified finality tags, archive flags and log-range gates", () => {
+    const byId = Object.fromEntries(FLARE_MAINNET_REGISTRY.map((entry) => [entry.id, entry.capabilities]));
+    expect(FLARE_MAINNET_REGISTRY.every(({ capabilities }) => capabilities?.blockTags?.includes("finalized"))).toBe(true);
+    expect(Object.entries(byId).filter(([, caps]) => caps?.archive).map(([id]) => id))
+      .toEqual(["flare-quicknode-public", "flare-tenderly-public"]);
+    expect(byId["flare-public"]?.maxLogBlockRange).toBe(30);
+    expect(byId["flare-drpc-public"]?.maxLogBlockRange).toBe(100);
+  });
+
+  test("the official node never receives log ranges above its 30-block maximum", async () => {
+    const mock = fixture(({ method }) => method === "eth_chainId" ? "0xe" : []);
+    const pool = flare({ ...offline, endpoints: [FLARE_RPC_URL], fetchFn: mock.fetchFn });
+    try {
+      await expect(pool.request({ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x1e" }] })).resolves.toEqual([]);
+      await expect(pool.request({ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x1f" }] })).rejects.toThrow();
+      expect(mock.calls.filter(({ method }) => method === "eth_getLogs")).toHaveLength(1);
     } finally { pool.close(); }
   });
 

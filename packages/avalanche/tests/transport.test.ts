@@ -43,6 +43,8 @@ describe("Avalanche C-Chain transport", () => {
       expect(AVALANCHE_RPC_URL).toBe("https://api.avax.network/ext/bc/C/rpc");
       expect(AVALANCHE_WS_URL).toBe("wss://api.avax.network/ext/bc/C/ws");
       expect(AVALANCHE_MAINNET_REGISTRY[0]?.rps).toBeUndefined();
+      // The official node keeps 8,192 ancestors; only Tenderly served historical state reliably.
+      expect(AVALANCHE_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities?.archive).map(({ id }) => id)).toEqual(["avalanche-tenderly"]);
       expect(mock.calls).toEqual([]);
     } finally { pool.close(); }
   });

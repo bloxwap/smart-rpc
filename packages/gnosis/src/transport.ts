@@ -28,7 +28,9 @@ export function gnosis(options: GnosisOptions = {}): RpcPool {
     chainId: GNOSIS_CHAIN_ID,
     chainIds: [GNOSIS_MAINNET_CAIP],
     endpoints,
-    maxUnitsPerSecond: options.maxUnitsPerSecond ?? 1 / GNOSIS_CONSENSUS.slotSeconds,
-    headLag: options.headLag === false ? false : { staleMs: 30_000, maxLag: 2, ...(typeof options.headLag === "object" ? options.headLag : {}) },
+    // 5s slots (measured 2026-11-08: 1,000 blocks in 5,070s, the gap being missed slots). Lag tolerance is one
+    // block, the minimum, and the head-growth ceiling 0.25 blocks/s: the slot rate plus the shared 25% headroom.
+    blockTimeMs: options.blockTimeMs ?? GNOSIS_CONSENSUS.slotSeconds * 1_000,
+    headLag: options.headLag === false ? false : { staleMs: 30_000, ...(typeof options.headLag === "object" ? options.headLag : {}) },
   });
 }

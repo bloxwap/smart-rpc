@@ -22,15 +22,14 @@ function nodes(heads: Record<string, number>) {
 }
 
 describe("Flare head-lag defaults", () => {
-  test("an omitted headLag applies the three-block Flare lag grace", async () => {
-    const mock = nodes({ "b.example": HEAD - 3, "c.example": HEAD - 4 });
+  test("an omitted headLag applies the one-block Flare lag grace", async () => {
+    const mock = nodes({ "b.example": HEAD - 1, "c.example": HEAD - 4 });
     const pool = flare({ endpoints: urls, fetchFn: mock.fetchFn, cache: false, race: false });
     try {
       await pool.probe();
       const [leader, graced, behind] = pool.snapshot();
       expect(leader).toMatchObject({ head: HEAD, lag: 0 });
-      // Three blocks is inside FLARE_HEAD_LAG.maxLag (the core default of 2 would penalize it).
-      expect(graced).toMatchObject({ head: HEAD - 3, lag: 3 });
+      expect(graced).toMatchObject({ head: HEAD - 1, lag: 1 });
       expect(graced?.score).toBe(leader?.score);
       expect(behind).toMatchObject({ head: HEAD - 4, lag: 4 });
       expect(behind?.score).toBeGreaterThan(leader?.score ?? Infinity);

@@ -16,6 +16,12 @@ export interface ProbeOptions {
   fetchImpl?: typeof fetch | undefined;
   now?: Date | undefined;
   beforeRequest?: (() => Promise<void>) | undefined;
+  /**
+   * Width of the realistic log page. Default: {@link LOGS_RANGE_BLOCKS}. Pass the
+   * endpoint's declared `maxLogBlockRange` when it is smaller: the router never sends a
+   * wider range there, so failing a wider probe would rank a working node as down.
+   */
+  logsRangeBlocks?: number | undefined;
 }
 
 interface MethodSample {
@@ -56,7 +62,8 @@ export async function probeEndpoint(url: string, options: ProbeOptions = {}): Pr
     const toBlock = `0x${head.toString(16)}`;
     const logs = await callMethod("eth_getLogs", [{ address: EMPTY_LOG_ADDRESS, fromBlock: toBlock, toBlock }]);
     methods.eth_getLogs = { ms: logs.ms, ok: chainIdOk && logs.ok && Array.isArray(logs.result) };
-    const fromBlock = `0x${Math.max(0, head - (LOGS_RANGE_BLOCKS - 1)).toString(16)}`;
+    const width = Math.max(1, Math.min(LOGS_RANGE_BLOCKS, options.logsRangeBlocks ?? LOGS_RANGE_BLOCKS));
+    const fromBlock = `0x${Math.max(0, head - (width - 1)).toString(16)}`;
     const range = await callMethod("eth_getLogs", [{ address: EMPTY_LOG_ADDRESS, fromBlock, toBlock }]);
     methods[LOGS_RANGE_PROBE] = { ms: range.ms, ok: chainIdOk && range.ok && Array.isArray(range.result) };
   } else {

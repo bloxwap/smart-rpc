@@ -81,6 +81,22 @@ describe("endpointScore", () => {
     expect(defaultScoreConfig.methodBlendSamples).toBe(3);
   });
 
+  test("a successful answer faster than the prior is credited at once; slow and failure-only books keep the prior pull", () => {
+    const fast = emptyStat();
+    observe(fast, 40, true);
+    expect(serviceMs(fast)).toBe(40);
+    const measured = emptyStat();
+    for (let sample = 0; sample < 5; sample += 1) observe(measured, 100, true);
+    expect(serviceMs(fast)).toBeLessThan(serviceMs(measured));
+
+    const slow = emptyStat();
+    observe(slow, 500, true);
+    expect(serviceMs(slow)).toBeCloseTo(0.2 * 500 + 0.8 * 250);
+    const failed = emptyStat();
+    observe(failed, 5, false);
+    expect(serviceMs(failed)).toBeCloseTo(0.2 * 5 + 0.8 * 250);
+  });
+
   test("the tail remembers a slow sample longer than the mean", () => {
     const stat = emptyStat();
     observe(stat, 50, true);

@@ -43,7 +43,7 @@ Core defaults are the HyperEVM transport at `092b8f9`, for every chain:
 - EWMA constants in `_score.ts` (`latencyMix` 0.6, alphas 0.4 / 0.2 / 0.5 / 0.05, `errorAlpha` 0.3, `livenessAlpha` 0.15, `errorWeight` 8, `queueWeight` 0.25, prior 250ms, confidence 5, method blend 3).
 - In-flight penalty `1 + n + 0.25 n²`.
 - Power-of-two-choices, top-2 race for safe reads.
-- Breaker: 3 failures, 5s cooldown, doubling to 60s. Probe success does not clear a streak that holds a failed call. `Retry-After` ejects immediately.
+- Breaker: 3 failures, 5s cooldown, doubling to 60s. Probe success does not clear a streak that holds a failed call. `Retry-After` on an endpoint failure such as HTTP 503 ejects immediately. Unlike the reference, a rate limit (HTTP 429, `-32005`) does not eject: the endpoint cools down for its `Retry-After` and its request rate adapts (see [Rate limits](./reference#rate-limits)).
 - 2 extra retries, 10s attempt timeout, immediate failover when another endpoint is up, jittered backoff from 100ms capped at 2s.
 - Probe every 4s, stop after 60s idle. Liveness is separate from the latency EWMA.
 - Stale heads (30s) and outlier heads (`maxAhead` 1000, and no reference when only two heads disagree) match `_scoreboard.ts`.

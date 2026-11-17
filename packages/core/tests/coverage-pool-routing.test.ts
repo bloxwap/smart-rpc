@@ -276,7 +276,9 @@ describe("race", () => {
     const client = pool([a.config, b.config], { race: true, routing: "best", now: () => 0 });
     await expect(client.request(read)).rejects.toThrow("execution reverted");
     expect(b.calls).toHaveLength(1);
-    expect(b.calls[0]?.signal?.aborted).toBe(true);
+    // Pending rivals are released to finish and contribute latency samples.
+    expect(b.calls[0]?.signal?.aborted).toBe(false);
+    expect(client.snapshot().every(({ inflight }) => inflight === 0)).toBe(true);
     client.close();
   });
 
@@ -292,7 +294,9 @@ describe("race", () => {
       shouldThrow: (error) => error.message.startsWith("fatal"),
     });
     await expect(client.request(read)).rejects.toThrow("fatal: wallet locked");
-    expect(b.calls[0]?.signal?.aborted).toBe(true);
+    // Pending rivals are released to finish and contribute latency samples.
+    expect(b.calls[0]?.signal?.aborted).toBe(false);
+    expect(client.snapshot().every(({ inflight }) => inflight === 0)).toBe(true);
     client.close();
   });
 

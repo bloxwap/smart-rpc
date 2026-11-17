@@ -3,7 +3,9 @@ title: Performance audit — November 17, 2026
 description: Built-in endpoint verification, measured startup improvements, CPU benchmarks, and remaining slow providers.
 ---
 
-**The final registries retain 102 active endpoints across all 25 supported networks.** All 102 passed identity, head, and state checks in this audit. One additional HyperEVM candidate passed these narrow checks but remains disabled by its broader historical capability policy. Eight unsuitable defaults were removed, startup order was improved on ten mainnets, and HyperEVM’s rolling history was refreshed.
+**Release integration follow-up:** the combined 0.3.0 registries contain **105 active defaults across 25 networks**, all passing a fresh identity check and three head, balance, and EVM call samples per endpoint. Results are in `reports/performance/2026-11-17/release-endpoints.json`. The merge includes the earlier audit’s five documented replacements and removes its additional stale defaults. HyperEVM’s log probe now respects each provider’s declared range cap; dRPC passed within its 100-block cap and is restored as a low-weight fallback. PublicNode remains first for ordered cold starts.
+
+The measurements below describe the optimization pass before release integration. That snapshot retained 102 active endpoints and one disabled HyperEVM candidate. Eight unsuitable defaults were removed, startup order was improved on ten mainnets, and HyperEVM’s rolling history was refreshed.
 
 The original 111 candidates produced 109 passes with the old identity/head check. Adding repeated balance reads reduced that to 104. Adding EVM `eth_call` exposed further method-specific failures. The final membership was selected from the complete expanded audit, without discarding any failed sample for a retained endpoint. Raw successful and failed observations are preserved under `reports/performance/2026-11-17/`.
 
@@ -34,7 +36,7 @@ Node 24.22.1, macOS arm64, one process with alternating before/after implementat
 
 All 25 immediate repeated reads completed in under 1 ms in that run. Reordering only changes initial preference among equal scores; runtime latency, budget, failure, and freshness scoring still adapt to the caller. No live identity verification or conservative provider limits were bypassed.
 
-**Network-by-network endpoint results.** For each network, the table selects the eligible provider with the lowest *worst median* across head, balance, and EVM call methods. Each retained provider had five successful samples per method. This is an audit winner for this location and workload, not a permanent global rank or necessarily the initial route.
+**Network-by-network endpoint results before release integration.** For each network, the table selects the eligible provider with the lowest *worst median* across head, balance, and EVM call methods. Each retained provider had five successful samples per method. This is an audit winner for this location and workload, not a permanent global rank or necessarily the initial route.
 
 | Network | Active defaults | Best measured provider | Head p50 | Balance p50 | Empty call p50 |
 | --- | ---: | --- | ---: | ---: | ---: |

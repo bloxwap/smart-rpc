@@ -23,13 +23,12 @@ function nodes(heads: Record<string, number>) {
 
 describe("Plasma head-lag defaults", () => {
   test("an omitted headLag applies the Plasma lag grace and lead limit", async () => {
-    const mock = nodes({ "b.example": HEAD - 4, "c.example": HEAD + 121 });
+    const mock = nodes({ "b.example": HEAD - 1, "c.example": HEAD + 121 });
     const pool = plasma({ endpoints: urls, fetchFn: mock.fetchFn, cache: false, race: false });
     try {
       await pool.probe();
       const [leader, behind, ahead] = pool.snapshot();
-      // Four blocks behind is inside PLASMA_HEAD_LAG.maxLag, so the score is not penalized.
-      expect(behind).toMatchObject({ head: HEAD - 4, lag: 4 });
+      expect(behind).toMatchObject({ head: HEAD - 1, lag: 1 });
       expect(behind?.score).toBe(leader?.score);
       // 121 blocks ahead exceeds maxAhead 120 (the core default of 1000 would accept it as the tip).
       expect(leader).toMatchObject({ head: HEAD, lag: 0 });

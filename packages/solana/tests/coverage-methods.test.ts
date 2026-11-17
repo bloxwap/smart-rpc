@@ -48,3 +48,12 @@ describe("Solana method classification", () => {
     expect(parseSlot(5n)).toBeNull();
   });
 });
+
+describe("routing freshness and rate-limit boundaries", () => {
+  test("missing commitment means the head, and unhealthy is not a rate limit", async () => {
+    const { isHeadSensitiveSolanaMethod, isSolanaRateLimit } = await import("../src/methods.js");
+    expect(isHeadSensitiveSolanaMethod("getBalance", undefined)).toBe(true);
+    expect(isSolanaRateLimit(Object.assign(new Error("node unhealthy"), { code: -32005 }))).toBe(false);
+    expect(isSolanaRateLimit(Object.assign(new Error("rate limit"), { code: -32005 }))).toBe(true);
+  });
+});

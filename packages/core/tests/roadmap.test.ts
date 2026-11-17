@@ -207,16 +207,48 @@ describe("stateful and concurrent calls", () => {
     client.close();
   });
 
-  test("race winner aborts the losing read without failure or latency samples", async () => {
+  test("race winner releases the losing read: it finishes in the background, is scored, and is never delivered", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
     let loserSignal: AbortSignal | undefined;
+    const events: string[] = [];
     const client = pool([
       { id: "winner", url: "winner", call: async () => "ok" },
-      { id: "loser", url: "loser", call: (_request, options) => { loserSignal = options?.signal; return new Promise(() => undefined); } },
-    ], { race: true });
+      {
+        id: "loser", url: "loser",
+        call: (_request, options) => {
+          loserSignal = options?.signal;
+          return new Promise((resolve) => setTimeout(() => resolve("late"), 50));
+        },
+      },
+    ], { race: true, now: () => Date.now(), onEvent: (event) => events.push(`${event.type}:${"endpoint" in event ? event.endpoint : ""}`) });
     await expect(client.request(read)).resolves.toBe("ok");
-    expect(loserSignal?.aborted).toBe(true);
+    expect(loserSignal?.aborted).toBe(false);
+    expect(client.snapshot().find(({ id }) => id === "loser")).toMatchObject({ inflight: 0, methods: { "*": { n: 0 } } });
+    await vi.advanceTimersByTimeAsync(50);
+    expect(client.snapshot().find(({ id }) => id === "loser")).toMatchObject({
+      inflight: 0, ejected: false, methods: { "*": { ewma: 50, error: 0, n: 1 } },
+    });
+    expect(events.filter((event) => event.startsWith("success:"))).toEqual(["success:winner"]);
+    client.close();
+  });
+
+  test("a caller abort still aborts every racer without failure or latency samples", async () => {
+    const signals: (AbortSignal | undefined)[] = [];
+    const client = pool(["a", "b"].map((id) => ({
+      id, url: id, call: (_request: unknown, options?: { signal?: AbortSignal }) => {
+        signals.push(options?.signal);
+        return new Promise(() => undefined);
+      },
+    })), { race: true });
+    const controller = new AbortController();
+    const pending = client.request({ ...read, signal: controller.signal }).catch((error: unknown) => error);
     await Promise.resolve();
-    expect(client.snapshot().find(({ id }) => id === "loser")).toMatchObject({ inflight: 0, ejected: false, methods: { "*": { n: 0 } } });
+    controller.abort();
+    await expect(pending).resolves.toMatchObject({ name: "AbortError" });
+    expect(signals.map((signal) => signal?.aborted)).toEqual([true, true]);
+    await Promise.resolve();
+    for (const row of client.snapshot()) expect(row).toMatchObject({ inflight: 0, ejected: false, methods: { "*": { n: 0 } } });
     client.close();
   });
 

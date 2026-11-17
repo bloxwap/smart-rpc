@@ -249,3 +249,10 @@ describe("Solana HTTP responses", () => {
     }
   });
 });
+
+test("an empty HTTP error body keeps the HTTP status without inventing provider details", async () => {
+  const call = jsonRpcCaller("https://empty.example", async () => new Response("", { status: 503 }));
+  const error = await call({ method: "getSlot" }).catch((caught: unknown) => caught);
+  expect(error).toMatchObject({ status: 503, message: "Solana RPC HTTP 503" });
+  expect(error).not.toHaveProperty("details");
+});

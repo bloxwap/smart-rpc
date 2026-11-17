@@ -4,21 +4,69 @@ import {
   ETHEREUM_MAINNET_ENDPOINTS,
   ETHEREUM_MAINNET_REGISTRY,
   ethereum,
+  supportsEvmRequest,
 } from "../src/index.js";
 
 describe("Ethereum public registry defaults", () => {
-  test("installs the complete registry with provider budgets and URL identities", () => {
+  test("installs the complete registry with documented provider budgets and URL identities", () => {
     const pool = ethereum({ headLag: { probeInterval: false }, now: () => 0 });
     try {
       expect(pool.endpoints.map((endpoint) => endpoint.url)).toEqual(ETHEREUM_MAINNET_ENDPOINTS);
+      // Undocumented keyless allowances stay unbudgeted; published ones keep their bucket.
       expect(pool.snapshot().map(({ id, tokens }) => ({ id, tokens }))).toEqual(
-        ETHEREUM_MAINNET_REGISTRY.map(({ url, burst }) => ({ id: url, tokens: burst })),
+        ETHEREUM_MAINNET_REGISTRY.map(({ url, rps, burst }) => ({
+          id: url,
+          tokens: rps === undefined ? null : (burst ?? Math.max(1, Math.ceil(rps * 2))),
+        })),
       );
+      const byId = new Map(ETHEREUM_MAINNET_REGISTRY.map((endpoint) => [endpoint.id, endpoint]));
+      expect(byId.get("ethereum-nownodes")).toMatchObject({ rps: 5, burst: 5 });
+      expect(byId.get("ethereum-pocket")?.rps).toBe(33);
+      for (const id of ["ethereum-publicnode", "ethereum-drpc", "ethereum-tenderly"]) {
+        expect(byId.get(id)?.rps).toBeUndefined();
+      }
+      for (const endpoint of ETHEREUM_MAINNET_REGISTRY) {
+        expect(endpoint.reviewedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(endpoint.sourceUrls.length).toBeGreaterThan(0);
+      }
       expect(ETHEREUM_MAINNET_REGISTRY.map(({ url }) => url)).toEqual(ETHEREUM_MAINNET_ENDPOINTS);
       expect(ETHEREUM_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
       expect(ETHEREUM_MAINNET_ENDPOINTS.length).toBeLessThanOrEqual(5);
       expect(ETHEREUM_MAINNET_ENDPOINTS).not.toContain("https://rpc.ankr.com/eth");
       expect(ETHEREUM_MAINNET_ENDPOINTS).not.toContain("https://cloudflare-eth.com");
+    } finally {
+      pool.close();
+    }
+  });
+
+  test("registry capabilities record live evidence and route archive and log reads", () => {
+    const byId = new Map(ETHEREUM_MAINNET_REGISTRY.map((endpoint) => [endpoint.id, endpoint]));
+    expect(byId.get("ethereum-drpc")?.capabilities).toMatchObject({ archive: true, batch: true, maxBatchSize: 3, maxLogBlockRange: 100 });
+    expect(byId.get("ethereum-publicnode")?.capabilities?.archive).toBe(false);
+    expect(byId.get("ethereum-nownodes")?.capabilities?.archive).toBe(false);
+    expect(byId.get("ethereum-nownodes")?.unsupportedMethods).toContain("eth_getLogs");
+    expect(byId.get("ethereum-tenderly")?.unsupportedMethods).toContain("eth_getLogs");
+    const archive = { method: "eth_getBalance", params: ["0x0000000000000000000000000000000000000000", "0x1"] };
+    expect(ETHEREUM_MAINNET_REGISTRY.filter(({ capabilities }) => supportsEvmRequest(capabilities, archive)).map(({ id }) => id))
+      .toEqual(["ethereum-drpc", "ethereum-tenderly", "ethereum-pocket"]);
+    const wideLogs = { method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x3e8" }] };
+    expect(supportsEvmRequest(byId.get("ethereum-drpc")?.capabilities, wideLogs)).toBe(false);
+    expect(supportsEvmRequest(byId.get("ethereum-pocket")?.capabilities, wideLogs)).toBe(true);
+  });
+
+  test("the default pool sends historical state only to registry archive endpoints", async () => {
+    const calls: string[] = [];
+    const fetchFn = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      const request = JSON.parse(String(init?.body)) as { id: number; method: string };
+      if (request.method === "eth_getBalance") calls.push(new URL(url).host);
+      return Response.json({ jsonrpc: "2.0", id: request.id, result: request.method === "eth_chainId" ? "0x1" : "0x2a" });
+    };
+    const pool = ethereum({ fetchFn, routing: "best", race: false, cache: false, headLag: { probeInterval: false } });
+    try {
+      await pool.request({ method: "eth_getBalance", params: ["0x0000000000000000000000000000000000000000", "0x1"] });
+      expect(calls).toHaveLength(1);
+      expect(["eth.drpc.org", "mainnet.gateway.tenderly.co", "eth.api.pocket.network"]).toContain(calls[0]);
     } finally {
       pool.close();
     }

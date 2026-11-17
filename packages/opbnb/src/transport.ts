@@ -10,6 +10,9 @@ export const OPBNB_NATIVE_CURRENCY = { name: "BNB", symbol: "BNB", decimals: 18 
 export const OPBNB_PARENT_CHAIN_ID = 56;
 export const OPBNB_PARENT_CAIP = "eip155:56";
 
+/** 250ms blocks (measured 2026-11-08: 1,000 blocks in 250s). Lag tolerance is four blocks, one second. */
+const OPBNB_BLOCK_TIME_MS = 250;
+
 export interface OpBnbOptions extends Omit<EthereumOptions, "chainId" | "chainIds"> {}
 
 /** opBNB mainnet execution RPC; routing and resilience remain in the shared core. */
@@ -19,5 +22,6 @@ export function opbnb(options: OpBnbOptions = {}): RpcPool {
     chainId: OPBNB_CHAIN_ID,
     chainIds: [OPBNB_MAINNET_CAIP],
     endpoints: options.endpoints ?? OPBNB_MAINNET_REGISTRY,
+    blockTimeMs: options.blockTimeMs ?? OPBNB_BLOCK_TIME_MS,
   });
 }

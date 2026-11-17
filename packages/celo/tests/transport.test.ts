@@ -55,6 +55,13 @@ describe("Celo transport", () => {
       expect(CELO_MAINNET_ENDPOINTS).toEqual(CELO_MAINNET_REGISTRY.map(({ url }) => url));
       expect(CELO_MAINNET_REGISTRY.length).toBeLessThanOrEqual(5);
       expect(CELO_MAINNET_REGISTRY.every(({ rps }) => rps === undefined)).toBe(true);
+      // dRPC mainnet intermittently answers core reads with -32601 and is not a default.
+      expect(CELO_MAINNET_ENDPOINTS).not.toContain("https://celo.drpc.org");
+      // Forno documents non-archive nodes; only live-verified archive providers opt in.
+      expect(CELO_MAINNET_REGISTRY.filter(({ capabilities }) => capabilities?.archive).map(({ id }) => id)).toEqual(["celo-thirdweb-mainnet"]);
+      expect(CELO_SEPOLIA_REGISTRY.filter(({ capabilities }) => capabilities?.archive).map(({ id }) => id))
+        .toEqual(["celo-ankr-sepolia", "celo-drpc-sepolia", "celo-tenderly-sepolia"]);
+      expect(CELO_MAINNET_REGISTRY.find(({ id }) => id === "celo-thirdweb-mainnet")?.websocketUrl).toBeUndefined();
       expect(CELO_WEBSOCKET_URL).toBe("wss://forno.celo.org/ws");
       expect(mock.calls).toEqual([]);
     } finally { client.close(); }

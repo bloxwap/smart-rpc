@@ -1,7 +1,7 @@
 {
   "version": 1,
   "chainId": 999,
-  "updatedAt": "2026-11-17T11:02:19.738Z",
+  "updatedAt": "2026-11-17T16:38:38.884Z",
   "policy": {
     "windowMs": 2419200000,
     "minObservations": 3,
@@ -18,10 +18,10 @@
       "weight": 0.15,
       "rank": 1,
       "stats": {
-        "observations": 1,
-        "successes": 1,
+        "observations": 4,
+        "successes": 4,
         "uptime": 1,
-        "latencyMs": 336.9,
+        "latencyMs": 247,
         "tailMs": 336.9,
         "medianLag": 1,
         "established": false,
@@ -34,11 +34,11 @@
       "weight": 0.15,
       "rank": 2,
       "stats": {
-        "observations": 3,
-        "successes": 2,
+        "observations": 6,
+        "successes": 4,
         "uptime": 0.6667,
-        "latencyMs": 198.2,
-        "tailMs": 238.4,
+        "latencyMs": 181.7,
+        "tailMs": 283.9,
         "medianLag": 0,
         "established": false,
         "precompileOk": true
@@ -50,10 +50,10 @@
       "weight": 1,
       "rank": 3,
       "stats": {
-        "observations": 3,
-        "successes": 3,
+        "observations": 6,
+        "successes": 6,
         "uptime": 1,
-        "latencyMs": 586.9,
+        "latencyMs": 649.3,
         "tailMs": 662.5,
         "medianLag": 0,
         "established": true,
@@ -61,34 +61,34 @@
       }
     },
     {
-      "url": "https://hyperliquid-json-rpc.stakely.io",
+      "url": "https://hyperliquid.drpc.org",
       "eligible": true,
-      "weight": 1,
+      "weight": 0.15,
       "rank": 4,
       "stats": {
-        "observations": 3,
+        "observations": 6,
         "successes": 3,
-        "uptime": 1,
-        "latencyMs": 992.9,
-        "tailMs": 1701.4,
-        "medianLag": 10,
-        "established": true,
+        "uptime": 0.5,
+        "latencyMs": 269.8,
+        "tailMs": 291.8,
+        "medianLag": 1,
+        "established": false,
         "precompileOk": true
       }
     },
     {
-      "url": "https://hyperliquid.drpc.org",
-      "eligible": false,
-      "weight": 0,
-      "rank": null,
+      "url": "https://hyperliquid-json-rpc.stakely.io",
+      "eligible": true,
+      "weight": 1,
+      "rank": 5,
       "stats": {
-        "observations": 3,
-        "successes": 1,
-        "uptime": 0.3333,
-        "latencyMs": 267.3,
-        "tailMs": 291.8,
-        "medianLag": 1,
-        "established": false,
+        "observations": 6,
+        "successes": 6,
+        "uptime": 1,
+        "latencyMs": 643.4,
+        "tailMs": 1701.4,
+        "medianLag": 7.5,
+        "established": true,
         "precompileOk": true
       }
     }

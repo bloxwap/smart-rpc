@@ -2,10 +2,12 @@ import { describe, expect, test } from "vitest";
 import { createSmartRpc, UnknownChainError } from "@smart-rpc/core";
 
 import {
+  HYPEREVM_MAINNET_REGISTRY,
   HYPEREVM_NATIVE_CURRENCY,
   HYPEREVM_OFFICIAL_CAPABILITIES,
   HYPEREVM_RPC_URL,
   HYPEREVM_SAFE_METHODS,
+  HYPEREVM_TESTNET_REGISTRY,
   HYPEREVM_TESTNET_RPC_URL,
   hyperevm,
   requestLogs,
@@ -46,6 +48,17 @@ describe("HyperEVM capabilities", () => {
     expect(HYPEREVM_OFFICIAL_CAPABILITIES).toMatchObject({
       archive: false, pinning: false, subscriptions: false, maxLogBlockRange: 50, maxLogTopics: 4,
     });
+  });
+
+  test("records probe-verified public log ranges and archive state per provider", () => {
+    const byId = new Map([...HYPEREVM_MAINNET_REGISTRY, ...HYPEREVM_TESTNET_REGISTRY].map((endpoint) => [endpoint.id, endpoint.capabilities]));
+    expect(byId.get("hyperliquid-mainnet")).toMatchObject({ archive: false, maxLogBlockRange: 50 });
+    expect(byId.get("drpc-mainnet")).toMatchObject({ archive: true, pinning: false, maxLogBlockRange: 100 });
+    expect(byId.get("drpc-testnet")).toMatchObject({ archive: false, maxLogBlockRange: 100 });
+    for (const id of ["hypurrscan-mainnet", "stakely-mainnet", "publicnode-mainnet"]) {
+      // These nodes answered numeric selectors with current state, so archive must stay off.
+      expect(byId.get(id)).toMatchObject({ archive: false, pinning: false, maxLogBlockRange: 1_000 });
+    }
   });
 
   test.each([
