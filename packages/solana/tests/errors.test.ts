@@ -108,6 +108,8 @@ describe("Solana pool", () => {
       const reads: string[] = [];
       const client = solana({
         ...deterministic,
+        // These fixtures describe simultaneous heads; runner scheduling is not chain production.
+        now: () => 0,
         endpoints: [{ url: "https://behind.example", weight: 100 }, { url: "https://ahead.example" }],
         fetchFn: async (input, init) => {
           const host = new URL(String(input)).host;
