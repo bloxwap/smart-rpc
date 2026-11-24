@@ -11,6 +11,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  security:
+    # Release scan, parallel with prepare.
+    uses: bloxwap/.github/.github/workflows/security-scan.yml@2a70724cd0d803abef5f5a7c64c46065f4fda19b # v1.1.0
+    permissions:
+      contents: read
+    with:
+      runs-on: '["self-hosted","macOS","ARM64"]'
+      profile: release
+      secrets-days: "7"
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
+
   prepare:
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 20
@@ -94,7 +106,7 @@ jobs:
           retention-days: 7
 
   publish:
-    needs: prepare
+    needs: [prepare, security]
     if: needs.prepare.outputs.publish == 'true'
     # npm OIDC trusted publishing requires a GitHub-hosted runner.
     # https://docs.npmjs.com/trusted-publishers/
