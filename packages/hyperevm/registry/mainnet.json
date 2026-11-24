@@ -1,7 +1,7 @@
 {
   "version": 1,
   "chainId": 999,
-  "updatedAt": "2026-11-17T16:38:38.884Z",
+  "updatedAt": "2026-11-24T02:56:16.718Z",
   "policy": {
     "windowMs": 2419200000,
     "minObservations": 3,
@@ -15,32 +15,16 @@
     {
       "url": "https://hyperliquid-rpc.publicnode.com",
       "eligible": true,
-      "weight": 0.15,
+      "weight": 1,
       "rank": 1,
       "stats": {
-        "observations": 4,
-        "successes": 4,
+        "observations": 5,
+        "successes": 5,
         "uptime": 1,
-        "latencyMs": 247,
-        "tailMs": 336.9,
+        "latencyMs": 329.1,
+        "tailMs": 541.9,
         "medianLag": 1,
-        "established": false,
-        "precompileOk": true
-      }
-    },
-    {
-      "url": "https://rpc.hyperliquid.xyz/evm",
-      "eligible": true,
-      "weight": 0.15,
-      "rank": 2,
-      "stats": {
-        "observations": 6,
-        "successes": 4,
-        "uptime": 0.6667,
-        "latencyMs": 181.7,
-        "tailMs": 283.9,
-        "medianLag": 0,
-        "established": false,
+        "established": true,
         "precompileOk": true
       }
     },
@@ -48,15 +32,31 @@
       "url": "https://rpc.hypurrscan.io",
       "eligible": true,
       "weight": 1,
-      "rank": 3,
+      "rank": 2,
       "stats": {
-        "observations": 6,
-        "successes": 6,
+        "observations": 7,
+        "successes": 7,
         "uptime": 1,
-        "latencyMs": 649.3,
+        "latencyMs": 644.6,
         "tailMs": 662.5,
         "medianLag": 0,
         "established": true,
+        "precompileOk": true
+      }
+    },
+    {
+      "url": "https://rpc.hyperliquid.xyz/evm",
+      "eligible": true,
+      "weight": 0.15,
+      "rank": 3,
+      "stats": {
+        "observations": 7,
+        "successes": 5,
+        "uptime": 0.7143,
+        "latencyMs": 186.5,
+        "tailMs": 518.3,
+        "medianLag": 0,
+        "established": false,
         "precompileOk": true
       }
     },
@@ -66,11 +66,11 @@
       "weight": 0.15,
       "rank": 4,
       "stats": {
-        "observations": 6,
-        "successes": 3,
-        "uptime": 0.5,
-        "latencyMs": 269.8,
-        "tailMs": 291.8,
+        "observations": 7,
+        "successes": 4,
+        "uptime": 0.5714,
+        "latencyMs": 277.9,
+        "tailMs": 360.1,
         "medianLag": 1,
         "established": false,
         "precompileOk": true
@@ -82,12 +82,12 @@
       "weight": 1,
       "rank": 5,
       "stats": {
-        "observations": 6,
-        "successes": 6,
+        "observations": 7,
+        "successes": 7,
         "uptime": 1,
-        "latencyMs": 643.4,
+        "latencyMs": 848,
         "tailMs": 1701.4,
-        "medianLag": 7.5,
+        "medianLag": 7,
         "established": true,
         "precompileOk": true
       }
