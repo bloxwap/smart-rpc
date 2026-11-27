@@ -40,6 +40,15 @@ export const HYPEREVM_TESTNET_RPC_URL = "https://rpc.hyperliquid-testnet.xyz/evm
 const reviewedAt = "2026-11-08";
 
 /**
+ * Budget for community endpoints that publish no numeric limit and answered 300 of 300
+ * eth_getBalance reads at 5 requests/second over 60 seconds on 2026-11-27. The budget stays
+ * below that measured rate; a 429 still cuts it at runtime. Stakely drew HTTP 429 after about
+ * 33 seconds of the same load and the official RPC publishes 100 requests/minute, so neither
+ * uses it.
+ */
+const SOAKED_BUDGET = { rps: 4, burst: 8 } as const;
+
+/**
  * Community nodes that rejected eth_getLogs above 1,000 blocks ("query exceeds max block
  * range 1000") in live probes on 2026-11-08. Archive stays off: Hypurrscan and PublicNode
  * (like the official RPC) answered eth_getBalance at block 1, block 1,000 and head-1M with
@@ -98,8 +107,7 @@ const mainnetSources: readonly MainnetEndpointSource[] = [
     sourceUrls: ["https://hyperliquid.gitbook.io/hyperliquid-docs/builder-tools/hyperevm-tools"],
     reviewedAt,
     capabilities: communityLogCapabilities,
-    rps: 1,
-    burst: 2,
+    ...SOAKED_BUDGET,
   },
   {
     id: "drpc-mainnet",
@@ -111,8 +119,7 @@ const mainnetSources: readonly MainnetEndpointSource[] = [
     ],
     reviewedAt,
     capabilities: { ...publicCapabilities, archive: true, maxLogBlockRange: DRPC_FREE_LOG_BLOCK_RANGE },
-    rps: 1,
-    burst: 2,
+    ...SOAKED_BUDGET,
     unsupportedMethods: drpcUnsupportedMethods,
   },
   {
@@ -132,8 +139,21 @@ const mainnetSources: readonly MainnetEndpointSource[] = [
     sourceUrls: ["https://publicnode.com/"],
     reviewedAt,
     capabilities: communityLogCapabilities,
-    rps: 1,
-    burst: 2,
+    ...SOAKED_BUDGET,
+  },
+  {
+    id: "purroof-mainnet",
+    url: "https://rpc.purroofgroup.com",
+    provider: "Purroof Group",
+    sourceUrls: ["https://www.purroofgroup.com/"],
+    reviewedAt: "2026-11-27",
+    // The operator publishes this as a free archive RPC, "currently rate-limited due to high
+    // demand", without a number. It passed the same 5 requests/second soak and the HyperCore
+    // precompile probe (2026-11-27); the budget is set lower than its peers for that notice.
+    // Archive and log-range behavior are unverified, so the conservative public defaults apply.
+    capabilities: publicCapabilities,
+    rps: 3,
+    burst: 6,
   },
 ];
 

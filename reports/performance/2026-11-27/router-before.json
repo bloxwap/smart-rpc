@@ -1,0 +1,666 @@
+{
+  "startedAt": "2026-11-27T13:53:27.018Z",
+  "completedAt": "2026-11-27T13:54:03.737Z",
+  "options": {
+    "protocols": [
+      "hyperevm",
+      "solana",
+      "base",
+      "ethereum"
+    ],
+    "rounds": 2,
+    "router": 60,
+    "timeout": 8000,
+    "chains": 4
+  },
+  "chains": {
+    "base": {
+      "chainId": "eip155:8453",
+      "endpointCount": 5,
+      "healthyCount": 5,
+      "bestDirectP50": 37,
+      "bestDirectReadP50": 89,
+      "routerVsBestP50": 2.49,
+      "routerVsBestReadP50": 1.03,
+      "endpoints": [
+        {
+          "id": "base-drpc",
+          "provider": "dRPC",
+          "url": "https://base.drpc.org",
+          "rps": null,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 37,
+          "p95": 37,
+          "readP50": 89,
+          "readP95": 89,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "yes(3143 logs, 127ms)",
+            "archiveBlock1": "yes"
+          }
+        },
+        {
+          "id": "base-mainnet",
+          "provider": "Base",
+          "url": "https://mainnet.base.org",
+          "rps": null,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 91,
+          "p95": 91,
+          "readP50": 90,
+          "readP95": 90,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "rate_limited: HTTP 429 {\"jsonrpc\":\"2.0\",\"id\":116,\"error\":{\"code\":-32011,\"message\":\"request lim",
+            "archiveBlock1": "yes"
+          }
+        },
+        {
+          "id": "base-publicnode",
+          "provider": "PublicNode",
+          "url": "https://base-rpc.publicnode.com",
+          "rps": null,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 108,
+          "p95": 108,
+          "readP50": 117,
+          "readP95": 117,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "rpc_error: Please specify an address in your request or, to remove restrictions, order a de",
+            "archiveBlock1": "auth: HTTP 403 {\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32602,\"message\":\"Archive requests req"
+          }
+        },
+        {
+          "id": "base-tenderly",
+          "provider": "Tenderly",
+          "url": "https://base.gateway.tenderly.co",
+          "rps": null,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 95,
+          "p95": 95,
+          "readP50": 95,
+          "readP95": 95,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "yes(3115 logs, 313ms)",
+            "archiveBlock1": "yes"
+          }
+        },
+        {
+          "id": "base-pocket",
+          "provider": "Pocket Network",
+          "url": "https://base.api.pocket.network",
+          "rps": 33,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 231,
+          "p95": 231,
+          "readP50": 227,
+          "readP95": 227,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "yes(3084 logs, 1616ms)",
+            "archiveBlock1": "yes"
+          }
+        }
+      ],
+      "router": {
+        "requests": 60,
+        "succeeded": 60,
+        "servedLocally": 15,
+        "successRate": 1,
+        "p50": 92,
+        "p95": 107,
+        "elapsedMs": 2448,
+        "servedBy": {
+          "https://base.drpc.org": 32,
+          "https://mainnet.base.org": 14,
+          "https://base.gateway.tenderly.co": 11,
+          "https://base-rpc.publicnode.com": 3,
+          "https://base.api.pocket.network": 1
+        },
+        "events": {
+          "failover": 0,
+          "hedge": 0,
+          "race": 42,
+          "throttle": 0,
+          "eject": 0,
+          "quarantine": 0,
+          "restore": 0,
+          "error": 0,
+          "coalesce": 0,
+          "cache": 58
+        },
+        "ejected": [],
+        "failures": {},
+        "snapshot": [
+          {
+            "score": 716,
+            "lag": 0,
+            "inflight": 4
+          },
+          {
+            "score": 454,
+            "lag": 0,
+            "inflight": 2
+          },
+          {
+            "score": 1039,
+            "lag": null,
+            "inflight": 4
+          },
+          {
+            "score": 1106,
+            "lag": null,
+            "inflight": 4
+          },
+          {
+            "score": 479,
+            "lag": 0,
+            "inflight": 1
+          }
+        ]
+      }
+    },
+    "ethereum": {
+      "chainId": "eip155:1",
+      "endpointCount": 5,
+      "healthyCount": 5,
+      "bestDirectP50": 33,
+      "bestDirectReadP50": 44,
+      "routerVsBestP50": 1.39,
+      "routerVsBestReadP50": 1.05,
+      "endpoints": [
+        {
+          "id": "ethereum-drpc",
+          "provider": "dRPC",
+          "url": "https://eth.drpc.org",
+          "rps": null,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 33,
+          "p95": 33,
+          "readP50": 44,
+          "readP95": 44,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "range_limit: query exceeds max results 20000, retry with the range 26506918-26506945",
+            "archiveBlock1": "yes"
+          }
+        },
+        {
+          "id": "ethereum-publicnode",
+          "provider": "PublicNode",
+          "url": "https://ethereum-rpc.publicnode.com",
+          "rps": null,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 101,
+          "p95": 101,
+          "readP50": 109,
+          "readP95": 109,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "rpc_error: Please specify an address in your request or, to remove restrictions, order a de",
+            "archiveBlock1": "auth: HTTP 403 {\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32602,\"message\":\"Archive requests req"
+          }
+        },
+        {
+          "id": "ethereum-nownodes",
+          "provider": "NOWNodes",
+          "url": "https://public-eth.nownodes.io",
+          "rps": 5,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 219,
+          "p95": 219,
+          "readP50": 217,
+          "readP95": 217,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "timeout: >8000ms",
+            "archiveBlock1": "unsupported: historical state d67e4d450343046425ae4271474353857ab860dbc0a1dde64b41b5cd3a532bf"
+          }
+        },
+        {
+          "id": "ethereum-tenderly",
+          "provider": "Tenderly",
+          "url": "https://mainnet.gateway.tenderly.co",
+          "rps": null,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 93,
+          "p95": 93,
+          "readP50": 92,
+          "readP95": 92,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "yes(34389 logs, 581ms)",
+            "archiveBlock1": "yes"
+          }
+        },
+        {
+          "id": "ethereum-pocket",
+          "provider": "Pocket Network",
+          "url": "https://eth.api.pocket.network",
+          "rps": 33,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 199,
+          "p95": 199,
+          "readP50": 184,
+          "readP95": 184,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "rpc_error: invalid argument 0: missing required field 'address' for log filter",
+            "archiveBlock1": "yes"
+          }
+        }
+      ],
+      "router": {
+        "requests": 60,
+        "succeeded": 60,
+        "servedLocally": 14,
+        "successRate": 1,
+        "p50": 46,
+        "p95": 119,
+        "elapsedMs": 2320,
+        "servedBy": {
+          "https://eth.drpc.org": 48,
+          "https://ethereum-rpc.publicnode.com": 8,
+          "https://mainnet.gateway.tenderly.co": 3
+        },
+        "events": {
+          "failover": 0,
+          "hedge": 0,
+          "race": 29,
+          "throttle": 0,
+          "eject": 0,
+          "quarantine": 0,
+          "restore": 0,
+          "error": 0,
+          "coalesce": 0,
+          "cache": 40
+        },
+        "ejected": [],
+        "failures": {},
+        "snapshot": [
+          {
+            "score": 78,
+            "lag": 0,
+            "inflight": 0
+          },
+          {
+            "score": 146,
+            "lag": 0,
+            "inflight": 0
+          },
+          {
+            "score": 340,
+            "lag": null,
+            "inflight": 0
+          },
+          {
+            "score": 110,
+            "lag": 0,
+            "inflight": 0
+          },
+          {
+            "score": 250,
+            "lag": null,
+            "inflight": 0
+          }
+        ]
+      }
+    },
+    "hyperevm": {
+      "chainId": "eip155:999",
+      "endpointCount": 5,
+      "healthyCount": 5,
+      "bestDirectP50": 39,
+      "bestDirectReadP50": 86,
+      "routerVsBestP50": 14.38,
+      "routerVsBestReadP50": 6.52,
+      "endpoints": [
+        {
+          "id": "publicnode-mainnet",
+          "provider": "PublicNode",
+          "url": "https://hyperliquid-rpc.publicnode.com",
+          "rps": 1,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 108,
+          "p95": 108,
+          "readP50": 111,
+          "readP95": 111,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "yes(371 logs, 405ms)",
+            "archiveBlock1": "yes"
+          }
+        },
+        {
+          "id": "hyperliquid-mainnet",
+          "provider": "Hyperliquid",
+          "url": "https://rpc.hyperliquid.xyz/evm",
+          "rps": 1.5,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 120,
+          "p95": 120,
+          "readP50": 125,
+          "readP95": 125,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "yes(345 logs, 353ms)",
+            "archiveBlock1": "yes"
+          }
+        },
+        {
+          "id": "hypurrscan-mainnet",
+          "provider": "Hypurrscan",
+          "url": "https://rpc.hypurrscan.io",
+          "rps": 1,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 146,
+          "p95": 146,
+          "readP50": 147,
+          "readP95": 147,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "yes(345 logs, 626ms)",
+            "archiveBlock1": "yes"
+          }
+        },
+        {
+          "id": "drpc-mainnet",
+          "provider": "dRPC",
+          "url": "https://hyperliquid.drpc.org",
+          "rps": 1,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 39,
+          "p95": 39,
+          "readP50": 86,
+          "readP95": 86,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "yes(369 logs, 96ms)",
+            "archiveBlock1": "yes"
+          }
+        },
+        {
+          "id": "stakely-mainnet",
+          "provider": "Stakely",
+          "url": "https://hyperliquid-json-rpc.stakely.io",
+          "rps": 1,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 706,
+          "p95": 706,
+          "readP50": 445,
+          "readP95": 445,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLogs50": "yes(345 logs, 1919ms)",
+            "archiveBlock1": "yes"
+          }
+        }
+      ],
+      "router": {
+        "requests": 60,
+        "succeeded": 60,
+        "servedLocally": 13,
+        "successRate": 1,
+        "p50": 561,
+        "p95": 875,
+        "elapsedMs": 8263,
+        "servedBy": {
+          "https://hyperliquid-rpc.publicnode.com": 9,
+          "https://rpc.hyperliquid.xyz/evm": 14,
+          "https://hyperliquid.drpc.org": 8,
+          "https://rpc.hypurrscan.io": 9,
+          "https://hyperliquid-json-rpc.stakely.io": 8
+        },
+        "events": {
+          "failover": 0,
+          "hedge": 0,
+          "race": 0,
+          "throttle": 0,
+          "eject": 0,
+          "quarantine": 0,
+          "restore": 0,
+          "error": 0,
+          "coalesce": 0,
+          "cache": 30
+        },
+        "ejected": [],
+        "failures": {},
+        "snapshot": [
+          {
+            "score": 724,
+            "lag": 0,
+            "inflight": 0
+          },
+          {
+            "score": 832,
+            "lag": null,
+            "inflight": 0
+          },
+          {
+            "score": 184,
+            "lag": 0,
+            "inflight": 0
+          },
+          {
+            "score": 1058,
+            "lag": null,
+            "inflight": 0
+          },
+          {
+            "score": 645,
+            "lag": null,
+            "inflight": 0
+          },
+          {
+            "score": 250,
+            "lag": null,
+            "inflight": 0
+          },
+          {
+            "score": 250,
+            "lag": null,
+            "inflight": 0
+          }
+        ]
+      }
+    },
+    "solana": {
+      "chainId": "solana:mainnet",
+      "endpointCount": 4,
+      "healthyCount": 3,
+      "bestDirectP50": 145,
+      "bestDirectReadP50": 56,
+      "routerVsBestP50": 0.76,
+      "routerVsBestReadP50": 1.96,
+      "endpoints": [
+        {
+          "id": "solana",
+          "provider": "Solana",
+          "url": "https://api.mainnet.solana.com",
+          "rps": 3,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 145,
+          "p95": 145,
+          "readP50": 56,
+          "readP95": 56,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLatestBlockhash": "yes(45ms)"
+          }
+        },
+        {
+          "id": "publicnode",
+          "provider": "PublicNode",
+          "url": "https://solana-rpc.publicnode.com",
+          "rps": 3,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 175,
+          "p95": 175,
+          "readP50": 137,
+          "readP95": 137,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "yes",
+            "getLatestBlockhash": "yes(98ms)"
+          }
+        },
+        {
+          "id": "solanavibestation",
+          "provider": "Solana Vibe Station",
+          "url": "https://public.rpc.solanavibestation.com",
+          "rps": 1,
+          "identity": "error:timeout",
+          "successRate": 0,
+          "p50": null,
+          "p95": null,
+          "readP50": null,
+          "readP95": null,
+          "avgLag": null,
+          "maxLag": null,
+          "errors": {
+            "timeout": 2
+          },
+          "probes": null
+        },
+        {
+          "id": "pocket",
+          "provider": "Pocket Network",
+          "url": "https://solana.api.pocket.network",
+          "rps": 3,
+          "identity": "ok",
+          "successRate": 1,
+          "p50": 756,
+          "p95": 756,
+          "readP50": 753,
+          "readP95": 753,
+          "avgLag": 0,
+          "maxLag": 0,
+          "errors": {},
+          "probes": {
+            "batch": "http_400",
+            "getLatestBlockhash": "yes(744ms)"
+          }
+        }
+      ],
+      "router": {
+        "requests": 60,
+        "succeeded": 60,
+        "servedLocally": 19,
+        "successRate": 1,
+        "p50": 110,
+        "p95": 824,
+        "elapsedMs": 10379,
+        "servedBy": {
+          "https://api.mainnet.solana.com": 26,
+          "https://solana-rpc.publicnode.com": 25,
+          "https://solana.api.pocket.network": 21
+        },
+        "events": {
+          "failover": 0,
+          "hedge": 0,
+          "race": 3,
+          "throttle": 0,
+          "eject": 0,
+          "quarantine": 0,
+          "restore": 0,
+          "error": 1,
+          "coalesce": 0,
+          "cache": 94
+        },
+        "ejected": [],
+        "failures": {},
+        "snapshot": [
+          {
+            "score": 48,
+            "lag": 0,
+            "inflight": 0
+          },
+          {
+            "score": 128,
+            "lag": 0,
+            "inflight": 0
+          },
+          {
+            "score": 19800,
+            "lag": null,
+            "inflight": 0
+          },
+          {
+            "score": 218,
+            "lag": 3,
+            "inflight": 0
+          }
+        ]
+      }
+    }
+  }
+}

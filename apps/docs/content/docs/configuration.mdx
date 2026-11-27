@@ -47,6 +47,25 @@ An operation budget covers identity checks, retries, races, and batch items. Unk
 
 `coldStart: "ordered"` prefers the configured endpoint order with neutral weights until the pool records a request-latency sample or restores a score book. Health, in-flight load, capabilities, budgets, and identity checks still apply. Normal weighted scoring resumes after that first sample, including a failed request. Background probes do not end this startup phase. The general default is `"weighted"`; HyperEVM uses `"ordered"` for its built-in registries and `"weighted"` when endpoints are supplied explicitly. Set `coldStart` explicitly to override either behavior.
 
+`weighting` sets how an endpoint `weight` enters its score. `"fixed"`, the general default, divides the score by the weight for the life of the pool, so a weight above 1 is a standing preference. `"prior"` treats the weight as a belief held before measurement: it moves linearly to 1 over the endpoint's first five latency samples (`score.confidenceSamples`), after which measured latency, errors, load and lag alone rank it. HyperEVM uses `"prior"`, because its registry weights describe weekly probe history and would otherwise outrank a faster endpoint the pool has measured itself. Pass `weighting: "fixed"` to `hyperevm()` to keep explicit weights permanent.
+
+## Connections and startup
+
+Each endpoint's first call waits for its identity check, so a new pool pays one extra round trip per endpoint. Call `pool.probe()` once after constructing a long-lived pool to verify every endpoint and open its connection before the first user request.
+
+Node's built-in `fetch` closes an idle connection after 4 seconds. A request after a longer pause pays a new TCP and TLS handshake, which measured 40–80ms per request against public endpoints on 2026-11-27. The 4-second head probe keeps connections open only while the pool is busy and probes are enabled. For a Node server, pass a `fetchFn` with a longer keep-alive:
+
+```ts
+import { Agent, fetch as undiciFetch } from "undici";
+
+const agent = new Agent({ keepAliveTimeout: 60_000, keepAliveMaxTimeout: 60_000 });
+const transport = base({
+  fetchFn: (input, init) => undiciFetch(input, { ...init, dispatcher: agent }) as unknown as Promise<Response>,
+});
+```
+
+With that agent the same endpoints answered in their warm time after 5, 10 and 20 second pauses, except where the server closes the connection first. Browsers and Cloudflare Workers manage connections themselves and need no change.
+
 ## Endpoint and provider budgets
 
 ```ts

@@ -3,6 +3,20 @@ title: Performance audit — November 17, 2026
 description: Built-in endpoint verification, measured startup improvements, CPU benchmarks, and remaining slow providers.
 ---
 
+**Follow-up, November 27, 2026.** A second pass targeted the two chains whose router was slower than its best endpoint. Raw results are in `reports/performance/2026-11-27/`. All figures are small samples from one location.
+
+| Chain | Best direct read p50 | Router p50 before | Router p50 after | Router p95 before | Router p95 after |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| hyperevm | 89 ms | 561 ms | 122 ms | 875 ms | 243 ms |
+| solana | 66 ms | 110 ms | 125 ms | 824 ms | 393 ms |
+
+The 60-request HyperEVM workload finished in 3.1 seconds instead of 8.3, and Solana's in 3.2 instead of 10.4, because requests no longer queue for budget tokens. Solana's p50 did not improve: its two fast keyless endpoints are the whole pool, and a production deployment needs a keyed endpoint beside them. Three Ethereum runs on unchanged routing code measured 47, 86 and 48 ms, so differences of that size between single runs are noise.
+
+Three causes were addressed. HyperEVM's community endpoints were held to a self-imposed 1 request/second; five of six candidates answered 300 of 300 reads at 5 requests/second for 60 seconds, so their budgets rose to 3–4 requests/second (Stakely drew HTTP 429 after about 33 seconds and stays at 1). HyperEVM registry weights divided the score permanently, which ranked a 450ms established node ahead of 120ms nodes with capped weights; weights are now priors that fade over five live samples. Solana Vibe Station timed out on every connection and was removed, and the remaining Solana budgets were raised within the published and measured limits. Purroof Group was added to HyperEVM. Base and Ethereum already routed within 5% of their best endpoint and are unchanged.
+
+Candidates measured and not added: bloXroute (no documented permission for unauthenticated use; its Ethereum host is a private-mempool product), Nodies (hostnames not found in provider documentation; no CORS preflight), `mainnet-preconf.base.org` (Flashblocks retired), and every keyless Solana candidate (rate-limited, paid-only or discontinued).
+
+
 **Release integration follow-up:** the combined 0.3.0 registries contain **105 active defaults across 25 networks**, all passing a fresh identity check and three head, balance, and EVM call samples per endpoint. Results are in `reports/performance/2026-11-17/release-endpoints.json`. The merge includes the earlier audit’s five documented replacements and removes its additional stale defaults. HyperEVM’s log probe now respects each provider’s declared range cap; dRPC passed within its 100-block cap and is restored as a low-weight fallback. PublicNode remains first for ordered cold starts.
 
 The measurements below describe the optimization pass before release integration. That snapshot retained 102 active endpoints and one disabled HyperEVM candidate. Eight unsuitable defaults were removed, startup order was improved on ten mainnets, and HyperEVM’s rolling history was refreshed.

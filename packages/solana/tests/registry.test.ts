@@ -20,7 +20,6 @@ const clusters = [
     urls: [
       "https://api.mainnet.solana.com",
       "https://solana-rpc.publicnode.com",
-      "https://public.rpc.solanavibestation.com",
       "https://solana.api.pocket.network",
     ],
   },
@@ -132,7 +131,7 @@ describe("Solana public registry", () => {
 
   test("known method restrictions skip Pocket during configured failover", async () => {
     const calls: { url: string; method: string }[] = [];
-    const first = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "solanavibestation")!;
+    const first = { label: "primary", url: "https://primary.example" };
     const pocket = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "pocket")!;
     const fallback = MAINNET_ENDPOINTS.find((endpoint) => endpoint.label === "solana")!;
     const pool = solana({

@@ -48,39 +48,30 @@ export const MAINNET_REGISTRY: readonly PublicRpcEndpoint[] = [
     url: "https://api.mainnet.solana.com",
     provider: "Solana",
     sourceUrls: ["https://solana.com/docs/references/clusters"],
-    reviewedAt: "2026-11-08",
-    // The public cluster limits each method to 40 requests per 10 seconds.
+    reviewedAt: "2026-11-27",
+    // The public cluster limits each method to 40 requests per 10 seconds and each IP to 100.
+    // A burst of 6 followed by 3 r/s sends at most 36 of one method in any 10 seconds.
     rps: 3,
-    burst: 3,
+    burst: 6,
   },
   {
     id: "publicnode",
     url: "https://solana-rpc.publicnode.com",
     provider: "PublicNode",
     sourceUrls: ["https://solana.publicnode.com/"],
-    reviewedAt: "2026-11-08",
-    rps: 3,
-    burst: 3,
+    reviewedAt: "2026-11-27",
+    // No numeric limit is published. 300 of 300 getBalance reads at 5 r/s over 60 seconds
+    // succeeded (2026-11-27); the budget stays below that measured rate.
+    rps: 4,
+    burst: 8,
     // Live probes (2026-11-08) on mainnet and testnet: these return HTTP 403/-32602
     // "Indexed requests require a personal token" (getLargestAccounts: 410 disabled).
     // -32602 is terminal for callers, so the pool must never route them here.
     unsupportedMethods: PUBLICNODE_TOKEN_GATED_METHODS,
   },
-  {
-    id: "solanavibestation",
-    url: "https://public.rpc.solanavibestation.com",
-    provider: "Solana Vibe Station",
-    sourceUrls: [
-      "https://solanavibestation.com/",
-      "https://docs.solanavibestation.com/services/solana-node-services/rpc-services",
-    ],
-    reviewedAt: "2026-11-08",
-    // Documented free tier: 5 r/s and 1 sendTransaction r/s. One budget covers every
-    // method, so the stricter sendTransaction limit applies; mixed reads near 2.5 r/s
-    // drew HTTP 429 in live probes (2026-11-08).
-    rps: 1,
-    burst: 1,
-  },
+  // Solana Vibe Station's public endpoint is still published by its operator, but every request
+  // from the audit client timed out on TCP connect for over 15 minutes on 2026-11-27 (303 of 303),
+  // so it is no longer a default. Configure it explicitly where it is reachable.
   {
     id: "pocket",
     url: "https://solana.api.pocket.network",

@@ -81,6 +81,29 @@ describe("hyperevm public defaults", () => {
     } finally { client.close(); }
   });
 
+  test.each([
+    { weighting: undefined, expected: "https://fast.example/" },
+    { weighting: "fixed" as const, expected: "https://slow.example/" },
+  ])("weights are priors that yield to measured latency unless weighting is $weighting", async ({ weighting, expected }) => {
+    // The clock advances only inside a request, so each endpoint's measured latency is exact.
+    let clock = 0;
+    const mock = mockRpc(({ url, method }) => {
+      if (method !== "eth_chainId") clock += url.includes("fast") ? 100 : 400;
+      return method === "eth_chainId" ? "0x3e7" : "0x10";
+    });
+    const client = hyperevm({
+      chainId: 999, weighting, coldStart: "ordered", now: () => clock,
+      fetchFn: mock.fetchFn, headLag: false, race: false, cache: false, routing: "best",
+      endpoints: [{ url: "https://fast.example", weight: 0.1 }, { url: "https://slow.example", weight: 1 }],
+    });
+    try {
+      for (let index = 1; index <= 8; index += 1) {
+        await client.request({ method: "eth_getBalance", params: [`0x${index.toString(16)}`, "latest"] });
+      }
+      expect(mock.calls.at(-1)?.url).toBe(expected);
+    } finally { client.close(); }
+  });
+
   test("loads separate source-backed mainnet and testnet pools without making requests", () => {
     const mock = mockRpc(() => "0x1");
     const client = hyperevm({ fetchFn: mock.fetchFn, headLag: { probeInterval: false } });
