@@ -246,6 +246,13 @@ export interface PoolOptions {
    * Health, capabilities, budgets, and identity checks still apply. Default: "weighted".
    */
   coldStart?: "weighted" | "ordered" | undefined;
+  /**
+   * How endpoint `weight` enters the score. `"fixed"` divides the score by the weight for the life of the pool.
+   * `"prior"` treats the weight as a belief held before measurement: it fades linearly to 1 over
+   * `score.confidenceSamples` of that endpoint's own latency samples, after which only measured latency, errors,
+   * load and lag rank it. Default: "fixed".
+   */
+  weighting?: "fixed" | "prior" | undefined;
   /** Eject an endpoint after consecutive failures, or for a `Retry-After`. Default: enabled. */
   breaker?: boolean | BreakerOptions | undefined;
   /**

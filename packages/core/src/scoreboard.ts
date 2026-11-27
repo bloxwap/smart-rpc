@@ -52,6 +52,8 @@ export interface ScoreboardOptions {
   perMethod: boolean;
   /** Prefer curated order with neutral weights until a latency sample or restored book exists. */
   coldStart?: "weighted" | "ordered" | undefined;
+  /** `"prior"` fades each weight toward 1 as the endpoint's own latency samples arrive. Default: `"fixed"`. */
+  weighting?: "fixed" | "prior" | undefined;
   headLag: boolean;
   maxLag: number;
   staleMs: number;
@@ -295,9 +297,22 @@ export class Scoreboard {
       perMethod: this.#options.perMethod,
       inflight: this.#inflight(endpoint),
       lagPenalty: this.#lagPenalty(endpoint),
-      weight: this.#orderedStart() ? 1 : endpoint.weight,
+      weight: this.#weight(endpoint),
       config: this.#options.config ?? defaultScoreConfig,
     });
+  }
+
+  /**
+   * The weight that divides the score. An ordered cold start is neutral. A `"prior"` weight is a belief held
+   * before measurement: it moves linearly to 1 over `confidenceSamples` of the endpoint's own samples, so a
+   * registry weight never outvotes a latency the pool has measured itself.
+   */
+  #weight(endpoint: EndpointState): number {
+    if (this.#orderedStart()) return 1;
+    if (this.#options.weighting !== "prior") return endpoint.weight;
+    const config = this.#options.config ?? defaultScoreConfig;
+    const confidence = Math.min(1, endpoint.global.n / config.confidenceSamples);
+    return 1 + (endpoint.weight - 1) * (1 - confidence);
   }
 
   /** Calls in flight that are still inside their deadline. Expired ones are dropped. */

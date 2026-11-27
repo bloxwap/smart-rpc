@@ -10,6 +10,7 @@ const SOURCE_URLS = [
   "https://hyperliquid.drpc.org",
   "https://hyperliquid-json-rpc.stakely.io",
   "https://hyperliquid-rpc.publicnode.com",
+  "https://rpc.purroofgroup.com",
 ] as const;
 
 const offline = (url: string): MainnetRegistryRow => ({ url, eligible: false, weight: 0, rank: null, stats: null });
@@ -43,6 +44,7 @@ describe("HyperEVM registry loading", () => {
       offline(SOURCE_URLS[2]),
       ranked(SOURCE_URLS[3], 1, 1),
       offline(SOURCE_URLS[4]),
+      offline(SOURCE_URLS[5]),
     ]));
     expect(registry.HYPEREVM_MAINNET_REGISTRY.map(({ url, rank, weight }) => ({ url, rank, weight }))).toEqual([
       { url: "https://hyperliquid-json-rpc.stakely.io", rank: 1, weight: 1 },
@@ -50,6 +52,7 @@ describe("HyperEVM registry loading", () => {
       { url: "https://hyperliquid-rpc.publicnode.com", rank: null, weight: 0 },
       { url: "https://hyperliquid.drpc.org", rank: null, weight: 0 },
       { url: "https://rpc.hyperliquid.xyz/evm", rank: null, weight: 0 },
+      { url: "https://rpc.purroofgroup.com", rank: null, weight: 0 },
     ]);
     expect(registry.HYPEREVM_MAINNET_ENDPOINTS).toEqual(["https://hyperliquid-json-rpc.stakely.io", "https://rpc.hypurrscan.io"]);
     // Source metadata survives the merge with ranking data.
@@ -68,7 +71,7 @@ describe("HyperEVM registry loading", () => {
   });
 
   test("refuses to load a ranking with fewer endpoints than the source registry", async () => {
-    await expect(loadWith(ranking(SOURCE_URLS.slice(0, 4).map(offline))))
+    await expect(loadWith(ranking(SOURCE_URLS.slice(0, 5).map(offline))))
       .rejects.toThrow("HyperEVM ranking data and source registry contain different endpoint counts.");
   });
 
@@ -78,8 +81,8 @@ describe("HyperEVM registry loading", () => {
   });
 
   test("refuses to load a ranking that swaps a source endpoint for an unknown URL", async () => {
-    await expect(loadWith(ranking([...SOURCE_URLS.slice(0, 4), "https://unknown.example/evm"].map(offline))))
-      .rejects.toThrow("HyperEVM ranking data is missing https://hyperliquid-rpc.publicnode.com.");
+    await expect(loadWith(ranking([...SOURCE_URLS.slice(0, 5), "https://unknown.example/evm"].map(offline))))
+      .rejects.toThrow("HyperEVM ranking data is missing https://rpc.purroofgroup.com.");
   });
 
   test("refuses to load a ranking document that fails validation", async () => {

@@ -1,0 +1,8 @@
+{"url":"https://hyperliquid-rpc.publicnode.com","ok":300,"of":300,"p50":111,"p95":142,"firstFailAt":null,"errors":[]}
+{"url":"https://rpc.hypurrscan.io","ok":300,"of":300,"p50":130,"p95":186,"firstFailAt":null,"errors":[]}
+{"url":"https://hyperliquid.drpc.org","ok":300,"of":300,"p50":91,"p95":115,"firstFailAt":null,"errors":[]}
+{"url":"https://rpc.purroofgroup.com","ok":300,"of":300,"p50":125,"p95":131,"firstFailAt":null,"errors":[]}
+{"url":"https://hyperliquid.rpc.blxrbdn.com","ok":300,"of":300,"p50":129,"p95":156,"firstFailAt":null,"errors":[]}
+{"url":"https://solana-rpc.publicnode.com","ok":300,"of":300,"p50":110,"p95":138,"firstFailAt":null,"errors":[]}
+{"url":"https://hyperliquid-json-rpc.stakely.io","ok":209,"of":300,"p50":534,"p95":1114,"firstFailAt":163,"errors":["429 Too Many Requests"]}
+{"url":"https://public.rpc.solanavibestation.com","ok":0,"of":300,"p50":-1,"p95":-1,"firstFailAt":0,"errors":["TimeoutError"]}

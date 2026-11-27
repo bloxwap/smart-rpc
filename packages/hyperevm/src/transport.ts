@@ -73,6 +73,11 @@ export interface HyperEvmOptions
   /** Use curated order before latency samples. Default: "ordered" for public defaults, "weighted" for explicit endpoints. */
   coldStart?: EthereumOptions["coldStart"];
   /**
+   * Registry weights describe probe history, not live latency, so they act as priors that fade as the pool
+   * measures each endpoint. Default: "prior". Pass "fixed" to keep explicit weights for the life of the pool.
+   */
+  weighting?: EthereumOptions["weighting"];
+  /**
    * One HyperEVM chain. Omit to serve both `eip155:999` and `eip155:998`.
    */
   chainId?: 999 | 998 | undefined;
@@ -102,6 +107,7 @@ export function hyperevm(options: HyperEvmOptions = {}): HyperEvmTransport {
       chainIds: [`eip155:${chainId}`],
       endpoints: endpointsFor(options, chainId),
       coldStart: options.coldStart ?? (configuredEndpoints(options, chainId) === undefined ? "ordered" : "weighted"),
+      weighting: options.weighting ?? "prior",
       skipPrecompiles: options.skipPrecompiles ?? true,
       blockHashProbe: true,
       cachePolicy: HYPEREVM_CACHE_POLICY,

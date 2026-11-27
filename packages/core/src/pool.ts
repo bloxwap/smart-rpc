@@ -206,6 +206,10 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
   if (coldStart !== "weighted" && coldStart !== "ordered") {
     throw new Error('smart-rpc coldStart must be "weighted" or "ordered".');
   }
+  const weighting = options.weighting ?? "fixed";
+  if (weighting !== "fixed" && weighting !== "prior") {
+    throw new Error('smart-rpc weighting must be "fixed" or "prior".');
+  }
   const perMethod = options.perMethod ?? true;
   const retryCount = options.retryCount ?? DEFAULT_RETRY_COUNT;
   if (!Number.isSafeInteger(retryCount) || retryCount < 0) {
@@ -335,6 +339,7 @@ function buildPool(options: PoolOptions, budgetStore: Budgets, budgetNamespace: 
     {
       perMethod,
       coldStart,
+      weighting,
       headLag: headLag.enabled,
       maxLag: headLag.maxLag,
       staleMs: headLag.staleMs,
@@ -1383,6 +1388,7 @@ function poolFingerprint(options: PoolOptions): string {
     race: options.race ?? null,
     routing: options.routing ?? null,
     coldStart: options.coldStart ?? "weighted",
+    weighting: options.weighting ?? "fixed",
     breaker: options.breaker ?? null,
     budget: options.budget ?? null,
     operationBudget: options.operationBudget ?? null,
